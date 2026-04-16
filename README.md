@@ -21,12 +21,20 @@ world snapshots at 20 Hz over a binary Flatbuffers wire format
 
 ### I want to play on a friend's server
 
-Read **[`docs/PLAYER_SETUP.md`](docs/PLAYER_SETUP.md)**.
+Read **[`docs/FRIEND_QUICKSTART.md`](docs/FRIEND_QUICKSTART.md)** — written
+to be followed by you or by an AI assistant (Cursor, Copilot, etc.).
 
-Short version: install Skyrim SE + SKSE64 + Address Library + our plugin,
-edit `SkyrimReLive.toml` (server host/port, player name), launch via
-`skse64_loader.exe`. The plugin auto-connects on save load and renders
-other players as ghost actors.
+Fastest path: clone this repo, then run
+```powershell
+.\tools\friend-quickstart.ps1 -HostIp <your-friend's-IP> -HostName <their-name>
+```
+The script downloads the latest release, runs the installer, sets you up
+end-to-end. If you'd rather build from source, the same script handles
+that with `-ForceBuild`. Detailed walkthrough + troubleshooting in the
+quickstart doc.
+
+If you want the underlying mechanics, [`docs/PLAYER_SETUP.md`](docs/PLAYER_SETUP.md)
+covers them in depth.
 
 ### I want to host a server (for friends or publicly)
 
