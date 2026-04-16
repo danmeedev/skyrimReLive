@@ -29,6 +29,12 @@ struct PlayerInputBuilder;
 struct WorldSnapshot;
 struct WorldSnapshotBuilder;
 
+struct CombatEvent;
+struct CombatEventBuilder;
+
+struct DamageApply;
+struct DamageApplyBuilder;
+
 FLATBUFFERS_MANUALLY_ALIGNED_STRUCT(4) Vec3 FLATBUFFERS_FINAL_CLASS {
  private:
   float x_;
@@ -440,6 +446,170 @@ inline ::flatbuffers::Offset<WorldSnapshot> CreateWorldSnapshotDirect(
       server_tick,
       server_time_ms,
       players__);
+}
+
+struct CombatEvent FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef CombatEventBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_TARGET_PLAYER_ID = 4,
+    VT_ATTACK_TYPE = 6,
+    VT_WEAPON_REACH = 8,
+    VT_WEAPON_BASE_DAMAGE = 10,
+    VT_CLIENT_TIME_MS = 12
+  };
+  uint32_t target_player_id() const {
+    return GetField<uint32_t>(VT_TARGET_PLAYER_ID, 0);
+  }
+  uint8_t attack_type() const {
+    return GetField<uint8_t>(VT_ATTACK_TYPE, 0);
+  }
+  float weapon_reach() const {
+    return GetField<float>(VT_WEAPON_REACH, 100.0f);
+  }
+  float weapon_base_damage() const {
+    return GetField<float>(VT_WEAPON_BASE_DAMAGE, 0.0f);
+  }
+  uint64_t client_time_ms() const {
+    return GetField<uint64_t>(VT_CLIENT_TIME_MS, 0);
+  }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_TARGET_PLAYER_ID, 4) &&
+           VerifyField<uint8_t>(verifier, VT_ATTACK_TYPE, 1) &&
+           VerifyField<float>(verifier, VT_WEAPON_REACH, 4) &&
+           VerifyField<float>(verifier, VT_WEAPON_BASE_DAMAGE, 4) &&
+           VerifyField<uint64_t>(verifier, VT_CLIENT_TIME_MS, 8) &&
+           verifier.EndTable();
+  }
+};
+
+struct CombatEventBuilder {
+  typedef CombatEvent Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_target_player_id(uint32_t target_player_id) {
+    fbb_.AddElement<uint32_t>(CombatEvent::VT_TARGET_PLAYER_ID, target_player_id, 0);
+  }
+  void add_attack_type(uint8_t attack_type) {
+    fbb_.AddElement<uint8_t>(CombatEvent::VT_ATTACK_TYPE, attack_type, 0);
+  }
+  void add_weapon_reach(float weapon_reach) {
+    fbb_.AddElement<float>(CombatEvent::VT_WEAPON_REACH, weapon_reach, 100.0f);
+  }
+  void add_weapon_base_damage(float weapon_base_damage) {
+    fbb_.AddElement<float>(CombatEvent::VT_WEAPON_BASE_DAMAGE, weapon_base_damage, 0.0f);
+  }
+  void add_client_time_ms(uint64_t client_time_ms) {
+    fbb_.AddElement<uint64_t>(CombatEvent::VT_CLIENT_TIME_MS, client_time_ms, 0);
+  }
+  explicit CombatEventBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<CombatEvent> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<CombatEvent>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<CombatEvent> CreateCombatEvent(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t target_player_id = 0,
+    uint8_t attack_type = 0,
+    float weapon_reach = 100.0f,
+    float weapon_base_damage = 0.0f,
+    uint64_t client_time_ms = 0) {
+  CombatEventBuilder builder_(_fbb);
+  builder_.add_client_time_ms(client_time_ms);
+  builder_.add_weapon_base_damage(weapon_base_damage);
+  builder_.add_weapon_reach(weapon_reach);
+  builder_.add_target_player_id(target_player_id);
+  builder_.add_attack_type(attack_type);
+  return builder_.Finish();
+}
+
+struct DamageApply FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef DamageApplyBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_ATTACKER_PLAYER_ID = 4,
+    VT_DAMAGE = 6,
+    VT_STAGGER = 8,
+    VT_NEW_HP = 10,
+    VT_SERVER_TIME_MS = 12
+  };
+  uint32_t attacker_player_id() const {
+    return GetField<uint32_t>(VT_ATTACKER_PLAYER_ID, 0);
+  }
+  float damage() const {
+    return GetField<float>(VT_DAMAGE, 0.0f);
+  }
+  bool stagger() const {
+    return GetField<uint8_t>(VT_STAGGER, 0) != 0;
+  }
+  float new_hp() const {
+    return GetField<float>(VT_NEW_HP, 0.0f);
+  }
+  uint64_t server_time_ms() const {
+    return GetField<uint64_t>(VT_SERVER_TIME_MS, 0);
+  }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_ATTACKER_PLAYER_ID, 4) &&
+           VerifyField<float>(verifier, VT_DAMAGE, 4) &&
+           VerifyField<uint8_t>(verifier, VT_STAGGER, 1) &&
+           VerifyField<float>(verifier, VT_NEW_HP, 4) &&
+           VerifyField<uint64_t>(verifier, VT_SERVER_TIME_MS, 8) &&
+           verifier.EndTable();
+  }
+};
+
+struct DamageApplyBuilder {
+  typedef DamageApply Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_attacker_player_id(uint32_t attacker_player_id) {
+    fbb_.AddElement<uint32_t>(DamageApply::VT_ATTACKER_PLAYER_ID, attacker_player_id, 0);
+  }
+  void add_damage(float damage) {
+    fbb_.AddElement<float>(DamageApply::VT_DAMAGE, damage, 0.0f);
+  }
+  void add_stagger(bool stagger) {
+    fbb_.AddElement<uint8_t>(DamageApply::VT_STAGGER, static_cast<uint8_t>(stagger), 0);
+  }
+  void add_new_hp(float new_hp) {
+    fbb_.AddElement<float>(DamageApply::VT_NEW_HP, new_hp, 0.0f);
+  }
+  void add_server_time_ms(uint64_t server_time_ms) {
+    fbb_.AddElement<uint64_t>(DamageApply::VT_SERVER_TIME_MS, server_time_ms, 0);
+  }
+  explicit DamageApplyBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<DamageApply> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<DamageApply>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<DamageApply> CreateDamageApply(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t attacker_player_id = 0,
+    float damage = 0.0f,
+    bool stagger = false,
+    float new_hp = 0.0f,
+    uint64_t server_time_ms = 0) {
+  DamageApplyBuilder builder_(_fbb);
+  builder_.add_server_time_ms(server_time_ms);
+  builder_.add_new_hp(new_hp);
+  builder_.add_damage(damage);
+  builder_.add_attacker_player_id(attacker_player_id);
+  builder_.add_stagger(stagger);
+  return builder_.Finish();
 }
 
 }  // namespace v1

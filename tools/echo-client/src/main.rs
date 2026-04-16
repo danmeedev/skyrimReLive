@@ -3,9 +3,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use anyhow::{bail, Context, Result};
 use flatbuffers::FlatBufferBuilder;
 use skyrim_relive_server::proto::v1::{
-    Disconnect, Heartbeat, HeartbeatArgs, Hello, HelloArgs, LeaveNotify, LeaveNotifyArgs,
-    MessageType, PlayerInput, PlayerInputArgs, Transform as FbTransform, Vec3 as FbVec3, Welcome,
-    WorldSnapshot,
+    CombatEvent, CombatEventArgs, DamageApply, Disconnect, Heartbeat, HeartbeatArgs, Hello,
+    HelloArgs, LeaveNotify, LeaveNotifyArgs, MessageType, PlayerInput, PlayerInputArgs,
+    Transform as FbTransform, Vec3 as FbVec3, Welcome, WorldSnapshot,
 };
 use skyrim_relive_server::wire;
 use tokio::net::UdpSocket;
@@ -21,6 +21,10 @@ async fn main() -> Result<()> {
     let mut force_bad_version = false;
     let mut keepalive_secs: u64 = 0;
     let mut send_leave = false;
+    // --attack <player_id>: every 1 s during keepalive, send a CombatEvent
+    // targeting that id with synthetic weapon stats. Used to validate
+    // server-side combat authority + DamageApply round-trip.
+    let mut attack_target: Option<u32> = None;
 
     let args: Vec<String> = std::env::args().skip(1).collect();
     let mut i = 0;
@@ -49,10 +53,19 @@ async fn main() -> Result<()> {
                 send_leave = true;
                 i += 1;
             }
+            "--attack" => {
+                attack_target = Some(
+                    args.get(i + 1)
+                        .context("--attack needs a target player_id")?
+                        .parse()?,
+                );
+                i += 2;
+            }
             "-h" | "--help" => {
                 println!(
                     "usage: echo-client [--name <name>] [--server host:port] \
-                     [--bad-version] [--keepalive <secs>] [--leave]"
+                     [--bad-version] [--keepalive <secs>] [--leave] \
+                     [--attack <target_player_id>]"
                 );
                 return Ok(());
             }
@@ -119,6 +132,8 @@ async fn main() -> Result<()> {
         let deadline = Instant::now() + Duration::from_secs(keepalive_secs);
         let mut hb_ticker = interval(Duration::from_secs(1));
         let mut input_ticker = interval(Duration::from_millis(50));
+        let mut attack_ticker = interval(Duration::from_secs(1));
+        let mut damage_received: u32 = 0;
         let mut snapshot_count: u64 = 0;
         let mut other_pids = std::collections::BTreeSet::<u32>::new();
         let mut last_seen_tick: u64 = 0;
@@ -138,6 +153,12 @@ async fn main() -> Result<()> {
                     #[allow(clippy::cast_precision_loss)]
                     let t = frame as f32 * 0.05;
                     send_player_input(&socket, t.cos() * 100.0, t.sin() * 100.0, 0.0, t).await?;
+                }
+                _ = attack_ticker.tick() => {
+                    if Instant::now() >= deadline { break; }
+                    if let Some(target) = attack_target {
+                        send_combat_event(&socket, target, 50.0, 100.0).await?;
+                    }
                 }
                 read = socket.recv(&mut buf) => {
                     let Ok(n) = read else { continue };
@@ -163,6 +184,17 @@ async fn main() -> Result<()> {
                                 }
                             }
                         }
+                        MessageType::DamageApply => {
+                            let d = flatbuffers::root::<DamageApply<'_>>(body)?;
+                            damage_received += 1;
+                            println!(
+                                "DamageApply: from player_id={} damage={:.1} stagger={} new_hp={:.1}",
+                                d.attacker_player_id(),
+                                d.damage(),
+                                d.stagger(),
+                                d.new_hp(),
+                            );
+                        }
                         _ => {}
                     }
                 }
@@ -170,6 +202,9 @@ async fn main() -> Result<()> {
         }
         if let Some((x, y, z)) = last_saw_other_pos {
             println!("last other-player pos seen: ({x:.1}, {y:.1}, {z:.1})");
+        }
+        if attack_target.is_some() {
+            println!("DamageApply messages received: {damage_received}");
         }
 
         // Lossy cast to f64 is fine — these counters never exceed ~2^32.
@@ -238,6 +273,37 @@ async fn send_player_input(socket: &UdpSocket, x: f32, y: f32, z: f32, yaw: f32)
     fbb.finish(input, None);
     let packet = wire::encode(MessageType::PlayerInput, fbb.finished_data());
     socket.send(&packet).await?;
+    Ok(())
+}
+
+async fn send_combat_event(
+    socket: &UdpSocket,
+    target_player_id: u32,
+    weapon_reach: f32,
+    weapon_base_damage: f32,
+) -> Result<()> {
+    let mut fbb = FlatBufferBuilder::with_capacity(64);
+    let now_ms = u64::try_from(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0),
+    )
+    .unwrap_or(0);
+    let evt = CombatEvent::create(
+        &mut fbb,
+        &CombatEventArgs {
+            target_player_id,
+            attack_type: 0,
+            weapon_reach,
+            weapon_base_damage,
+            client_time_ms: now_ms,
+        },
+    );
+    fbb.finish(evt, None);
+    let packet = wire::encode(MessageType::CombatEvent, fbb.finished_data());
+    socket.send(&packet).await?;
+    println!("sent: CombatEvent target={target_player_id} damage={weapon_base_damage}");
     Ok(())
 }
 

@@ -58,3 +58,25 @@ table WorldSnapshot {
     server_time_ms: uint64;
     players: [PlayerState];
 }
+
+// Phase 2.3 — combat. Client reports it landed an attack on a peer; server
+// validates (range, attack-rate clamp), applies damage to target's Health
+// component, and sends a DamageApply to the target.
+table CombatEvent {
+    target_player_id: uint32;     // peer the attacker hit; 0 = no specific target
+    attack_type: ubyte = 0;       // 0=light, 1=power, 2=bash
+    weapon_reach: float = 100;    // for server-side range check
+    weapon_base_damage: float = 0;// client-reported, server clamps
+    client_time_ms: uint64;
+}
+
+// Server's verdict on a hit. Sent to the target player's client; the
+// attacker's client sees the visual feedback via the target's animation
+// changes propagated through the next WorldSnapshot.
+table DamageApply {
+    attacker_player_id: uint32;
+    damage: float;                // post-validation damage actually applied
+    stagger: bool = false;        // target should play stagger animation
+    new_hp: float;                // target's HP after this hit
+    server_time_ms: uint64;
+}

@@ -24,11 +24,13 @@ enum MessageType : uint8_t {
   MessageType_Disconnect = 5,
   MessageType_PlayerInput = 16,
   MessageType_WorldSnapshot = 17,
+  MessageType_CombatEvent = 32,
+  MessageType_DamageApply = 33,
   MessageType_MIN = MessageType_Hello,
-  MessageType_MAX = MessageType_WorldSnapshot
+  MessageType_MAX = MessageType_DamageApply
 };
 
-inline const MessageType (&EnumValuesMessageType())[7] {
+inline const MessageType (&EnumValuesMessageType())[9] {
   static const MessageType values[] = {
     MessageType_Hello,
     MessageType_Welcome,
@@ -36,13 +38,15 @@ inline const MessageType (&EnumValuesMessageType())[7] {
     MessageType_LeaveNotify,
     MessageType_Disconnect,
     MessageType_PlayerInput,
-    MessageType_WorldSnapshot
+    MessageType_WorldSnapshot,
+    MessageType_CombatEvent,
+    MessageType_DamageApply
   };
   return values;
 }
 
 inline const char * const *EnumNamesMessageType() {
-  static const char * const names[18] = {
+  static const char * const names[34] = {
     "Hello",
     "Welcome",
     "Heartbeat",
@@ -60,13 +64,29 @@ inline const char * const *EnumNamesMessageType() {
     "",
     "PlayerInput",
     "WorldSnapshot",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "CombatEvent",
+    "DamageApply",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameMessageType(MessageType e) {
-  if (::flatbuffers::IsOutRange(e, MessageType_Hello, MessageType_WorldSnapshot)) return "";
+  if (::flatbuffers::IsOutRange(e, MessageType_Hello, MessageType_DamageApply)) return "";
   const size_t index = static_cast<size_t>(e) - static_cast<size_t>(MessageType_Hello);
   return EnumNamesMessageType()[index];
 }

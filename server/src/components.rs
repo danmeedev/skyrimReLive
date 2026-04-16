@@ -25,6 +25,9 @@ pub struct Player {
 pub struct Connection {
     pub addr: SocketAddr,
     pub last_heard: Instant,
+    /// When this connection's owner last landed a `CombatEvent`. Used for
+    /// rate-limiting attacks (anti-spam), not for damage cooldown logic.
+    pub last_attack_at: Option<Instant>,
 }
 
 #[derive(Component, Debug, Default, Clone, Copy)]
@@ -42,6 +45,23 @@ pub struct Velocity {
 /// animation-graph variables we replicate (`Speed`, `Direction`, `IsRunning`,
 /// `IsSprinting`, `IsSneaking`). Will grow as Phase 2 sub-steps add weapon
 /// and combat state.
+/// Phase 2.3 — combat HP for damage authority. Death/respawn arrives in
+/// a later sub-step; for now HP is informational and clamps at 0.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct Health {
+    pub current: f32,
+    pub max: f32,
+}
+
+impl Default for Health {
+    fn default() -> Self {
+        Self {
+            current: 100.0,
+            max: 100.0,
+        }
+    }
+}
+
 // Clippy flags >3 bools as a smell; here it's intentional — the struct
 // mirrors a fixed wire-format layout where each bool maps to a specific
 // animation graph variable. Bitfield/enum compression is an optimization

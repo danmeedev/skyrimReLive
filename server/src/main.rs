@@ -5,12 +5,15 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use anyhow::Result;
 use bevy_ecs::prelude::*;
 use flatbuffers::FlatBufferBuilder;
-use skyrim_relive_server::components::{AnimState, Connection, Player, Transform, Velocity};
+use skyrim_relive_server::components::{
+    AnimState, Connection, Health, Player, Transform, Velocity,
+};
 use skyrim_relive_server::config::Config;
 use skyrim_relive_server::proto::v1::{
-    Disconnect, DisconnectArgs, DisconnectCode, Hello, MessageType, PlayerInput,
-    PlayerState as FbPlayerState, PlayerStateArgs as FbPlayerStateArgs, Transform as FbTransform,
-    Vec3 as FbVec3, Welcome, WelcomeArgs, WorldSnapshot, WorldSnapshotArgs,
+    CombatEvent, DamageApply, DamageApplyArgs, Disconnect, DisconnectArgs, DisconnectCode, Hello,
+    MessageType, PlayerInput, PlayerState as FbPlayerState, PlayerStateArgs as FbPlayerStateArgs,
+    Transform as FbTransform, Vec3 as FbVec3, Welcome, WelcomeArgs, WorldSnapshot,
+    WorldSnapshotArgs,
 };
 use skyrim_relive_server::wire;
 use tokio::net::UdpSocket;
@@ -108,7 +111,11 @@ impl ServerState {
             MessageType::Heartbeat => self.handle_heartbeat(peer),
             MessageType::LeaveNotify => self.handle_leave(peer),
             MessageType::PlayerInput => self.handle_player_input(peer, body),
-            MessageType::Welcome | MessageType::Disconnect | MessageType::WorldSnapshot => {
+            MessageType::CombatEvent => self.handle_combat_event(peer, body).await,
+            MessageType::Welcome
+            | MessageType::Disconnect
+            | MessageType::WorldSnapshot
+            | MessageType::DamageApply => {
                 warn!(%peer, ?mt, "client sent server-only message; ignoring");
             }
             _ => warn!(%peer, ?mt, "unhandled message type"),
@@ -144,10 +151,12 @@ impl ServerState {
                 Connection {
                     addr: peer,
                     last_heard: Instant::now(),
+                    last_attack_at: None,
                 },
                 Transform::default(),
                 Velocity::default(),
                 AnimState::default(),
+                Health::default(),
             ))
             .id();
         self.addr_to_entity.insert(peer, entity);
@@ -233,6 +242,146 @@ impl ServerState {
         // Touch last_heard regardless — acts as heartbeat even when idle.
         if let Some(mut conn) = self.world.get_mut::<Connection>(entity) {
             conn.last_heard = Instant::now();
+        }
+    }
+
+    /// Phase 2.3 — server-authoritative combat. Client reports a hit on a
+    /// peer; server validates (rate-limit, range vs `weapon_reach`, target
+    /// exists), clamps damage, applies it, and sends `DamageApply` to the
+    /// target. Tightens H1 from Phase 1's "trust everything" baseline.
+    #[allow(clippy::too_many_lines)]
+    async fn handle_combat_event(&mut self, peer: SocketAddr, body: &[u8]) {
+        const MAX_DAMAGE: f32 = 200.0; // sanity clamp
+        const REACH_SLACK: f32 = 50.0; // forgive small lag-induced overruns
+        const STAGGER_THRESHOLD: f32 = 30.0;
+        const MIN_ATTACK_INTERVAL: Duration = Duration::from_millis(200); // 5 hits/sec max
+
+        let Some(&attacker_entity) = self.addr_to_entity.get(&peer) else {
+            warn!(%peer, "CombatEvent from unknown peer (no Hello?)");
+            return;
+        };
+
+        let event = match flatbuffers::root::<CombatEvent<'_>>(body) {
+            Ok(e) => e,
+            Err(e) => {
+                warn!(%peer, error = %e, "bad CombatEvent payload");
+                return;
+            }
+        };
+
+        // Rate-limit: reject if attacker is swinging too fast.
+        let now = Instant::now();
+        if let Some(mut conn) = self.world.get_mut::<Connection>(attacker_entity) {
+            if let Some(last) = conn.last_attack_at {
+                if now.duration_since(last) < MIN_ATTACK_INTERVAL {
+                    warn!(%peer, "attack rate-limited");
+                    return;
+                }
+            }
+            conn.last_attack_at = Some(now);
+        }
+
+        let target_id = event.target_player_id();
+        if target_id == 0 {
+            // Area attack with no specific target — Phase 2.3 only
+            // handles directed combat. Future sub-step adds AoE.
+            return;
+        }
+        // Reject self-attack. Won't happen via real plugin (TESHitEvent
+        // filters), but echo-client tests can hit it.
+        let attacker_pid = self
+            .world
+            .get::<Player>(attacker_entity)
+            .map_or(0, |p| p.id);
+        if target_id == attacker_pid {
+            warn!(%peer, target_id, "self-attack rejected");
+            return;
+        }
+
+        // Look up target entity by player_id. Linear scan over connections
+        // is fine for Phase 2 (8-player target); Phase 6 will index this.
+        let mut target_entity: Option<Entity> = None;
+        let mut target_addr: Option<SocketAddr> = None;
+        for (e, p, c) in self
+            .world
+            .query::<(Entity, &Player, &Connection)>()
+            .iter(&self.world)
+        {
+            if p.id == target_id {
+                target_entity = Some(e);
+                target_addr = Some(c.addr);
+                break;
+            }
+        }
+        let (Some(target_entity), Some(target_addr)) = (target_entity, target_addr) else {
+            warn!(%peer, target_id, "CombatEvent target not found");
+            return;
+        };
+
+        // Range check: Euclidean distance attacker→target vs claimed reach.
+        let attacker_pos = self.world.get::<Transform>(attacker_entity).map(|t| t.pos);
+        let target_pos = self.world.get::<Transform>(target_entity).map(|t| t.pos);
+        let (Some(a), Some(t)) = (attacker_pos, target_pos) else {
+            warn!(%peer, target_id, "missing transform on combatants");
+            return;
+        };
+        let dx = a[0] - t[0];
+        let dy = a[1] - t[1];
+        let dz = a[2] - t[2];
+        let dist = (dx * dx + dy * dy + dz * dz).sqrt();
+        let max_dist = event.weapon_reach() + REACH_SLACK;
+        if dist > max_dist {
+            warn!(
+                %peer,
+                target_id,
+                dist,
+                max_dist,
+                "CombatEvent rejected: out of range"
+            );
+            return;
+        }
+
+        // Damage clamp + Health update.
+        let raw_damage = event.weapon_base_damage();
+        let damage = raw_damage.clamp(0.0, MAX_DAMAGE);
+        let mut new_hp = 0.0;
+        if let Some(mut hp) = self.world.get_mut::<Health>(target_entity) {
+            hp.current = (hp.current - damage).max(0.0);
+            new_hp = hp.current;
+        }
+
+        let server_time_ms = u64::try_from(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_millis())
+                .unwrap_or(0),
+        )
+        .unwrap_or(0);
+
+        info!(
+            attacker = attacker_pid,
+            target = target_id,
+            damage,
+            new_hp,
+            "combat hit applied"
+        );
+
+        // Send DamageApply to the target's client.
+        let mut fbb = FlatBufferBuilder::with_capacity(64);
+        let dmg = DamageApply::create(
+            &mut fbb,
+            &DamageApplyArgs {
+                attacker_player_id: attacker_pid,
+                damage,
+                stagger: damage >= STAGGER_THRESHOLD,
+                new_hp,
+                server_time_ms,
+            },
+        );
+        fbb.finish(dmg, None);
+        let packet = wire::encode(MessageType::DamageApply, fbb.finished_data());
+        if let Err(e) = self.socket.send_to(&packet, target_addr).await {
+            warn!(peer = %target_addr, error = %e, "DamageApply send failed");
         }
     }
 

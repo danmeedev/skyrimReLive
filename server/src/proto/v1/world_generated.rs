@@ -1168,5 +1168,407 @@ pub mod skyrim_relive {
                 ds.finish()
             }
         }
+        pub enum CombatEventOffset {}
+        #[derive(Copy, Clone, PartialEq)]
+
+        pub struct CombatEvent<'a> {
+            pub _tab: ::flatbuffers::Table<'a>,
+        }
+
+        impl<'a> ::flatbuffers::Follow<'a> for CombatEvent<'a> {
+            type Inner = CombatEvent<'a>;
+            #[inline]
+            unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+                Self {
+                    _tab: unsafe { ::flatbuffers::Table::new(buf, loc) },
+                }
+            }
+        }
+
+        impl<'a> CombatEvent<'a> {
+            pub const VT_TARGET_PLAYER_ID: ::flatbuffers::VOffsetT = 4;
+            pub const VT_ATTACK_TYPE: ::flatbuffers::VOffsetT = 6;
+            pub const VT_WEAPON_REACH: ::flatbuffers::VOffsetT = 8;
+            pub const VT_WEAPON_BASE_DAMAGE: ::flatbuffers::VOffsetT = 10;
+            pub const VT_CLIENT_TIME_MS: ::flatbuffers::VOffsetT = 12;
+
+            #[inline]
+            pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+                CombatEvent { _tab: table }
+            }
+            #[allow(unused_mut)]
+            pub fn create<
+                'bldr: 'args,
+                'args: 'mut_bldr,
+                'mut_bldr,
+                A: ::flatbuffers::Allocator + 'bldr,
+            >(
+                _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+                args: &'args CombatEventArgs,
+            ) -> ::flatbuffers::WIPOffset<CombatEvent<'bldr>> {
+                let mut builder = CombatEventBuilder::new(_fbb);
+                builder.add_client_time_ms(args.client_time_ms);
+                builder.add_weapon_base_damage(args.weapon_base_damage);
+                builder.add_weapon_reach(args.weapon_reach);
+                builder.add_target_player_id(args.target_player_id);
+                builder.add_attack_type(args.attack_type);
+                builder.finish()
+            }
+
+            #[inline]
+            pub fn target_player_id(&self) -> u32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u32>(CombatEvent::VT_TARGET_PLAYER_ID, Some(0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn attack_type(&self) -> u8 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u8>(CombatEvent::VT_ATTACK_TYPE, Some(0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn weapon_reach(&self) -> f32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<f32>(CombatEvent::VT_WEAPON_REACH, Some(100.0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn weapon_base_damage(&self) -> f32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<f32>(CombatEvent::VT_WEAPON_BASE_DAMAGE, Some(0.0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn client_time_ms(&self) -> u64 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u64>(CombatEvent::VT_CLIENT_TIME_MS, Some(0))
+                        .unwrap()
+                }
+            }
+        }
+
+        impl ::flatbuffers::Verifiable for CombatEvent<'_> {
+            #[inline]
+            fn run_verifier(
+                v: &mut ::flatbuffers::Verifier,
+                pos: usize,
+            ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+                v.visit_table(pos)?
+                    .visit_field::<u32>("target_player_id", Self::VT_TARGET_PLAYER_ID, false)?
+                    .visit_field::<u8>("attack_type", Self::VT_ATTACK_TYPE, false)?
+                    .visit_field::<f32>("weapon_reach", Self::VT_WEAPON_REACH, false)?
+                    .visit_field::<f32>("weapon_base_damage", Self::VT_WEAPON_BASE_DAMAGE, false)?
+                    .visit_field::<u64>("client_time_ms", Self::VT_CLIENT_TIME_MS, false)?
+                    .finish();
+                Ok(())
+            }
+        }
+        pub struct CombatEventArgs {
+            pub target_player_id: u32,
+            pub attack_type: u8,
+            pub weapon_reach: f32,
+            pub weapon_base_damage: f32,
+            pub client_time_ms: u64,
+        }
+        impl<'a> Default for CombatEventArgs {
+            #[inline]
+            fn default() -> Self {
+                CombatEventArgs {
+                    target_player_id: 0,
+                    attack_type: 0,
+                    weapon_reach: 100.0,
+                    weapon_base_damage: 0.0,
+                    client_time_ms: 0,
+                }
+            }
+        }
+
+        pub struct CombatEventBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+            fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+        }
+        impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> CombatEventBuilder<'a, 'b, A> {
+            #[inline]
+            pub fn add_target_player_id(&mut self, target_player_id: u32) {
+                self.fbb_
+                    .push_slot::<u32>(CombatEvent::VT_TARGET_PLAYER_ID, target_player_id, 0);
+            }
+            #[inline]
+            pub fn add_attack_type(&mut self, attack_type: u8) {
+                self.fbb_
+                    .push_slot::<u8>(CombatEvent::VT_ATTACK_TYPE, attack_type, 0);
+            }
+            #[inline]
+            pub fn add_weapon_reach(&mut self, weapon_reach: f32) {
+                self.fbb_
+                    .push_slot::<f32>(CombatEvent::VT_WEAPON_REACH, weapon_reach, 100.0);
+            }
+            #[inline]
+            pub fn add_weapon_base_damage(&mut self, weapon_base_damage: f32) {
+                self.fbb_.push_slot::<f32>(
+                    CombatEvent::VT_WEAPON_BASE_DAMAGE,
+                    weapon_base_damage,
+                    0.0,
+                );
+            }
+            #[inline]
+            pub fn add_client_time_ms(&mut self, client_time_ms: u64) {
+                self.fbb_
+                    .push_slot::<u64>(CombatEvent::VT_CLIENT_TIME_MS, client_time_ms, 0);
+            }
+            #[inline]
+            pub fn new(
+                _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            ) -> CombatEventBuilder<'a, 'b, A> {
+                let start = _fbb.start_table();
+                CombatEventBuilder {
+                    fbb_: _fbb,
+                    start_: start,
+                }
+            }
+            #[inline]
+            pub fn finish(self) -> ::flatbuffers::WIPOffset<CombatEvent<'a>> {
+                let o = self.fbb_.end_table(self.start_);
+                ::flatbuffers::WIPOffset::new(o.value())
+            }
+        }
+
+        impl ::core::fmt::Debug for CombatEvent<'_> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                let mut ds = f.debug_struct("CombatEvent");
+                ds.field("target_player_id", &self.target_player_id());
+                ds.field("attack_type", &self.attack_type());
+                ds.field("weapon_reach", &self.weapon_reach());
+                ds.field("weapon_base_damage", &self.weapon_base_damage());
+                ds.field("client_time_ms", &self.client_time_ms());
+                ds.finish()
+            }
+        }
+        pub enum DamageApplyOffset {}
+        #[derive(Copy, Clone, PartialEq)]
+
+        pub struct DamageApply<'a> {
+            pub _tab: ::flatbuffers::Table<'a>,
+        }
+
+        impl<'a> ::flatbuffers::Follow<'a> for DamageApply<'a> {
+            type Inner = DamageApply<'a>;
+            #[inline]
+            unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+                Self {
+                    _tab: unsafe { ::flatbuffers::Table::new(buf, loc) },
+                }
+            }
+        }
+
+        impl<'a> DamageApply<'a> {
+            pub const VT_ATTACKER_PLAYER_ID: ::flatbuffers::VOffsetT = 4;
+            pub const VT_DAMAGE: ::flatbuffers::VOffsetT = 6;
+            pub const VT_STAGGER: ::flatbuffers::VOffsetT = 8;
+            pub const VT_NEW_HP: ::flatbuffers::VOffsetT = 10;
+            pub const VT_SERVER_TIME_MS: ::flatbuffers::VOffsetT = 12;
+
+            #[inline]
+            pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+                DamageApply { _tab: table }
+            }
+            #[allow(unused_mut)]
+            pub fn create<
+                'bldr: 'args,
+                'args: 'mut_bldr,
+                'mut_bldr,
+                A: ::flatbuffers::Allocator + 'bldr,
+            >(
+                _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+                args: &'args DamageApplyArgs,
+            ) -> ::flatbuffers::WIPOffset<DamageApply<'bldr>> {
+                let mut builder = DamageApplyBuilder::new(_fbb);
+                builder.add_server_time_ms(args.server_time_ms);
+                builder.add_new_hp(args.new_hp);
+                builder.add_damage(args.damage);
+                builder.add_attacker_player_id(args.attacker_player_id);
+                builder.add_stagger(args.stagger);
+                builder.finish()
+            }
+
+            #[inline]
+            pub fn attacker_player_id(&self) -> u32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u32>(DamageApply::VT_ATTACKER_PLAYER_ID, Some(0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn damage(&self) -> f32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<f32>(DamageApply::VT_DAMAGE, Some(0.0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn stagger(&self) -> bool {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<bool>(DamageApply::VT_STAGGER, Some(false))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn new_hp(&self) -> f32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<f32>(DamageApply::VT_NEW_HP, Some(0.0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn server_time_ms(&self) -> u64 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u64>(DamageApply::VT_SERVER_TIME_MS, Some(0))
+                        .unwrap()
+                }
+            }
+        }
+
+        impl ::flatbuffers::Verifiable for DamageApply<'_> {
+            #[inline]
+            fn run_verifier(
+                v: &mut ::flatbuffers::Verifier,
+                pos: usize,
+            ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+                v.visit_table(pos)?
+                    .visit_field::<u32>("attacker_player_id", Self::VT_ATTACKER_PLAYER_ID, false)?
+                    .visit_field::<f32>("damage", Self::VT_DAMAGE, false)?
+                    .visit_field::<bool>("stagger", Self::VT_STAGGER, false)?
+                    .visit_field::<f32>("new_hp", Self::VT_NEW_HP, false)?
+                    .visit_field::<u64>("server_time_ms", Self::VT_SERVER_TIME_MS, false)?
+                    .finish();
+                Ok(())
+            }
+        }
+        pub struct DamageApplyArgs {
+            pub attacker_player_id: u32,
+            pub damage: f32,
+            pub stagger: bool,
+            pub new_hp: f32,
+            pub server_time_ms: u64,
+        }
+        impl<'a> Default for DamageApplyArgs {
+            #[inline]
+            fn default() -> Self {
+                DamageApplyArgs {
+                    attacker_player_id: 0,
+                    damage: 0.0,
+                    stagger: false,
+                    new_hp: 0.0,
+                    server_time_ms: 0,
+                }
+            }
+        }
+
+        pub struct DamageApplyBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+            fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+        }
+        impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> DamageApplyBuilder<'a, 'b, A> {
+            #[inline]
+            pub fn add_attacker_player_id(&mut self, attacker_player_id: u32) {
+                self.fbb_.push_slot::<u32>(
+                    DamageApply::VT_ATTACKER_PLAYER_ID,
+                    attacker_player_id,
+                    0,
+                );
+            }
+            #[inline]
+            pub fn add_damage(&mut self, damage: f32) {
+                self.fbb_
+                    .push_slot::<f32>(DamageApply::VT_DAMAGE, damage, 0.0);
+            }
+            #[inline]
+            pub fn add_stagger(&mut self, stagger: bool) {
+                self.fbb_
+                    .push_slot::<bool>(DamageApply::VT_STAGGER, stagger, false);
+            }
+            #[inline]
+            pub fn add_new_hp(&mut self, new_hp: f32) {
+                self.fbb_
+                    .push_slot::<f32>(DamageApply::VT_NEW_HP, new_hp, 0.0);
+            }
+            #[inline]
+            pub fn add_server_time_ms(&mut self, server_time_ms: u64) {
+                self.fbb_
+                    .push_slot::<u64>(DamageApply::VT_SERVER_TIME_MS, server_time_ms, 0);
+            }
+            #[inline]
+            pub fn new(
+                _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            ) -> DamageApplyBuilder<'a, 'b, A> {
+                let start = _fbb.start_table();
+                DamageApplyBuilder {
+                    fbb_: _fbb,
+                    start_: start,
+                }
+            }
+            #[inline]
+            pub fn finish(self) -> ::flatbuffers::WIPOffset<DamageApply<'a>> {
+                let o = self.fbb_.end_table(self.start_);
+                ::flatbuffers::WIPOffset::new(o.value())
+            }
+        }
+
+        impl ::core::fmt::Debug for DamageApply<'_> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                let mut ds = f.debug_struct("DamageApply");
+                ds.field("attacker_player_id", &self.attacker_player_id());
+                ds.field("damage", &self.damage());
+                ds.field("stagger", &self.stagger());
+                ds.field("new_hp", &self.new_hp());
+                ds.field("server_time_ms", &self.server_time_ms());
+                ds.finish()
+            }
+        }
     } // pub mod v1
 } // pub mod skyrim_relive

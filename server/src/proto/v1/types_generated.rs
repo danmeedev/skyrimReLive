@@ -31,13 +31,13 @@ pub mod skyrim_relive {
             since = "2.0.0",
             note = "Use associated constants instead. This will no longer be generated in 2021."
         )]
-        pub const ENUM_MAX_MESSAGE_TYPE: u8 = 17;
+        pub const ENUM_MAX_MESSAGE_TYPE: u8 = 33;
         #[deprecated(
             since = "2.0.0",
             note = "Use associated constants instead. This will no longer be generated in 2021."
         )]
         #[allow(non_camel_case_types)]
-        pub const ENUM_VALUES_MESSAGE_TYPE: [MessageType; 7] = [
+        pub const ENUM_VALUES_MESSAGE_TYPE: [MessageType; 9] = [
             MessageType::Hello,
             MessageType::Welcome,
             MessageType::Heartbeat,
@@ -45,6 +45,8 @@ pub mod skyrim_relive {
             MessageType::Disconnect,
             MessageType::PlayerInput,
             MessageType::WorldSnapshot,
+            MessageType::CombatEvent,
+            MessageType::DamageApply,
         ];
 
         #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -59,9 +61,11 @@ pub mod skyrim_relive {
             pub const Disconnect: Self = Self(5);
             pub const PlayerInput: Self = Self(16);
             pub const WorldSnapshot: Self = Self(17);
+            pub const CombatEvent: Self = Self(32);
+            pub const DamageApply: Self = Self(33);
 
             pub const ENUM_MIN: u8 = 1;
-            pub const ENUM_MAX: u8 = 17;
+            pub const ENUM_MAX: u8 = 33;
             pub const ENUM_VALUES: &'static [Self] = &[
                 Self::Hello,
                 Self::Welcome,
@@ -70,6 +74,8 @@ pub mod skyrim_relive {
                 Self::Disconnect,
                 Self::PlayerInput,
                 Self::WorldSnapshot,
+                Self::CombatEvent,
+                Self::DamageApply,
             ];
             /// Returns the variant's name or "" if unknown.
             pub fn variant_name(self) -> Option<&'static str> {
@@ -81,6 +87,8 @@ pub mod skyrim_relive {
                     Self::Disconnect => Some("Disconnect"),
                     Self::PlayerInput => Some("PlayerInput"),
                     Self::WorldSnapshot => Some("WorldSnapshot"),
+                    Self::CombatEvent => Some("CombatEvent"),
+                    Self::DamageApply => Some("DamageApply"),
                     _ => None,
                 }
             }
