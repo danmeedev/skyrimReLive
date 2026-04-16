@@ -6,6 +6,7 @@ $ErrorActionPreference = 'Stop'
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $BundleRoot = Split-Path -Parent $ScriptDir
 $SrcDir = Join-Path $BundleRoot 'files'
+$DownloadsDir = Join-Path $BundleRoot 'downloads'
 $HostAddr = '{{HOST_IP}}'
 $HostPort = 27015
 $HostName = '{{HOST_NAME}}'
@@ -29,6 +30,108 @@ function Pause-Exit($code = 0) {
 function Ask($question) {
     $a = Read-Host "$question [Y/n]"
     return ($a -eq '' -or $a -match '^[Yy]')
+}
+
+# Locate (or install) 7-Zip — needed to extract SKSE's .7z archive.
+function Get-SevenZip {
+    foreach ($p in 'C:\Program Files\7-Zip\7z.exe',
+                   'C:\Program Files (x86)\7-Zip\7z.exe') {
+        if (Test-Path $p) { return $p }
+    }
+    Warn '7-Zip not installed (needed to extract SKSE .7z archives).'
+    if (Ask 'Install 7-Zip via winget now?') {
+        try {
+            winget install --id 7zip.7zip -e `
+                --accept-package-agreements --accept-source-agreements | Out-Null
+        } catch {
+            Warn "winget install failed: $_"
+            return $null
+        }
+        foreach ($p in 'C:\Program Files\7-Zip\7z.exe',
+                       'C:\Program Files (x86)\7-Zip\7z.exe') {
+            if (Test-Path $p) { return $p }
+        }
+    }
+    return $null
+}
+
+# If a fresh-from-Nexus archive (or pre-extracted folder) is sitting in
+# the bundle's downloads/ directory, this auto-installs it. Returns true
+# if files were placed; false if we can't find anything.
+function Try-AutoInstall-FromDownloads {
+    param(
+        [string]$ArchivePattern,    # e.g. '^skse64.*\.(7z|zip)$'
+        [string]$NeedleFile,        # e.g. 'skse64_loader.exe' (used to locate the right subdir)
+        [string]$DestDir,           # where to copy
+        [string[]]$FilesToCopy,     # filename patterns to copy (e.g. 'skse64_loader.exe', 'skse64_*.dll')
+        [string]$Label              # display name e.g. 'SKSE64'
+    )
+    if (-not (Test-Path $DownloadsDir)) { return $false }
+
+    # 1) Pre-extracted folder containing $NeedleFile?
+    $srcDir = $null
+    Get-ChildItem -Path $DownloadsDir -Directory -ErrorAction SilentlyContinue |
+        ForEach-Object {
+            if (-not $srcDir) {
+                $hit = Get-ChildItem -Path $_.FullName -Recurse -Filter $NeedleFile `
+                       -ErrorAction SilentlyContinue | Select-Object -First 1
+                if ($hit) { $srcDir = Split-Path $hit.FullName -Parent }
+            }
+        }
+
+    # 2) Else look for an archive matching the pattern.
+    if (-not $srcDir) {
+        $archive = Get-ChildItem -Path $DownloadsDir -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match $ArchivePattern } | Select-Object -First 1
+        if ($archive) {
+            $extractDir = Join-Path $DownloadsDir ("_extracted_" + $archive.BaseName)
+            if (Test-Path $extractDir) { Remove-Item -Recurse -Force $extractDir }
+            New-Item -ItemType Directory -Force -Path $extractDir | Out-Null
+            Step "Extracting $($archive.Name)..."
+            if ($archive.Extension -eq '.zip') {
+                try {
+                    Expand-Archive -Path $archive.FullName -DestinationPath $extractDir -Force
+                } catch {
+                    Warn "Expand-Archive failed: $_"
+                    return $false
+                }
+            } else {
+                $sevenZip = Get-SevenZip
+                if (-not $sevenZip) {
+                    Warn "Can't extract $($archive.Name) without 7-Zip."
+                    return $false
+                }
+                & $sevenZip x -y -o"$extractDir" $archive.FullName | Out-Null
+                if ($LASTEXITCODE -ne 0) {
+                    Warn "7-Zip extraction failed (exit $LASTEXITCODE)"
+                    return $false
+                }
+            }
+            $hit = Get-ChildItem -Path $extractDir -Recurse -Filter $NeedleFile `
+                   -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($hit) { $srcDir = Split-Path $hit.FullName -Parent }
+        }
+    }
+
+    if (-not $srcDir) { return $false }
+
+    # Copy the files matching FilesToCopy patterns.
+    Step "Installing $Label from $srcDir"
+    New-Item -ItemType Directory -Force -Path $DestDir | Out-Null
+    $copied = 0
+    foreach ($pattern in $FilesToCopy) {
+        Get-ChildItem -Path $srcDir -Filter $pattern -ErrorAction SilentlyContinue |
+            ForEach-Object {
+                Copy-Item -Force $_.FullName $DestDir
+                $copied++
+            }
+    }
+    if ($copied -eq 0) {
+        Warn "Found $Label source dir but no matching files to copy."
+        return $false
+    }
+    Ok "$Label installed automatically ($copied file(s))"
+    return $true
 }
 
 Banner 'SkyrimReLive - friend install'
@@ -81,46 +184,72 @@ if ($skyrimVer -ne '1.6.1170.0') {
 Step 'Checking SKSE64...'
 $skseLoader = Join-Path $SkyrimRoot 'skse64_loader.exe'
 if (-not (Test-Path $skseLoader)) {
-    Warn 'SKSE64 not found.'
-    Write-Host ''
-    Write-Host 'You need to install SKSE64 2.2.6:' -ForegroundColor Yellow
-    Write-Host '  1. Click "OK" below to open the SKSE download page'
-    Write-Host '  2. Download "Current Anniversary Edition build 2.2.6"'
-    Write-Host '  3. Open the .7z file (use 7-Zip if needed)'
-    Write-Host '  4. Copy these files from the archive root into:'
-    Write-Host "       $SkyrimRoot"
-    Write-Host '         - skse64_loader.exe'
-    Write-Host '         - skse64_1_6_1170.dll'
-    Write-Host '         - any other skse64_*.dll files'
-    Write-Host ''
-    Write-Host '  5. Then re-run this installer.'
-    Write-Host ''
-    Read-Host 'Press Enter to open the SKSE download page'
-    Start-Process 'https://skse.silverlock.org/'
-    Pause-Exit 1
+    # First try the downloads/ shortcut.
+    $auto = Try-AutoInstall-FromDownloads `
+        -ArchivePattern '^skse64.*\.(7z|zip)$' `
+        -NeedleFile     'skse64_loader.exe' `
+        -DestDir        $SkyrimRoot `
+        -FilesToCopy    @('skse64_loader.exe', 'skse64_*.dll') `
+        -Label          'SKSE64'
+    if (-not $auto) {
+        Warn 'SKSE64 not found and no SKSE archive in downloads/.'
+        Write-Host ''
+        Write-Host 'Two options:' -ForegroundColor Yellow
+        Write-Host '  EASY: Drop the SKSE 7z into the bundle''s downloads\ folder,'
+        Write-Host '        then re-run this installer. It will extract and place it.'
+        Write-Host ''
+        Write-Host '  Manual:'
+        Write-Host '    1. Click "OK" below to open the SKSE download page'
+        Write-Host '    2. Download "Current Anniversary Edition build 2.2.6"'
+        Write-Host '    3. Open the .7z file (use 7-Zip if needed)'
+        Write-Host '    4. Copy these files from the archive root into:'
+        Write-Host "         $SkyrimRoot"
+        Write-Host '           - skse64_loader.exe'
+        Write-Host '           - skse64_1_6_1170.dll'
+        Write-Host '           - any other skse64_*.dll files'
+        Write-Host '    5. Then re-run this installer.'
+        Write-Host ''
+        Read-Host 'Press Enter to open the SKSE download page'
+        Start-Process 'https://skse.silverlock.org/'
+        Pause-Exit 1
+    }
 }
 Ok 'SKSE64 installed'
 
 # ---- 2b. Address Library --------------------------------------------------
 Step 'Checking Address Library...'
-$alFile = Join-Path $SkyrimRoot 'Data\SKSE\Plugins\versionlib-1-6-1170-0.bin'
+$pluginsDir = Join-Path $SkyrimRoot 'Data\SKSE\Plugins'
+$alFile = Join-Path $pluginsDir 'versionlib-1-6-1170-0.bin'
 if (-not (Test-Path $alFile)) {
-    Warn 'Address Library not found.'
-    Write-Host ''
-    Write-Host 'You need Address Library for SKSE Plugins (free Nexus account required):' -ForegroundColor Yellow
-    Write-Host '  1. Click "OK" below to open the Nexus page'
-    Write-Host '  2. Sign in (free account works)'
-    Write-Host '  3. Download "All in one (all game versions)"'
-    Write-Host '  4. Open the .zip / .7z'
-    Write-Host '  5. Inside, navigate to SKSE\Plugins\'
-    Write-Host '  6. Copy every "versionlib-1-6-*.bin" file into:'
-    Write-Host "       $(Join-Path $SkyrimRoot 'Data\SKSE\Plugins')"
-    Write-Host ''
-    Write-Host '  7. Then re-run this installer.'
-    Write-Host ''
-    Read-Host 'Press Enter to open the Nexus page'
-    Start-Process 'https://www.nexusmods.com/skyrimspecialedition/mods/32444?tab=files'
-    Pause-Exit 1
+    # Try the downloads/ shortcut. Address Library archives have these
+    # bins under SKSE\Plugins\ inside the zip; we copy them all.
+    $auto = Try-AutoInstall-FromDownloads `
+        -ArchivePattern '32444|address.*lib|versionlib' `
+        -NeedleFile     'versionlib-1-6-1170-0.bin' `
+        -DestDir        $pluginsDir `
+        -FilesToCopy    @('versionlib-1-6-*.bin', 'version-1-5-*.bin') `
+        -Label          'Address Library'
+    if (-not $auto) {
+        Warn 'Address Library not found and no archive in downloads/.'
+        Write-Host ''
+        Write-Host 'Two options:' -ForegroundColor Yellow
+        Write-Host '  EASY: Drop the Nexus zip into the bundle''s downloads\ folder,'
+        Write-Host '        then re-run this installer. It will extract and place it.'
+        Write-Host ''
+        Write-Host '  Manual:'
+        Write-Host '    1. Click "OK" below to open the Nexus page'
+        Write-Host '    2. Sign in (free account works)'
+        Write-Host '    3. Download "All in one (all game versions)"'
+        Write-Host '    4. Open the .zip / .7z'
+        Write-Host '    5. Inside, navigate to SKSE\Plugins\'
+        Write-Host '    6. Copy every "versionlib-1-6-*.bin" file into:'
+        Write-Host "         $pluginsDir"
+        Write-Host '    7. Then re-run this installer.'
+        Write-Host ''
+        Read-Host 'Press Enter to open the Nexus page'
+        Start-Process 'https://www.nexusmods.com/skyrimspecialedition/mods/32444?tab=files'
+        Pause-Exit 1
+    }
 }
 Ok 'Address Library installed'
 

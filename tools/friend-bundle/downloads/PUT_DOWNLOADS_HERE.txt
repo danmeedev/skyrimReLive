@@ -1,0 +1,31 @@
+PUT YOUR SKSE AND ADDRESS LIBRARY DOWNLOADS IN THIS FOLDER
+============================================================
+
+If you put the right files here BEFORE running INSTALL.bat, the
+installer will set them up for you automatically. No manual extracting,
+no copying files to specific folders.
+
+What to put here
+----------------
+
+1) SKSE64
+     Download from: https://skse.silverlock.org/
+     Pick: "Current Anniversary Edition build 2.2.6"
+     File:   skse64_2_02_06.7z   (about 3 MB)
+     Drop the .7z here (don't extract it — the installer will).
+
+2) Address Library
+     Download from: https://www.nexusmods.com/skyrimspecialedition/mods/32444
+     (Free Nexus account required.)
+     Pick: "All in one (all game versions)"
+     File:   "All in one (all game versions)-32444-X-Y.zip"
+     Drop the .zip here (don't extract it — the installer will).
+
+That's it.
+
+If you already extracted the archives somewhere, you can also drop the
+*extracted* folders into this folder — the installer detects either way.
+
+If you don't put anything here, the installer falls back to opening the
+download pages in your browser and walking you through it the manual
+way.

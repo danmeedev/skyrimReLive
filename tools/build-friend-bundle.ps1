@@ -81,7 +81,7 @@ Copy-Item -Recurse -Force (Join-Path $tmplRoot '*') $bundleDir
 Step 'Substituting placeholders ({{HOST_IP}}, {{HOST_NAME}})'
 Get-ChildItem -Recurse -File -Path $bundleDir | ForEach-Object {
     # Skip binary files (DLL, etc.) by extension
-    if ($_.Extension -in '.dll', '.exe', '.bin', '.zip') { return }
+    if ($_.Extension -in '.dll', '.exe', '.bin', '.zip', '.7z') { return }
     $content = Get-Content -Raw -Encoding UTF8 $_.FullName
     if ($content -match '\{\{HOST_IP\}\}|\{\{HOST_NAME\}\}') {
         $new = $content -replace '\{\{HOST_IP\}\}', $HostIp `

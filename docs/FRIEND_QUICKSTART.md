@@ -46,10 +46,17 @@ instead. If you want to contribute code, see [`CONTRIBUTING.md`](../CONTRIBUTING
    files/
    scripts/
    ```
-2. **Double-click `INSTALL.bat`**. The installer walks you through the
-   rest: it'll detect your Skyrim install, check for SKSE / Address
-   Library / Tailscale, open browser tabs to download anything missing,
-   then deploy the plugin.
+2. **(Optional but recommended) Drop your SKSE and Address Library
+   downloads into the `downloads/` folder** before running the installer:
+   - SKSE 2.2.6 `.7z` from <https://skse.silverlock.org/>
+   - "All in one (all game versions)" `.zip` from Nexus mod 32444
+   - Drop the **archives** as-is — the installer extracts them. This
+     skips the manual "navigate the archive, copy these specific files"
+     step.
+3. **Double-click `INSTALL.bat`**. The installer walks you through the
+   rest: it auto-installs anything you placed in `downloads/`, opens
+   browser tabs for anything missing, deploys the plugin, and probes
+   the host's server.
 3. Once you see "Install complete!", **double-click `LAUNCH.bat`** to
    play. Load any save, press `~` in-game, type `rl status`. You should
    see `state=connected ...`.

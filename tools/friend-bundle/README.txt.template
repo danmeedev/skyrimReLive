@@ -23,10 +23,37 @@ What's in this package
     SkyrimReLive.dll      The plugin DLL
     SkyrimReLive.toml     Plugin config (preconfigured for {{HOST_NAME}}'s server: {{HOST_IP}})
 
+  downloads\
+    PUT_DOWNLOADS_HERE.txt   Read this. Drop the SKSE .7z and Address
+                             Library .zip here BEFORE running INSTALL.bat
+                             — the installer extracts and places them
+                             for you automatically.
+
   scripts\
     install.ps1           Installer logic (called by INSTALL.bat)
     launch.ps1            Launcher (called by LAUNCH.bat)
     uninstall.ps1         Uninstaller (called by UNINSTALL.bat)
+
+
+Tip: skip the "open browser, find files, copy by hand" step
+-----------------------------------------------------------
+
+The installer can do the SKSE and Address Library install for you if you
+drop their downloaded archives into the  downloads\  folder BEFORE you
+run INSTALL.bat.
+
+  1. Download SKSE 2.2.6 (.7z) from https://skse.silverlock.org/
+  2. Download "All in one (all game versions)" zip from
+     https://www.nexusmods.com/skyrimspecialedition/mods/32444
+  3. Drop both files (NOT extracted, just the original archive) into
+     this bundle's  downloads\  folder.
+  4. Run INSTALL.bat. It detects them and extracts/places them
+     automatically. (It will install 7-Zip via winget if needed to
+     handle the .7z.)
+
+If you skip this and run INSTALL.bat without the downloads, it falls
+back to opening the download pages and walking you through the manual
+copy-paste path.
 
 
 What you'll need
