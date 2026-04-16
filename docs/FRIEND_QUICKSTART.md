@@ -267,8 +267,10 @@ into Discord/email.
 - **You'll see your friend** as a ghost actor in the same Skyrim cell.
 - They'll **walk, run, sneak** in real time as you watch.
 - They'll **draw and sheath weapons** and you'll see the animations.
-- **Combat damage** is partially implemented (server-side authority works;
-  in-game hit detection is being worked on).
+- **Combat damage** lands hits between players: swing your weapon at
+  another player and the server validates the hit, applies damage, and
+  tells the target's client to play a stagger animation when it's a
+  heavy blow.
 - It's all **open source** (Apache-2.0). You can read every line of the
   plugin DLL's source code in this repo.
 

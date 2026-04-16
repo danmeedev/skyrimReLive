@@ -21,19 +21,19 @@ The phased roadmap, in plain language:
 
 The architecture is server-authoritative from day one specifically so the small-group story doesn't make the large-group story impossible later. Every design decision is documented as a proposal in the GitHub repo, peer-reviewable, with the trade-offs spelled out.
 
-## What works today (Phase 1 + Phase 2 steps 2.1 & 2.2)
+## What works today (Phase 1 + Phase 2 steps 2.1, 2.2 & 2.3)
 
 - **Connect to a server** by entering its address in `SkyrimReLive.toml` and loading any save.
 - **See other players** in the same cell as ghost actors. They appear, move, and despawn on disconnect.
 - **Watch them walk, run, sneak** — locomotion animations are synchronized, not just position.
 - **Watch them draw and sheath weapons** — combat stance is mirrored across clients.
+- **Hit each other in melee** — swing your sword at another player and it actually lands. The server validates each swing's range and rate, applies damage, and the target's client plays a stagger when the blow is heavy. Server-authoritative so no client can fake hits.
 - **In-game console commands** for everything: `rl status` to see what's happening, `rl connect`/`disconnect` to control the link, `rl cell` to pin replication to one cell, `rl demo` to spawn a synthetic ghost for solo testing.
 - **Smooth motion** via 100 ms snapshot interpolation — ghosts glide rather than teleport between updates.
 - **Self-hosted networking** that just works: Tailscale for friend groups (zero port-forwarding), IPv6 direct, port-forwarding, or cloud VPS. Pick whichever your network situation allows.
 
 ## What's coming (next few releases)
 
-- **Combat that actually does damage** (Phase 2.3) — server validates the swing, applies the hit, the target's client plays the stagger. No more swinging through each other.
 - **Anti-cheat basics** (Phase 2.4) — server-side teleport detection, speed clamps. Phase 1 trusts the client too much; Phase 2 starts tightening.
 - **Aim direction** (Phase 2.5) — pitch replication so people can see where you're looking, prep for ranged combat.
 - **Cell transitions** (Phase 3) — walk into Dragonsreach together, not just stand outside.

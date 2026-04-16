@@ -69,8 +69,14 @@ Per accepted proposal `docs/proposals/0002-phase-2-animation-combat.md`.
   slack); clamps damage; tracks Health component per player; sends
   DamageApply with stagger flag (≥30 damage). Echo-client `--attack`
   flag exercises the path. T2 verified end-to-end.
-- [ ] Step 2.3b: plugin combat hook (TESHitEvent → CombatEvent send;
-  DamageApply → local stagger animation playback)
+- [x] **Step 2.3b: plugin combat hook.** BSTEventSink<TESHitEvent>
+  installed at kPostLoadGame. Local-player melee hits on a known ghost
+  ship a CombatEvent with classified attack type (light/power/bash),
+  weapon reach, and base damage; hits on NPCs / unknown actors are
+  dropped. Incoming DamageApply schedules a main-thread task that fires
+  staggerStart on the player's animation graph (when the server flagged
+  damage ≥ 30) and prints a console hit summary. Sink is idempotent so
+  reconnect cycles don't stack subscriptions.
 - [ ] Step 2.4: server-side transform validation (anti-teleport / speedhack)
 - [ ] Step 2.5: pitch replication + ranged combat prep
 

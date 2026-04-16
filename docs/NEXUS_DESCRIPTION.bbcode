@@ -9,8 +9,8 @@ Connect with a friend (or a small group) and see each other walking, running, sn
 
 This is a Phase 2 alpha. Things work, but expect rough edges. Specifically:
 [list]
-[*]Position, locomotion animation, and weapon draw/sheath are synced.
-[*]Combat damage, NPC sync, persistence, and accounts are NOT in yet.
+[*]Position, locomotion animation, weapon draw/sheath, and melee combat damage between players are synced.
+[*]NPC sync, persistence, ranged/spell combat, and accounts are NOT in yet.
 [*]Other players currently appear as a clone of your own character (placeholder ghost).
 [*]No public server exists. You and your friend host one yourselves.
 [*]Crashes are possible. Save often. Don't use it on a save you care about.
@@ -30,6 +30,7 @@ If that doesn't put you off, read on.
 [*][b]See another player[/b] in the same cell as a ghost actor.
 [*][b]Watch them move[/b] - position is replicated at 60 Hz client to server, 20 Hz server to client, with 100 ms snapshot interpolation for smooth motion.
 [*][b]Watch them animate[/b] - walk/run/sneak transitions, weapon draw/sheath, combat stance.
+[*][b]Melee combat between players[/b] - server validates each swing's range and rate, applies damage, and the target's client plays a stagger when the blow is heavy. Server-authoritative so no client can claim a hit it didn't make.
 [*][b]In-game console commands[/b] (press [b]~[/b]):
 [list]
 [*][b]rl status[/b] - connection state, ghosts, packet counters, your position
@@ -44,7 +45,7 @@ If that doesn't put you off, read on.
 
 [size=4][b]What it does NOT do yet[/b][/size]
 [list]
-[*]No damage / combat outcomes are replicated. You can swing at each other, but no hits register.
+[*]Only melee hits register. Bows, spells, and shouts don't deal cross-player damage yet.
 [*]No NPC sync. Your bandit will not be your friend's bandit.
 [*]No quest sync, no inventory sync, no equipment-appearance sync.
 [*]No persistence. Each session is independent.

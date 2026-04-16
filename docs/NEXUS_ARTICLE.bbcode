@@ -23,13 +23,14 @@ The phased roadmap, in plain language:
 
 The architecture is server-authoritative from day one specifically so the small-group story doesn't make the large-group story impossible later. Every design decision is documented as a proposal in the GitHub repo, peer-reviewable, with the trade-offs spelled out.
 
-[size=4][b]What works today (Phase 1 + Phase 2 steps 2.1 & 2.2)[/b][/size]
+[size=4][b]What works today (Phase 1 + Phase 2 steps 2.1, 2.2 & 2.3)[/b][/size]
 
 [list]
 [*][b]Connect to a server[/b] by entering its address in [i]SkyrimReLive.toml[/i] and loading any save.
 [*][b]See other players[/b] in the same cell as ghost actors. They appear, move, and despawn on disconnect.
 [*][b]Watch them walk, run, sneak[/b] — locomotion animations are synchronized, not just position.
 [*][b]Watch them draw and sheath weapons[/b] — combat stance is mirrored across clients.
+[*][b]Hit each other in melee[/b] — swing your sword at another player and it actually lands. The server validates each swing's range and rate, applies damage, and the target's client plays a stagger when the blow is heavy. Server-authoritative so no client can fake hits.
 [*][b]In-game console commands[/b] for everything: [i]rl status[/i] to see what's happening, [i]rl connect[/i]/[i]disconnect[/i] to control the link, [i]rl cell[/i] to pin replication to one cell, [i]rl demo[/i] to spawn a synthetic ghost for solo testing.
 [*][b]Smooth motion[/b] via 100 ms snapshot interpolation — ghosts glide rather than teleport between updates.
 [*][b]Self-hosted networking[/b] that just works: Tailscale for friend groups (zero port-forwarding), IPv6 direct, port-forwarding, or cloud VPS. Pick whichever your network situation allows.
@@ -38,7 +39,6 @@ The architecture is server-authoritative from day one specifically so the small-
 [size=4][b]What's coming (next few releases)[/b][/size]
 
 [list]
-[*][b]Combat that actually does damage[/b] (Phase 2.3) — server validates the swing, applies the hit, the target's client plays the stagger. No more swinging through each other.
 [*][b]Anti-cheat basics[/b] (Phase 2.4) — server-side teleport detection, speed clamps. Phase 1 trusts the client too much; Phase 2 starts tightening.
 [*][b]Aim direction[/b] (Phase 2.5) — pitch replication so people can see where you're looking, prep for ranged combat.
 [*][b]Cell transitions[/b] (Phase 3) — walk into Dragonsreach together, not just stand outside.

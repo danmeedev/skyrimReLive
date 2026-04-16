@@ -97,11 +97,13 @@ If instead you see `timed out waiting for Welcome`, either the server isn't runn
   so ghosts glide rather than teleport between updates. Replication is
   cell-gated (only active when you and the other player are in the same
   cell, optionally pinned via `target_cell`).
-- Phase 2 in progress (steps 2.1 + 2.2 done): ghosts now play the correct
-  locomotion animation (idle/walk/run/sneak) and draw or sheath their
-  weapon in sync with the remote player's actions, instead of sliding.
-  Combat damage, server-side transform validation, and pitch/aim
-  replication are still pending (steps 2.3-2.5).
+- Phase 2 in progress (steps 2.1 + 2.2 + 2.3 done): ghosts play the
+  correct locomotion animation (idle/walk/run/sneak), draw or sheath
+  their weapon in sync with the remote player, and melee hits between
+  players actually land — the server validates each swing's range and
+  rate, applies damage, and the target's client plays a stagger when
+  the blow is heavy. Server-side transform validation and pitch/aim
+  replication are still pending (steps 2.4-2.5).
 
 For solo validation without a second player, use `rl demo start` from the
 in-game console — it spawns a synthetic ghost that orbits you with the run

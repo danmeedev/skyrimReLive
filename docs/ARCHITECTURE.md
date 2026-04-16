@@ -1,11 +1,13 @@
 # Architecture
 
-**Current state: Phase 2 in progress (steps 2.1 + 2.2 done).** Players
-connect, replicate transforms, and see each other as ghost actors that
-also play the correct locomotion animation (walk/run/sneak) and
-weapon-draw/sheath transitions. Steps 2.3-2.5 (combat events, transform
-validation, pitch replication) are not started. The server runs an
-authoritative ECS sim; the client is a thin SKSE plugin.
+**Current state: Phase 2 in progress (steps 2.1 + 2.2 + 2.3 done).**
+Players connect, replicate transforms, and see each other as ghost
+actors that play the correct locomotion animation (walk/run/sneak),
+weapon-draw/sheath transitions, and take/deliver melee damage —
+server-validated swings produce DamageApply packets that the target's
+client renders as a stagger. Steps 2.4-2.5 (transform validation,
+pitch replication / ranged combat prep) are not started. The server
+runs an authoritative ECS sim; the client is a thin SKSE plugin.
 
 ## Guiding principles
 
