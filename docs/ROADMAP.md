@@ -63,7 +63,14 @@ Per accepted proposal `docs/proposals/0002-phase-2-animation-combat.md`.
   no version bump). Plugin reads the local player's graph vars + queries
   IsWeaponDrawn(); Ghost applies via SetGraphVariableBool/Int so remote
   ghosts play draw/sheath transitions and hold the right combat stance.
-- [ ] Step 2.3: combat events + server damage authority
+- [x] **Step 2.3a: server-side combat authority.** New CombatEvent (C→S)
+  and DamageApply (S→C) message types. Server validates rate-limit,
+  target existence, self-attack, range vs weapon_reach (with 50-unit
+  slack); clamps damage; tracks Health component per player; sends
+  DamageApply with stagger flag (≥30 damage). Echo-client `--attack`
+  flag exercises the path. T2 verified end-to-end.
+- [ ] Step 2.3b: plugin combat hook (TESHitEvent → CombatEvent send;
+  DamageApply → local stagger animation playback)
 - [ ] Step 2.4: server-side transform validation (anti-teleport / speedhack)
 - [ ] Step 2.5: pitch replication + ranged combat prep
 
