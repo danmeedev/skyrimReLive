@@ -50,9 +50,18 @@ Per accepted proposal `docs/proposals/0001-phase-1-replication.md`.
 
 ## Phase 2 — Animation + combat sync
 
-- Animation graph variable replication
-- Weapon draw/sheath, attack, block, hit events
-- Damage authority: server validates, client plays feedback
+Per accepted proposal `docs/proposals/0002-phase-2-animation-combat.md`.
+
+- [x] **Step 2.1: locomotion animation sync (wire v2).**
+  PlayerState converted struct→table; PlayerInput and PlayerState gain
+  Speed/Direction/IsRunning/IsSprinting/IsSneaking fields. Server holds
+  AnimState component; plugin reads graph vars from PlayerCharacter and
+  applies to ghost actors via SetGraphVariableFloat/Bool. Demo ghost
+  synthesizes run animation. Wire-format version bumped to 2.
+- [ ] Step 2.2: weapon state sync (draw/sheath, stance detection)
+- [ ] Step 2.3: combat events + server damage authority
+- [ ] Step 2.4: server-side transform validation (anti-teleport / speedhack)
+- [ ] Step 2.5: pitch replication + ranged combat prep
 
 ## Phase 3 — World state
 
