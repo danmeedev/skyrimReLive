@@ -90,7 +90,11 @@ struct PlayerState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_ANIM_DIRECTION = 10,
     VT_ANIM_IS_RUNNING = 12,
     VT_ANIM_IS_SPRINTING = 14,
-    VT_ANIM_IS_SNEAKING = 16
+    VT_ANIM_IS_SNEAKING = 16,
+    VT_ANIM_IS_EQUIPPING = 18,
+    VT_ANIM_IS_UNEQUIPPING = 20,
+    VT_ANIM_WEAPON_STATE = 22,
+    VT_WEAPON_DRAWN = 24
   };
   uint32_t player_id() const {
     return GetField<uint32_t>(VT_PLAYER_ID, 0);
@@ -113,6 +117,18 @@ struct PlayerState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   bool anim_is_sneaking() const {
     return GetField<uint8_t>(VT_ANIM_IS_SNEAKING, 0) != 0;
   }
+  bool anim_is_equipping() const {
+    return GetField<uint8_t>(VT_ANIM_IS_EQUIPPING, 0) != 0;
+  }
+  bool anim_is_unequipping() const {
+    return GetField<uint8_t>(VT_ANIM_IS_UNEQUIPPING, 0) != 0;
+  }
+  int32_t anim_weapon_state() const {
+    return GetField<int32_t>(VT_ANIM_WEAPON_STATE, 0);
+  }
+  bool weapon_drawn() const {
+    return GetField<uint8_t>(VT_WEAPON_DRAWN, 0) != 0;
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -123,6 +139,10 @@ struct PlayerState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyField<uint8_t>(verifier, VT_ANIM_IS_RUNNING, 1) &&
            VerifyField<uint8_t>(verifier, VT_ANIM_IS_SPRINTING, 1) &&
            VerifyField<uint8_t>(verifier, VT_ANIM_IS_SNEAKING, 1) &&
+           VerifyField<uint8_t>(verifier, VT_ANIM_IS_EQUIPPING, 1) &&
+           VerifyField<uint8_t>(verifier, VT_ANIM_IS_UNEQUIPPING, 1) &&
+           VerifyField<int32_t>(verifier, VT_ANIM_WEAPON_STATE, 4) &&
+           VerifyField<uint8_t>(verifier, VT_WEAPON_DRAWN, 1) &&
            verifier.EndTable();
   }
 };
@@ -152,6 +172,18 @@ struct PlayerStateBuilder {
   void add_anim_is_sneaking(bool anim_is_sneaking) {
     fbb_.AddElement<uint8_t>(PlayerState::VT_ANIM_IS_SNEAKING, static_cast<uint8_t>(anim_is_sneaking), 0);
   }
+  void add_anim_is_equipping(bool anim_is_equipping) {
+    fbb_.AddElement<uint8_t>(PlayerState::VT_ANIM_IS_EQUIPPING, static_cast<uint8_t>(anim_is_equipping), 0);
+  }
+  void add_anim_is_unequipping(bool anim_is_unequipping) {
+    fbb_.AddElement<uint8_t>(PlayerState::VT_ANIM_IS_UNEQUIPPING, static_cast<uint8_t>(anim_is_unequipping), 0);
+  }
+  void add_anim_weapon_state(int32_t anim_weapon_state) {
+    fbb_.AddElement<int32_t>(PlayerState::VT_ANIM_WEAPON_STATE, anim_weapon_state, 0);
+  }
+  void add_weapon_drawn(bool weapon_drawn) {
+    fbb_.AddElement<uint8_t>(PlayerState::VT_WEAPON_DRAWN, static_cast<uint8_t>(weapon_drawn), 0);
+  }
   explicit PlayerStateBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -171,12 +203,20 @@ inline ::flatbuffers::Offset<PlayerState> CreatePlayerState(
     float anim_direction = 0.0f,
     bool anim_is_running = false,
     bool anim_is_sprinting = false,
-    bool anim_is_sneaking = false) {
+    bool anim_is_sneaking = false,
+    bool anim_is_equipping = false,
+    bool anim_is_unequipping = false,
+    int32_t anim_weapon_state = 0,
+    bool weapon_drawn = false) {
   PlayerStateBuilder builder_(_fbb);
+  builder_.add_anim_weapon_state(anim_weapon_state);
   builder_.add_anim_direction(anim_direction);
   builder_.add_anim_speed(anim_speed);
   builder_.add_transform(transform);
   builder_.add_player_id(player_id);
+  builder_.add_weapon_drawn(weapon_drawn);
+  builder_.add_anim_is_unequipping(anim_is_unequipping);
+  builder_.add_anim_is_equipping(anim_is_equipping);
   builder_.add_anim_is_sneaking(anim_is_sneaking);
   builder_.add_anim_is_sprinting(anim_is_sprinting);
   builder_.add_anim_is_running(anim_is_running);
@@ -192,7 +232,11 @@ struct PlayerInput FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_ANIM_DIRECTION = 10,
     VT_ANIM_IS_RUNNING = 12,
     VT_ANIM_IS_SPRINTING = 14,
-    VT_ANIM_IS_SNEAKING = 16
+    VT_ANIM_IS_SNEAKING = 16,
+    VT_ANIM_IS_EQUIPPING = 18,
+    VT_ANIM_IS_UNEQUIPPING = 20,
+    VT_ANIM_WEAPON_STATE = 22,
+    VT_WEAPON_DRAWN = 24
   };
   const skyrim_relive::v1::Transform *transform() const {
     return GetStruct<const skyrim_relive::v1::Transform *>(VT_TRANSFORM);
@@ -215,6 +259,18 @@ struct PlayerInput FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   bool anim_is_sneaking() const {
     return GetField<uint8_t>(VT_ANIM_IS_SNEAKING, 0) != 0;
   }
+  bool anim_is_equipping() const {
+    return GetField<uint8_t>(VT_ANIM_IS_EQUIPPING, 0) != 0;
+  }
+  bool anim_is_unequipping() const {
+    return GetField<uint8_t>(VT_ANIM_IS_UNEQUIPPING, 0) != 0;
+  }
+  int32_t anim_weapon_state() const {
+    return GetField<int32_t>(VT_ANIM_WEAPON_STATE, 0);
+  }
+  bool weapon_drawn() const {
+    return GetField<uint8_t>(VT_WEAPON_DRAWN, 0) != 0;
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -225,6 +281,10 @@ struct PlayerInput FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyField<uint8_t>(verifier, VT_ANIM_IS_RUNNING, 1) &&
            VerifyField<uint8_t>(verifier, VT_ANIM_IS_SPRINTING, 1) &&
            VerifyField<uint8_t>(verifier, VT_ANIM_IS_SNEAKING, 1) &&
+           VerifyField<uint8_t>(verifier, VT_ANIM_IS_EQUIPPING, 1) &&
+           VerifyField<uint8_t>(verifier, VT_ANIM_IS_UNEQUIPPING, 1) &&
+           VerifyField<int32_t>(verifier, VT_ANIM_WEAPON_STATE, 4) &&
+           VerifyField<uint8_t>(verifier, VT_WEAPON_DRAWN, 1) &&
            verifier.EndTable();
   }
 };
@@ -254,6 +314,18 @@ struct PlayerInputBuilder {
   void add_anim_is_sneaking(bool anim_is_sneaking) {
     fbb_.AddElement<uint8_t>(PlayerInput::VT_ANIM_IS_SNEAKING, static_cast<uint8_t>(anim_is_sneaking), 0);
   }
+  void add_anim_is_equipping(bool anim_is_equipping) {
+    fbb_.AddElement<uint8_t>(PlayerInput::VT_ANIM_IS_EQUIPPING, static_cast<uint8_t>(anim_is_equipping), 0);
+  }
+  void add_anim_is_unequipping(bool anim_is_unequipping) {
+    fbb_.AddElement<uint8_t>(PlayerInput::VT_ANIM_IS_UNEQUIPPING, static_cast<uint8_t>(anim_is_unequipping), 0);
+  }
+  void add_anim_weapon_state(int32_t anim_weapon_state) {
+    fbb_.AddElement<int32_t>(PlayerInput::VT_ANIM_WEAPON_STATE, anim_weapon_state, 0);
+  }
+  void add_weapon_drawn(bool weapon_drawn) {
+    fbb_.AddElement<uint8_t>(PlayerInput::VT_WEAPON_DRAWN, static_cast<uint8_t>(weapon_drawn), 0);
+  }
   explicit PlayerInputBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -273,12 +345,20 @@ inline ::flatbuffers::Offset<PlayerInput> CreatePlayerInput(
     float anim_direction = 0.0f,
     bool anim_is_running = false,
     bool anim_is_sprinting = false,
-    bool anim_is_sneaking = false) {
+    bool anim_is_sneaking = false,
+    bool anim_is_equipping = false,
+    bool anim_is_unequipping = false,
+    int32_t anim_weapon_state = 0,
+    bool weapon_drawn = false) {
   PlayerInputBuilder builder_(_fbb);
   builder_.add_client_time_ms(client_time_ms);
+  builder_.add_anim_weapon_state(anim_weapon_state);
   builder_.add_anim_direction(anim_direction);
   builder_.add_anim_speed(anim_speed);
   builder_.add_transform(transform);
+  builder_.add_weapon_drawn(weapon_drawn);
+  builder_.add_anim_is_unequipping(anim_is_unequipping);
+  builder_.add_anim_is_equipping(anim_is_equipping);
   builder_.add_anim_is_sneaking(anim_is_sneaking);
   builder_.add_anim_is_sprinting(anim_is_sprinting);
   builder_.add_anim_is_running(anim_is_running);

@@ -327,6 +327,10 @@ pub mod skyrim_relive {
             pub const VT_ANIM_IS_RUNNING: ::flatbuffers::VOffsetT = 12;
             pub const VT_ANIM_IS_SPRINTING: ::flatbuffers::VOffsetT = 14;
             pub const VT_ANIM_IS_SNEAKING: ::flatbuffers::VOffsetT = 16;
+            pub const VT_ANIM_IS_EQUIPPING: ::flatbuffers::VOffsetT = 18;
+            pub const VT_ANIM_IS_UNEQUIPPING: ::flatbuffers::VOffsetT = 20;
+            pub const VT_ANIM_WEAPON_STATE: ::flatbuffers::VOffsetT = 22;
+            pub const VT_WEAPON_DRAWN: ::flatbuffers::VOffsetT = 24;
 
             #[inline]
             pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -343,12 +347,16 @@ pub mod skyrim_relive {
                 args: &'args PlayerStateArgs<'args>,
             ) -> ::flatbuffers::WIPOffset<PlayerState<'bldr>> {
                 let mut builder = PlayerStateBuilder::new(_fbb);
+                builder.add_anim_weapon_state(args.anim_weapon_state);
                 builder.add_anim_direction(args.anim_direction);
                 builder.add_anim_speed(args.anim_speed);
                 if let Some(x) = args.transform {
                     builder.add_transform(x);
                 }
                 builder.add_player_id(args.player_id);
+                builder.add_weapon_drawn(args.weapon_drawn);
+                builder.add_anim_is_unequipping(args.anim_is_unequipping);
+                builder.add_anim_is_equipping(args.anim_is_equipping);
                 builder.add_anim_is_sneaking(args.anim_is_sneaking);
                 builder.add_anim_is_sprinting(args.anim_is_sprinting);
                 builder.add_anim_is_running(args.anim_is_running);
@@ -428,6 +436,50 @@ pub mod skyrim_relive {
                         .unwrap()
                 }
             }
+            #[inline]
+            pub fn anim_is_equipping(&self) -> bool {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<bool>(PlayerState::VT_ANIM_IS_EQUIPPING, Some(false))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn anim_is_unequipping(&self) -> bool {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<bool>(PlayerState::VT_ANIM_IS_UNEQUIPPING, Some(false))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn anim_weapon_state(&self) -> i32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<i32>(PlayerState::VT_ANIM_WEAPON_STATE, Some(0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn weapon_drawn(&self) -> bool {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<bool>(PlayerState::VT_WEAPON_DRAWN, Some(false))
+                        .unwrap()
+                }
+            }
         }
 
         impl ::flatbuffers::Verifiable for PlayerState<'_> {
@@ -444,6 +496,14 @@ pub mod skyrim_relive {
                     .visit_field::<bool>("anim_is_running", Self::VT_ANIM_IS_RUNNING, false)?
                     .visit_field::<bool>("anim_is_sprinting", Self::VT_ANIM_IS_SPRINTING, false)?
                     .visit_field::<bool>("anim_is_sneaking", Self::VT_ANIM_IS_SNEAKING, false)?
+                    .visit_field::<bool>("anim_is_equipping", Self::VT_ANIM_IS_EQUIPPING, false)?
+                    .visit_field::<bool>(
+                        "anim_is_unequipping",
+                        Self::VT_ANIM_IS_UNEQUIPPING,
+                        false,
+                    )?
+                    .visit_field::<i32>("anim_weapon_state", Self::VT_ANIM_WEAPON_STATE, false)?
+                    .visit_field::<bool>("weapon_drawn", Self::VT_WEAPON_DRAWN, false)?
                     .finish();
                 Ok(())
             }
@@ -456,6 +516,10 @@ pub mod skyrim_relive {
             pub anim_is_running: bool,
             pub anim_is_sprinting: bool,
             pub anim_is_sneaking: bool,
+            pub anim_is_equipping: bool,
+            pub anim_is_unequipping: bool,
+            pub anim_weapon_state: i32,
+            pub weapon_drawn: bool,
         }
         impl<'a> Default for PlayerStateArgs<'a> {
             #[inline]
@@ -468,6 +532,10 @@ pub mod skyrim_relive {
                     anim_is_running: false,
                     anim_is_sprinting: false,
                     anim_is_sneaking: false,
+                    anim_is_equipping: false,
+                    anim_is_unequipping: false,
+                    anim_weapon_state: 0,
+                    weapon_drawn: false,
                 }
             }
         }
@@ -522,6 +590,32 @@ pub mod skyrim_relive {
                 );
             }
             #[inline]
+            pub fn add_anim_is_equipping(&mut self, anim_is_equipping: bool) {
+                self.fbb_.push_slot::<bool>(
+                    PlayerState::VT_ANIM_IS_EQUIPPING,
+                    anim_is_equipping,
+                    false,
+                );
+            }
+            #[inline]
+            pub fn add_anim_is_unequipping(&mut self, anim_is_unequipping: bool) {
+                self.fbb_.push_slot::<bool>(
+                    PlayerState::VT_ANIM_IS_UNEQUIPPING,
+                    anim_is_unequipping,
+                    false,
+                );
+            }
+            #[inline]
+            pub fn add_anim_weapon_state(&mut self, anim_weapon_state: i32) {
+                self.fbb_
+                    .push_slot::<i32>(PlayerState::VT_ANIM_WEAPON_STATE, anim_weapon_state, 0);
+            }
+            #[inline]
+            pub fn add_weapon_drawn(&mut self, weapon_drawn: bool) {
+                self.fbb_
+                    .push_slot::<bool>(PlayerState::VT_WEAPON_DRAWN, weapon_drawn, false);
+            }
+            #[inline]
             pub fn new(
                 _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
             ) -> PlayerStateBuilder<'a, 'b, A> {
@@ -548,6 +642,10 @@ pub mod skyrim_relive {
                 ds.field("anim_is_running", &self.anim_is_running());
                 ds.field("anim_is_sprinting", &self.anim_is_sprinting());
                 ds.field("anim_is_sneaking", &self.anim_is_sneaking());
+                ds.field("anim_is_equipping", &self.anim_is_equipping());
+                ds.field("anim_is_unequipping", &self.anim_is_unequipping());
+                ds.field("anim_weapon_state", &self.anim_weapon_state());
+                ds.field("weapon_drawn", &self.weapon_drawn());
                 ds.finish()
             }
         }
@@ -576,6 +674,10 @@ pub mod skyrim_relive {
             pub const VT_ANIM_IS_RUNNING: ::flatbuffers::VOffsetT = 12;
             pub const VT_ANIM_IS_SPRINTING: ::flatbuffers::VOffsetT = 14;
             pub const VT_ANIM_IS_SNEAKING: ::flatbuffers::VOffsetT = 16;
+            pub const VT_ANIM_IS_EQUIPPING: ::flatbuffers::VOffsetT = 18;
+            pub const VT_ANIM_IS_UNEQUIPPING: ::flatbuffers::VOffsetT = 20;
+            pub const VT_ANIM_WEAPON_STATE: ::flatbuffers::VOffsetT = 22;
+            pub const VT_WEAPON_DRAWN: ::flatbuffers::VOffsetT = 24;
 
             #[inline]
             pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -593,11 +695,15 @@ pub mod skyrim_relive {
             ) -> ::flatbuffers::WIPOffset<PlayerInput<'bldr>> {
                 let mut builder = PlayerInputBuilder::new(_fbb);
                 builder.add_client_time_ms(args.client_time_ms);
+                builder.add_anim_weapon_state(args.anim_weapon_state);
                 builder.add_anim_direction(args.anim_direction);
                 builder.add_anim_speed(args.anim_speed);
                 if let Some(x) = args.transform {
                     builder.add_transform(x);
                 }
+                builder.add_weapon_drawn(args.weapon_drawn);
+                builder.add_anim_is_unequipping(args.anim_is_unequipping);
+                builder.add_anim_is_equipping(args.anim_is_equipping);
                 builder.add_anim_is_sneaking(args.anim_is_sneaking);
                 builder.add_anim_is_sprinting(args.anim_is_sprinting);
                 builder.add_anim_is_running(args.anim_is_running);
@@ -677,6 +783,50 @@ pub mod skyrim_relive {
                         .unwrap()
                 }
             }
+            #[inline]
+            pub fn anim_is_equipping(&self) -> bool {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<bool>(PlayerInput::VT_ANIM_IS_EQUIPPING, Some(false))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn anim_is_unequipping(&self) -> bool {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<bool>(PlayerInput::VT_ANIM_IS_UNEQUIPPING, Some(false))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn anim_weapon_state(&self) -> i32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<i32>(PlayerInput::VT_ANIM_WEAPON_STATE, Some(0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn weapon_drawn(&self) -> bool {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<bool>(PlayerInput::VT_WEAPON_DRAWN, Some(false))
+                        .unwrap()
+                }
+            }
         }
 
         impl ::flatbuffers::Verifiable for PlayerInput<'_> {
@@ -693,6 +843,14 @@ pub mod skyrim_relive {
                     .visit_field::<bool>("anim_is_running", Self::VT_ANIM_IS_RUNNING, false)?
                     .visit_field::<bool>("anim_is_sprinting", Self::VT_ANIM_IS_SPRINTING, false)?
                     .visit_field::<bool>("anim_is_sneaking", Self::VT_ANIM_IS_SNEAKING, false)?
+                    .visit_field::<bool>("anim_is_equipping", Self::VT_ANIM_IS_EQUIPPING, false)?
+                    .visit_field::<bool>(
+                        "anim_is_unequipping",
+                        Self::VT_ANIM_IS_UNEQUIPPING,
+                        false,
+                    )?
+                    .visit_field::<i32>("anim_weapon_state", Self::VT_ANIM_WEAPON_STATE, false)?
+                    .visit_field::<bool>("weapon_drawn", Self::VT_WEAPON_DRAWN, false)?
                     .finish();
                 Ok(())
             }
@@ -705,6 +863,10 @@ pub mod skyrim_relive {
             pub anim_is_running: bool,
             pub anim_is_sprinting: bool,
             pub anim_is_sneaking: bool,
+            pub anim_is_equipping: bool,
+            pub anim_is_unequipping: bool,
+            pub anim_weapon_state: i32,
+            pub weapon_drawn: bool,
         }
         impl<'a> Default for PlayerInputArgs<'a> {
             #[inline]
@@ -717,6 +879,10 @@ pub mod skyrim_relive {
                     anim_is_running: false,
                     anim_is_sprinting: false,
                     anim_is_sneaking: false,
+                    anim_is_equipping: false,
+                    anim_is_unequipping: false,
+                    anim_weapon_state: 0,
+                    weapon_drawn: false,
                 }
             }
         }
@@ -771,6 +937,32 @@ pub mod skyrim_relive {
                 );
             }
             #[inline]
+            pub fn add_anim_is_equipping(&mut self, anim_is_equipping: bool) {
+                self.fbb_.push_slot::<bool>(
+                    PlayerInput::VT_ANIM_IS_EQUIPPING,
+                    anim_is_equipping,
+                    false,
+                );
+            }
+            #[inline]
+            pub fn add_anim_is_unequipping(&mut self, anim_is_unequipping: bool) {
+                self.fbb_.push_slot::<bool>(
+                    PlayerInput::VT_ANIM_IS_UNEQUIPPING,
+                    anim_is_unequipping,
+                    false,
+                );
+            }
+            #[inline]
+            pub fn add_anim_weapon_state(&mut self, anim_weapon_state: i32) {
+                self.fbb_
+                    .push_slot::<i32>(PlayerInput::VT_ANIM_WEAPON_STATE, anim_weapon_state, 0);
+            }
+            #[inline]
+            pub fn add_weapon_drawn(&mut self, weapon_drawn: bool) {
+                self.fbb_
+                    .push_slot::<bool>(PlayerInput::VT_WEAPON_DRAWN, weapon_drawn, false);
+            }
+            #[inline]
             pub fn new(
                 _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
             ) -> PlayerInputBuilder<'a, 'b, A> {
@@ -797,6 +989,10 @@ pub mod skyrim_relive {
                 ds.field("anim_is_running", &self.anim_is_running());
                 ds.field("anim_is_sprinting", &self.anim_is_sprinting());
                 ds.field("anim_is_sneaking", &self.anim_is_sneaking());
+                ds.field("anim_is_equipping", &self.anim_is_equipping());
+                ds.field("anim_is_unequipping", &self.anim_is_unequipping());
+                ds.field("anim_weapon_state", &self.anim_weapon_state());
+                ds.field("weapon_drawn", &self.weapon_drawn());
                 ds.finish()
             }
         }

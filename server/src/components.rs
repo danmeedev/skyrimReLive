@@ -42,11 +42,22 @@ pub struct Velocity {
 /// animation-graph variables we replicate (`Speed`, `Direction`, `IsRunning`,
 /// `IsSprinting`, `IsSneaking`). Will grow as Phase 2 sub-steps add weapon
 /// and combat state.
+// Clippy flags >3 bools as a smell; here it's intentional — the struct
+// mirrors a fixed wire-format layout where each bool maps to a specific
+// animation graph variable. Bitfield/enum compression is an optimization
+// for Phase 5/6 once we have many more.
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Component, Debug, Default, Clone, Copy)]
 pub struct AnimState {
+    // Phase 2.1: locomotion.
     pub speed: f32,
     pub direction: f32,
     pub is_running: bool,
     pub is_sprinting: bool,
     pub is_sneaking: bool,
+    // Phase 2.2: weapon state.
+    pub is_equipping: bool,
+    pub is_unequipping: bool,
+    pub weapon_state: i32,
+    pub weapon_drawn: bool,
 }

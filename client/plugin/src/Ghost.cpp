@@ -282,6 +282,11 @@ namespace relive::ghost {
             g.actor->SetGraphVariableBool("IsRunning", latest.is_running);
             g.actor->SetGraphVariableBool("IsSprinting", latest.is_sprinting);
             g.actor->SetGraphVariableBool("IsSneaking", latest.is_sneaking);
+            // Phase 2.2: weapon state. Bool transitions trigger draw/sheath
+            // animations; iState pins the stance once drawn.
+            g.actor->SetGraphVariableBool("IsEquipping", latest.is_equipping);
+            g.actor->SetGraphVariableBool("IsUnequipping", latest.is_unequipping);
+            g.actor->SetGraphVariableInt("iState", latest.weapon_state);
             ++it;
         }
     }

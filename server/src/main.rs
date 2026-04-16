@@ -218,13 +218,17 @@ impl ServerState {
                 xf.yaw = new_yaw;
             }
         }
-        // Phase 2.1: copy locomotion anim variables from the input.
+        // Phase 2.1/2.2: copy anim variables from the input.
         if let Some(mut anim) = self.world.get_mut::<AnimState>(entity) {
             anim.speed = input.anim_speed();
             anim.direction = input.anim_direction();
             anim.is_running = input.anim_is_running();
             anim.is_sprinting = input.anim_is_sprinting();
             anim.is_sneaking = input.anim_is_sneaking();
+            anim.is_equipping = input.anim_is_equipping();
+            anim.is_unequipping = input.anim_is_unequipping();
+            anim.weapon_state = input.anim_weapon_state();
+            anim.weapon_drawn = input.weapon_drawn();
         }
         // Touch last_heard regardless — acts as heartbeat even when idle.
         if let Some(mut conn) = self.world.get_mut::<Connection>(entity) {
@@ -326,6 +330,10 @@ impl ServerState {
                             anim_is_running: a.is_running,
                             anim_is_sprinting: a.is_sprinting,
                             anim_is_sneaking: a.is_sneaking,
+                            anim_is_equipping: a.is_equipping,
+                            anim_is_unequipping: a.is_unequipping,
+                            anim_weapon_state: a.weapon_state,
+                            weapon_drawn: a.weapon_drawn,
                         },
                     )
                 })

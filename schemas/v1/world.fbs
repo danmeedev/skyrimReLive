@@ -24,13 +24,17 @@ struct Transform {
 table PlayerState {
     player_id: uint32;
     transform: Transform;
-    // Phase 2.1 locomotion variables. Fixed fields for now; will migrate
-    // to hash-keyed arrays in step 2.2/2.3 if the variable count grows.
+    // Phase 2.1 locomotion variables.
     anim_speed: float = 0;             // current movement speed
     anim_direction: float = 0;         // movement direction relative to facing (radians)
     anim_is_running: bool = false;
     anim_is_sprinting: bool = false;
     anim_is_sneaking: bool = false;
+    // Phase 2.2 weapon state.
+    anim_is_equipping: bool = false;   // drawing weapon (transition)
+    anim_is_unequipping: bool = false; // sheathing weapon (transition)
+    anim_weapon_state: int32 = 0;      // iState: 0=sheathed, 1+=various stances
+    weapon_drawn: bool = false;        // convenience: is a weapon currently out
 }
 
 table PlayerInput {
@@ -42,6 +46,11 @@ table PlayerInput {
     anim_is_running: bool = false;
     anim_is_sprinting: bool = false;
     anim_is_sneaking: bool = false;
+    // Phase 2.2: weapon state.
+    anim_is_equipping: bool = false;
+    anim_is_unequipping: bool = false;
+    anim_weapon_state: int32 = 0;
+    weapon_drawn: bool = false;
 }
 
 table WorldSnapshot {

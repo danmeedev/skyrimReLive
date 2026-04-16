@@ -180,11 +180,18 @@ namespace relive::net {
         bool anim_running = false;
         bool anim_sprinting = false;
         bool anim_sneaking = false;
+        bool anim_equipping = false;
+        bool anim_unequipping = false;
+        std::int32_t anim_weapon_state = 0;
         player->GetGraphVariableFloat("Speed", anim_speed);
         player->GetGraphVariableFloat("Direction", anim_dir);
         player->GetGraphVariableBool("IsRunning", anim_running);
         player->GetGraphVariableBool("IsSprinting", anim_sprinting);
         player->GetGraphVariableBool("IsSneaking", anim_sneaking);
+        player->GetGraphVariableBool("IsEquipping", anim_equipping);
+        player->GetGraphVariableBool("IsUnequipping", anim_unequipping);
+        player->GetGraphVariableInt("iState", anim_weapon_state);
+        const bool weapon_drawn = player->AsActorState()->IsWeaponDrawn();
 
         flatbuffers::FlatBufferBuilder fbb(96);
         const re_v1::Vec3 v3(x, y, z);
@@ -201,6 +208,10 @@ namespace relive::net {
         ib.add_anim_is_running(anim_running);
         ib.add_anim_is_sprinting(anim_sprinting);
         ib.add_anim_is_sneaking(anim_sneaking);
+        ib.add_anim_is_equipping(anim_equipping);
+        ib.add_anim_is_unequipping(anim_unequipping);
+        ib.add_anim_weapon_state(anim_weapon_state);
+        ib.add_weapon_drawn(weapon_drawn);
         const auto input_off = ib.Finish();
         fbb.Finish(input_off);
 
@@ -251,6 +262,11 @@ namespace relive::net {
                         u.snap.is_running = p->anim_is_running();
                         u.snap.is_sprinting = p->anim_is_sprinting();
                         u.snap.is_sneaking = p->anim_is_sneaking();
+                        // Phase 2.2: weapon state.
+                        u.snap.is_equipping = p->anim_is_equipping();
+                        u.snap.is_unequipping = p->anim_is_unequipping();
+                        u.snap.weapon_state = p->anim_weapon_state();
+                        u.snap.weapon_drawn = p->weapon_drawn();
                         updates.push_back(u);
                     }
                 }

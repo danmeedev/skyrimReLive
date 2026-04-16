@@ -27,6 +27,11 @@ namespace relive::ghost {
         bool is_running = false;
         bool is_sprinting = false;
         bool is_sneaking = false;
+        // Phase 2.2 weapon state.
+        bool is_equipping = false;
+        bool is_unequipping = false;
+        std::int32_t weapon_state = 0;
+        bool weapon_drawn = false;
     };
 
     // Pluggable spawner. Phase 1 ships VanillaCloneSpawner (clones a known

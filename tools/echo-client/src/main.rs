@@ -228,6 +228,11 @@ async fn send_player_input(socket: &UdpSocket, x: f32, y: f32, z: f32, yaw: f32)
             anim_is_running: true,
             anim_is_sprinting: false,
             anim_is_sneaking: false,
+            // Phase 2.2: synthetic "weapon out, one-handed sword" state.
+            anim_is_equipping: false,
+            anim_is_unequipping: false,
+            anim_weapon_state: 1, // iState=1 == sword/dagger right hand
+            weapon_drawn: true,
         },
     );
     fbb.finish(input, None);
