@@ -10,7 +10,7 @@ version = "0.0.1"
 edition = "2021"
 license = "Apache-2.0"
 rust-version = "1.85"
-repository = "https://github.com/skyrim-relive/skyrim-relive"
+repository = "https://github.com/danmeedev/skyrimReLive"
 
 [workspace.dependencies]
 bevy_ecs = "0.16"

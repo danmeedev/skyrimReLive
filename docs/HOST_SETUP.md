@@ -11,8 +11,8 @@ group, or a public MMO later), this is the doc.
 ## Build & run the server
 
 ```sh
-git clone https://github.com/<repo>/skyrim-relive
-cd skyrim-relive/server
+git clone https://github.com/danmeedev/skyrimReLive
+cd skyrimReLive/server
 
 cargo run --release
 ```
@@ -21,7 +21,7 @@ Expected startup log:
 
 ```
 config loaded path=server.toml
-skyrim-relive-server listening bind=[::]:27015 version=1 tick_hz=60 snap_hz=20 timeout_s=5 dual_stack=true
+skyrim-relive-server listening bind=[::]:27015 version=2 tick_hz=60 snap_hz=20 timeout_s=5 dual_stack=true
 ```
 
 That's it — the server is running and listening on both IPv4 and IPv6 on
@@ -145,7 +145,7 @@ If the server log stays silent, see the troubleshooting section below.
 - The Hello left the client but no reply came back. Same causes as above — usually an asymmetric firewall that allows outbound but drops inbound return traffic. Windows Defender prompts you on first bind; if you dismissed that, add the rule manually (see IPv6 section).
 
 **Version mismatch.**
-- `Disconnect { code = VersionMismatch }` means client and server were built from different wire-format versions. Both must rebuild from the same `schemas/v1/` snapshot.
+- `Disconnect { code = VersionMismatch }` means client and server were built from different wire-format versions. Both must rebuild from the same `schemas/v1/` snapshot. (The directory is named `v1/` for historical reasons; the on-wire protocol byte is `2` since Phase 2 — see `schemas/README.md`.)
 
 **Host is running behind CGNAT (no router port forward works).**
 - Skip options 2 and 3. Use Tailscale or rent a VPS.
@@ -157,7 +157,7 @@ If the server log stays silent, see the troubleshooting section below.
 
 ## Security notes
 
-- The server trusts the client's position in Phase 1 (known H1 caveat — see the architecture doc). Don't run a public server with random players until Phase 2+ tightens authority.
+- The server still trusts the client's position (known H1 caveat from Phase 1 — see the architecture doc). Server-side plausibility checks land in Phase 2 step 2.4. Don't run a public server with random players until then.
 - No authentication yet — anyone who can reach the port can connect. For friend-group use on Tailscale this is fine because the tailnet itself is the perimeter.
 - Never put a private config (future: passwords, secrets) in the repo. `.gitignore` covers `.env` / `*.local.toml`.
 

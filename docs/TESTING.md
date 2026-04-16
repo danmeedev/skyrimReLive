@@ -48,7 +48,7 @@ Sanity checks that the server and CLI tools start cleanly. ~30 s total.
 cd server && cargo run
 ```
 
-Pass: log line `skyrim-relive-server listening bind=0.0.0.0:27015 version=1 tick_hz=60 snap_hz=20 timeout_s=5` appears within 2 s.
+Pass: log line `skyrim-relive-server listening bind=0.0.0.0:27015 version=2 tick_hz=60 snap_hz=20 timeout_s=5` appears within 2 s.
 
 **T1.2 — server starts without a config file**
 
@@ -74,7 +74,7 @@ Pass: prints `Welcome { player_id = N, tick = 60 Hz, snapshot = 20 Hz, your_addr
 cd tools/echo-client && cargo run -- --bad-version
 ```
 
-Pass: client prints `Disconnect { code = VersionMismatch, reason = "server speaks v1" }`; server logs `version mismatch; sending Disconnect`.
+Pass: client prints `Disconnect { code = VersionMismatch, reason = "server speaks v2" }`; server logs `version mismatch; sending Disconnect`.
 
 ---
 
@@ -259,10 +259,14 @@ Client disconnects their network for 10 s (disable wifi), reconnects. Phase 1 ha
 | 1.1 — schemas + framing   | T0, T1             | ✅ done |
 | 1.2 — ECS lifecycle       | T0, T1, T2         | ✅ done |
 | 1.3 — sim + snapshot      | T0, T2             | ✅ done |
-| 1.4 — plugin sends input  | T0, T3             | built — awaiting T3 run |
-| 1.5 — ghosts + interp     | T0, T4             | not started |
-| 1.6 — cell gating         | T0, T3, T4         | not started |
-| 2 — animation + combat    | T0, T4             | future |
+| 1.4 — plugin sends input  | T0, T3             | ✅ done |
+| 1.5 — ghosts + interp     | T0, T4             | ✅ done |
+| 1.6 — cell gating         | T0, T3, T4         | ✅ done |
+| 2.1 — locomotion anim sync (wire v2) | T0, T3, T4 | ✅ done |
+| 2.2 — weapon state sync   | T0, T3, T4         | ✅ done |
+| 2.3 — combat events + damage authority | T0, T4    | future |
+| 2.4 — server transform validation | T0, T2     | future |
+| 2.5 — pitch + ranged prep | T0, T4             | future |
 | 3 — world state / cells   | T0, T4             | future |
 | 4 — NPC strategy          | T0, T4             | future |
 | 5 — persistence + auth    | T0, T4, T5         | future |

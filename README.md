@@ -6,10 +6,14 @@ from self-hosted small-group co-op on a home PC to cloud-deployed MMO.
 Inspired by Skyrim Together Reborn and Keizaal Online. Independently
 implemented, Apache-2.0 licensed, no proprietary dependencies.
 
-**Current status: Phase 1 complete.** Players connect, see each other as
-ghost actors, and move in real time across a shared cell. The server runs an
-authoritative ECS sim at 60 Hz and broadcasts world snapshots at 20 Hz over
-a binary Flatbuffers wire format.
+**Current status: Phase 2 in progress.** Steps 2.1 (locomotion animation
+sync) and 2.2 (weapon state sync) are done; steps 2.3-2.5 (combat events
++ damage authority, transform validation, pitch replication) remain.
+Players connect, see each other as ghost actors that walk, run, sneak,
+and draw/sheath weapons in sync, and move in real time across a shared
+cell. The server runs an authoritative ECS sim at 60 Hz and broadcasts
+world snapshots at 20 Hz over a binary Flatbuffers wire format
+(protocol v2).
 
 ---
 

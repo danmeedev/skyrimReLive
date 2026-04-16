@@ -1,8 +1,11 @@
 # Architecture
 
-**Current state: Phase 1 complete.** Players connect, replicate transforms,
-and see each other as ghost actors. The server runs an authoritative ECS sim;
-the client is a thin SKSE plugin.
+**Current state: Phase 2 in progress (steps 2.1 + 2.2 done).** Players
+connect, replicate transforms, and see each other as ghost actors that
+also play the correct locomotion animation (walk/run/sneak) and
+weapon-draw/sheath transitions. Steps 2.3-2.5 (combat events, transform
+validation, pitch replication) are not started. The server runs an
+authoritative ECS sim; the client is a thin SKSE plugin.
 
 ## Guiding principles
 
@@ -15,29 +18,37 @@ the client is a thin SKSE plugin.
    are pluggable, not baked in.
 4. **Apache-2.0.** Avoid LGPL contamination -- do not link TiltedPhoques libs.
 
-## Topology (Phase 1)
+## Topology (Phase 2 in progress)
 
 ```
-+-- Skyrim.exe + SKSE plugin (client) --------+
-|  Sends PlayerInput @ 60 Hz (pos + yaw).     |
-|  Receives WorldSnapshot @ 20 Hz.            |
-|  Spawns ghost actors, 100 ms interpolation. |
-|  Cell gating: replication active per cell.  |
-+-------------+-------------------------------+
++-- Skyrim.exe + SKSE plugin (client) ----------------+
+|  Sends PlayerInput @ 60 Hz: pos + yaw plus          |
+|    locomotion graph vars (Speed, Direction,         |
+|    IsRunning, IsSprinting, IsSneaking) and weapon   |
+|    state (IsEquipping, IsUnequipping, iState,       |
+|    weapon_drawn) read via GetGraphVariable*.        |
+|  Receives WorldSnapshot @ 20 Hz.                    |
+|  Spawns ghost actors, 100 ms interpolation; applies |
+|    received graph vars to ghosts via                |
+|    SetGraphVariableFloat/Bool/Int so they animate.  |
+|  Cell gating: replication active per cell.          |
++-------------+---------------------------------------+
               | UDP (raw, unreliable)
               v
-+---------------------------------------------+
-|  Server (single binary, Rust)               |
-|  - bevy_ecs world: Player, Connection,      |
-|    Transform, Velocity components           |
-|  - 60 Hz sim tick (integrate Transform)     |
-|  - 20 Hz WorldSnapshot broadcast            |
-|  - Connection lifecycle: Hello/Welcome,     |
-|    Heartbeat, LeaveNotify, Disconnect,      |
-|    timeout GC                               |
-|  - TOML config (server.toml)                |
-|  - Dual-stack IPv6 via socket2              |
-+---------------------------------------------+
++-----------------------------------------------------+
+|  Server (single binary, Rust)                       |
+|  - bevy_ecs world: Player, Connection,              |
+|    Transform, Velocity, AnimState components        |
+|  - 60 Hz sim tick (integrate Transform; AnimState   |
+|    holds the latest replicated graph-var values)    |
+|  - 20 Hz WorldSnapshot broadcast (PlayerState as    |
+|    a Flatbuffers table, carries anim + weapon)      |
+|  - Connection lifecycle: Hello/Welcome,             |
+|    Heartbeat, LeaveNotify, Disconnect,              |
+|    timeout GC                                       |
+|  - TOML config (server.toml)                        |
+|  - Dual-stack IPv6 via socket2                      |
++-----------------------------------------------------+
 ```
 
 Future phases add reliable channels (GameNetworkingSockets), interest
@@ -54,8 +65,8 @@ server stays the same.
 | Server             | Rust                             | Safety + perf; avoids C++ in sim.    |
 | ECS                | bevy_ecs                         | Natural fit for replication.         |
 | Transport          | Raw UDP (tokio + socket2)        | Simplest; dual-stack IPv6 support.   |
-| Wire format        | Flatbuffers v1                   | Zero-copy, schema-evolvable.         |
-| Packet header      | 4-byte `R L ver type`            | Magic + version before FB parsing.   |
+| Wire format        | Flatbuffers (protocol v2)        | Zero-copy, schema-evolvable.         |
+| Packet header      | 4-byte `R L ver type` (ver=2)    | Magic + version before FB parsing.   |
 | Server config      | toml (serde)                     | Simple file-based config.            |
 | Co-op DB           | SQLite (planned)                 | Zero-install, file-based.            |
 | MMO DB             | Postgres + Redis (planned)       | Standard horizontal story.           |
@@ -67,4 +78,5 @@ See `ROADMAP.md`. Architecture must hold across phases -- each phase adds
 layers, not rewrites. Watch for accidental client-authority in Phase 1/2.
 
 Phase 1 trusts the client for its own transform (known caveat from proposal
-0001). Server-side plausibility checks arrive in Phase 2 with combat.
+0001). Server-side plausibility checks land in Phase 2 step 2.4 alongside
+combat (proposal 0002).

@@ -68,14 +68,22 @@ target_cell_form_id = 0          # 0 = any cell; nonzero = restrict to one cell
 On save load (or `rl connect`), the plugin:
 
 1. Opens a UDP socket on a background thread.
-2. Sends a binary `Hello` (Flatbuffers, 4-byte `RL` packet header).
+2. Sends a binary `Hello` (Flatbuffers, 4-byte `RL` packet header,
+   protocol version 2).
 3. Waits for `Welcome` (receives assigned player_id and server rates).
 4. Enters the main loop:
-   - **Net thread**: reads `PlayerCharacter` position/yaw at 60 Hz, ships
+   - **Net thread**: reads `PlayerCharacter` position/yaw at 60 Hz plus
+     animation graph variables (`Speed`, `Direction`, `IsRunning`,
+     `IsSprinting`, `IsSneaking`, `IsEquipping`, `IsUnequipping`,
+     `iState`) via `GetGraphVariableFloat/Bool/Int` and the weapon-drawn
+     flag from `actor->AsActorState()->IsWeaponDrawn()`, ships
      `PlayerInput`. Drains incoming `WorldSnapshot` packets and queues
-     decoded player states for the main thread.
+     decoded player states (transforms + anim/weapon fields) for the
+     main thread.
    - **Main thread** (SKSE TaskInterface): drains the queue, spawns ghost
-     actors for new players, interpolates transforms, despawns stale ghosts.
+     actors for new players, interpolates transforms, applies the
+     replicated graph variables to each ghost via
+     `SetGraphVariableFloat/Bool/Int`, and despawns stale ghosts.
 
 ### Ghost rendering
 
@@ -83,7 +91,11 @@ Other players appear as Lydia clones (vanilla NPC form `0x000A2C94`) spawned
 via `PlaceObjectAtMe`. AI is disabled on ghosts. Transform updates use
 100 ms render-delay interpolation: the client renders behind the latest
 snapshot and linearly interpolates between bracketing history entries.
-Ghosts are despawned after 180 ticks (~3 s) with no updates.
+Each main-thread tick also pushes the latest replicated locomotion and
+weapon-state graph variables into the ghost so it plays the correct
+walk/run/sneak animation and draws or sheaths weapons in sync with the
+remote player. Ghosts are despawned after 180 ticks (~3 s) with no
+updates.
 
 ### Cell gating
 

@@ -19,7 +19,10 @@ cargo run -- --name dovahkiin --server 127.0.0.1:27015
 | `--server <host:port>` | Server address (default: `127.0.0.1:27015`).           |
 | `--keepalive <secs>`   | Stay connected for N seconds after Welcome. Sends      |
 |                        | Heartbeat at 1 Hz and synthetic PlayerInput at 20 Hz   |
-|                        | (circular motion). Receives and counts WorldSnapshots. |
+|                        | (circular motion plus faked anim graph values --       |
+|                        | `IsRunning=true`, weapon drawn -- so headless tests    |
+|                        | exercise the Phase 2 anim/weapon fields). Receives     |
+|                        | and counts WorldSnapshots.                             |
 | `--leave`              | Send a `LeaveNotify` before exiting (graceful close).  |
 | `--bad-version`        | Corrupt the protocol version byte in the Hello packet  |
 |                        | to trigger a `Disconnect(VersionMismatch)` response.   |
@@ -40,7 +43,9 @@ cargo run -- --bad-version
 ## Keepalive output
 
 During `--keepalive`, the client sends `PlayerInput` with synthetic circular
-motion (cos/sin at 20 Hz) so that other connected clients (or a second
-echo-client) see non-zero position data in their WorldSnapshots. On exit it
-prints snapshot count, effective rate, last server tick, and any other
-player IDs seen.
+motion (cos/sin at 20 Hz) plus faked animation graph values (running, sword
+drawn) so that other connected clients (or a second echo-client) see
+non-zero position and anim data in their WorldSnapshots, and the Phase 2
+anim/weapon fields are exercised end-to-end without a game client. On
+exit it prints snapshot count, effective rate, last server tick, and any
+other player IDs seen.

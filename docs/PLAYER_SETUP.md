@@ -35,8 +35,8 @@ Until there's a tagged release, you have to build the DLL yourself.
 # - Rust: winget install Rustlang.Rustup
 # - git
 
-git clone https://github.com/<repo>/skyrim-relive
-cd skyrim-relive
+git clone https://github.com/danmeedev/skyrimReLive
+cd skyrimReLive
 
 # PowerShell (or any shell):
 .\tools\setup.ps1
@@ -91,7 +91,20 @@ If instead you see `timed out waiting for Welcome`, either the server isn't runn
 
 ## What's supported right now
 
-- Phase 1: you'll connect and your position will stream to the server.
-- Ghost actors (seeing other players move in-game) are **not yet rendered** — that's Phase 1 step 5. Until then, multiplayer is only "technically connected."
+- Phase 1 done: you connect, your position streams to the server, and other
+  players appear as ghost actors (vanilla Lydia clones) at their replicated
+  positions. Snapshots are smoothed with 100 ms render-delay interpolation,
+  so ghosts glide rather than teleport between updates. Replication is
+  cell-gated (only active when you and the other player are in the same
+  cell, optionally pinned via `target_cell`).
+- Phase 2 in progress (steps 2.1 + 2.2 done): ghosts now play the correct
+  locomotion animation (idle/walk/run/sneak) and draw or sheath their
+  weapon in sync with the remote player's actions, instead of sliding.
+  Combat damage, server-side transform validation, and pitch/aim
+  replication are still pending (steps 2.3-2.5).
+
+For solo validation without a second player, use `rl demo start` from the
+in-game console — it spawns a synthetic ghost that orbits you with the run
+animation playing, exercising the same render path real ghosts use.
 
 Check [`ROADMAP.md`](ROADMAP.md) for current status.

@@ -1,8 +1,10 @@
 # server
 
-Authoritative game server. Rust, bevy_ecs, Flatbuffers wire format v1.
+Authoritative game server. Rust, bevy_ecs, Flatbuffers wire format
+(protocol v2).
 
-Runs a 60 Hz ECS simulation (Transform integration from Velocity) and
+Runs a 60 Hz ECS simulation (Transform integration from Velocity; AnimState
+holds the latest replicated animation graph variables per player) and
 broadcasts `WorldSnapshot` to all connected clients at 20 Hz. Connection
 lifecycle: Hello/Welcome handshake, Heartbeat keepalive, LeaveNotify for
 graceful disconnect, server-initiated Disconnect (version mismatch, timeout).
@@ -46,14 +48,27 @@ Binary Flatbuffers over UDP. Every packet has a 4-byte header:
 ```
 +------+------+------+------+------------------+
 | 0x52 | 0x4C | ver  | type | flatbuffer body  |
-|  R   |  L   |  1   |      |                  |
+|  R   |  L   |  2   |      |                  |
 +------+------+------+------+------------------+
 ```
+
+Protocol version is `2` since Phase 2 step 2.1 (PlayerState was converted
+from a Flatbuffers struct to a table to allow adding variable-length
+fields). v1 clients receive `Disconnect{VersionMismatch}`.
 
 Client-to-server messages: `Hello`, `Heartbeat`, `LeaveNotify`, `PlayerInput`.
 Server-to-client messages: `Welcome`, `Disconnect`, `WorldSnapshot`.
 
-Schemas live in `schemas/v1/` (types.fbs, lifecycle.fbs, world.fbs).
+`PlayerInput` carries the local player's transform plus a curated set of
+animation graph variables (locomotion: `Speed`, `Direction`, `IsRunning`,
+`IsSprinting`, `IsSneaking`; weapon state: `IsEquipping`, `IsUnequipping`,
+`iState`, `weapon_drawn`). The server stores them in an `AnimState`
+component and forwards them in `PlayerState` entries inside each
+`WorldSnapshot`.
+
+Schemas live in `schemas/v1/` (types.fbs, lifecycle.fbs, world.fbs). The
+directory name reflects historical filesystem layout, not the on-wire
+version byte -- see `schemas/README.md`.
 
 ## Tests
 

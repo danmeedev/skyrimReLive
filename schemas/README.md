@@ -4,7 +4,23 @@ Shared Flatbuffers wire-format schemas. Codegen outputs go to:
 - `server/src/proto/v1/` (Rust)
 - `client/plugin/src/proto/v1/` (C++)
 
-## v1 schemas
+## Directory naming vs on-wire protocol version
+
+The schema directory is named `v1/` for historical reasons. The on-wire
+protocol version (the `ver` byte in every packet header) is **`2`** as of
+Phase 2 step 2.1, when `PlayerState` was converted from a Flatbuffers
+`struct` (inline, fixed-size) to a `table` (heap-allocated, supports
+adding new fields). The struct→table change is binary-incompatible, so
+the version byte was bumped; v1 clients now receive
+`Disconnect{VersionMismatch}` from the server.
+
+The directory was deliberately not renamed to `v2/` (and the generated
+`proto/v1/` paths weren't moved either). There is no deployed v1 anywhere,
+so renaming would be churn for no gain. Future breaking changes that
+warrant a fresh schema set will create a sibling `schemas/v2/` directory
+alongside the existing one.
+
+## Schema files
 
 ```
 schemas/v1/
@@ -12,11 +28,12 @@ schemas/v1/
                   DisconnectCode enum.
   lifecycle.fbs   Hello, Welcome, Heartbeat, LeaveNotify, Disconnect tables.
   world.fbs       Vec3 struct, Transform struct (pos + yaw), PlayerState
-                  struct, PlayerInput table, WorldSnapshot table.
+                  table (transform + locomotion graph vars + weapon
+                  state), PlayerInput table, WorldSnapshot table.
 ```
 
 All packets use a 4-byte header (`R L ver type`) before the Flatbuffer body.
-The `ver` byte is currently `1`. The `type` byte maps to `MessageType`.
+The `ver` byte is `2`. The `type` byte maps to `MessageType`.
 
 ## Regenerating
 
