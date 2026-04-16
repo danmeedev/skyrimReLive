@@ -159,7 +159,7 @@ If the server log stays silent, see the troubleshooting section below.
 
 ## Security notes
 
-- The server still trusts the client's position (known H1 caveat from Phase 1 — see the architecture doc). Server-side plausibility checks land in Phase 2 step 2.4. Don't run a public server with random players until then.
+- The server still trusts the client's position (known H1 caveat from Phase 1 — see the architecture doc). Anti-teleport / speedhack validation (Phase 2 step 2.4) is deferred since this is a friend-trust mod; the planned home is an opt-in "strict mode" config. Don't run a public server with random players until then.
 - No authentication yet — anyone who can reach the port can connect. For friend-group use on Tailscale this is fine because the tailnet itself is the perimeter.
 - Never put a private config (future: passwords, secrets) in the repo. `.gitignore` covers `.env` / `*.local.toml`.
 

@@ -34,8 +34,7 @@ The architecture is server-authoritative from day one specifically so the small-
 
 ## What's coming (next few releases)
 
-- **Anti-cheat basics** (Phase 2.4) — server-side teleport detection, speed clamps. Phase 1 trusts the client too much; Phase 2 starts tightening.
-- **Aim direction** (Phase 2.5) — pitch replication so people can see where you're looking, prep for ranged combat.
+- **Aim direction + ranged combat** (Phase 2.5) — pitch replication so people can see where you're aiming, plus extending the combat hook to bows and spells. Cheat-prevention (Phase 2.4 anti-teleport / speedhack) is deferred behind this — friend-trust mode is fine with `coc`, and a future opt-in "strict mode" server config is the right home for hardening when public servers become a thing.
 - **Cell transitions** (Phase 3) — walk into Dragonsreach together, not just stand outside.
 - **Persistent characters** (Phase 5) — your level, inventory, and equipment survive disconnects.
 - **Custom ghost appearance** — right now you appear as a clone of yourself; the longer plan is shipping with a proper custom NPC base so each player has their own appearance.

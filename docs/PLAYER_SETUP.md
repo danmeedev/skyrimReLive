@@ -102,8 +102,10 @@ If instead you see `timed out waiting for Welcome`, either the server isn't runn
   their weapon in sync with the remote player, and melee hits between
   players actually land — the server validates each swing's range and
   rate, applies damage, and the target's client plays a stagger when
-  the blow is heavy. Server-side transform validation and pitch/aim
-  replication are still pending (steps 2.4-2.5).
+  the blow is heavy. Pitch/aim replication and ranged-combat support
+  are still pending (step 2.5). Anti-cheat-style transform validation
+  (step 2.4) is deferred — this is a friend-trust mod and players are
+  free to use console commands like `coc`.
 
 For solo validation without a second player, use `rl demo start` from the
 in-game console — it spawns a synthetic ghost that orbits you with the run

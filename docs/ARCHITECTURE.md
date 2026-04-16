@@ -5,9 +5,12 @@ Players connect, replicate transforms, and see each other as ghost
 actors that play the correct locomotion animation (walk/run/sneak),
 weapon-draw/sheath transitions, and take/deliver melee damage —
 server-validated swings produce DamageApply packets that the target's
-client renders as a stagger. Steps 2.4-2.5 (transform validation,
-pitch replication / ranged combat prep) are not started. The server
-runs an authoritative ECS sim; the client is a thin SKSE plugin.
+client renders as a stagger. Step 2.5 (pitch replication / ranged
+combat prep) is not started; step 2.4 (transform validation /
+anti-teleport) is deferred — friend-trust co-op is explicitly fine
+with `coc`-style shortcuts, and a future opt-in "strict mode" config
+is the right home for hardening. The server runs an authoritative
+ECS sim; the client is a thin SKSE plugin.
 
 ## Guiding principles
 

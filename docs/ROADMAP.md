@@ -77,8 +77,12 @@ Per accepted proposal `docs/proposals/0002-phase-2-animation-combat.md`.
   staggerStart on the player's animation graph (when the server flagged
   damage ≥ 30) and prints a console hit summary. Sink is idempotent so
   reconnect cycles don't stack subscriptions.
-- [ ] Step 2.4: server-side transform validation (anti-teleport / speedhack)
 - [ ] Step 2.5: pitch replication + ranged combat prep
+- [ ] (deferred) Step 2.4: server-side transform validation (anti-teleport
+  / speedhack). Friend-trust co-op doesn't need hardening — `coc` and
+  similar shortcuts are explicitly fine. The validator design is still
+  on the table for a future opt-in "strict mode" server-rules config
+  when someone wants to host for untrusted players.
 
 ## Phase 3 — World state
 
