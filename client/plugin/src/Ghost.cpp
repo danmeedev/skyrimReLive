@@ -78,7 +78,15 @@ namespace relive::ghost {
                 // enable and force 3D load so the ghost is visible immediately.
                 actor->Enable(false);
                 actor->Load3D(false);
-                actor->EnableAI(false);
+                // IMPORTANT: do NOT EnableAI(false) here. Disabling AI also
+                // disables the engine's behavior-graph processing — our
+                // SetGraphVariableFloat/Bool calls become no-ops and the
+                // ghost renders as a static T-pose. With AI on, the graph
+                // transitions into idle/walk/run based on the variables we
+                // set in tick_main_thread. The ghost will have some vanilla
+                // AI quirks (default packages from Lydia or whatever base);
+                // those get suppressed properly in a later step (custom
+                // empty-package ActorBase via ESP).
                 actor->AllowBleedoutDialogue(false);
                 return actor;
             }
