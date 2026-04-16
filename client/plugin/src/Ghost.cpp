@@ -78,15 +78,15 @@ namespace relive::ghost {
                 // enable and force 3D load so the ghost is visible immediately.
                 actor->Enable(false);
                 actor->Load3D(false);
-                // IMPORTANT: do NOT EnableAI(false) here. Disabling AI also
-                // disables the engine's behavior-graph processing — our
-                // SetGraphVariableFloat/Bool calls become no-ops and the
-                // ghost renders as a static T-pose. With AI on, the graph
-                // transitions into idle/walk/run based on the variables we
-                // set in tick_main_thread. The ghost will have some vanilla
-                // AI quirks (default packages from Lydia or whatever base);
-                // those get suppressed properly in a later step (custom
-                // empty-package ActorBase via ESP).
+                // AI must stay on so the behavior-graph keeps processing
+                // (EnableAI(false) turns it into a T-pose statue). But the
+                // template's default AI package (Lydia's follow/sandbox)
+                // keeps overwriting our Speed/forceRun writes every frame,
+                // so lock the ghost into a do-nothing package first — the
+                // package has no movement commands, leaving the locomotion
+                // state machine free for us to drive.
+                actor->InitiateDoNothingPackage();
+                actor->EvaluatePackage(true, true);
                 actor->AllowBleedoutDialogue(false);
                 return actor;
             }
@@ -326,6 +326,26 @@ namespace relive::ghost {
             g.actor->SetGraphVariableBool("IsEquipping", latest.is_equipping);
             g.actor->SetGraphVariableBool("IsUnequipping", latest.is_unequipping);
             g.actor->SetGraphVariableInt("iState", latest.weapon_state);
+            // Belt-and-suspenders: stomp the ActorState bits the locomotion
+            // graph samples. InitiateDoNothingPackage stops the AI from
+            // fighting us, but we still need to tell the state machine what
+            // gait to use. Speed > ~1 means "moving"; we pick walk vs run
+            // from is_running, and force the movingForward bit so the graph
+            // leaves the idle branch.
+            auto* st = g.actor->AsActorState();
+            if (st) {
+                const bool moving = latest.speed > 1.0F;
+                st->actorState1.movingForward = moving ? 1 : 0;
+                st->actorState1.movingBack    = 0;
+                st->actorState1.movingLeft    = 0;
+                st->actorState1.movingRight   = 0;
+                st->actorState1.walking  = (moving && !latest.is_running) ? 1 : 0;
+                st->actorState1.running  = (moving && latest.is_running) ? 1 : 0;
+                st->actorState1.sprinting = latest.is_sprinting ? 1 : 0;
+                st->actorState1.sneaking = latest.is_sneaking ? 1 : 0;
+                st->actorState2.forceRun = latest.is_running ? 1 : 0;
+                st->actorState2.forceSneak = latest.is_sneaking ? 1 : 0;
+            }
             ++it;
         }
     }
