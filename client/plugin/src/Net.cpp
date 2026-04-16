@@ -13,6 +13,7 @@
 #include <RE/Skyrim.h>
 #include <SKSE/Logger.h>
 
+#include "Combat.h"
 #include "Ghost.h"
 #include "Socket.h"
 
@@ -272,6 +273,10 @@ namespace relive::net {
                 }
                 ghost::instance().ingest(snap->server_tick(),
                                          snap->server_time_ms(), updates);
+            } else if (type == re_v1::MessageType_DamageApply) {
+                const auto* d = flatbuffers::GetRoot<re_v1::DamageApply>(body.data());
+                combat::on_damage_apply(d->attacker_player_id(), d->damage(),
+                                        d->stagger(), d->new_hp());
             } else if (type == re_v1::MessageType_Disconnect) {
                 const auto* d = flatbuffers::GetRoot<re_v1::Disconnect>(body.data());
                 SKSE::log::warn("server sent Disconnect: code={} reason={}",
@@ -281,6 +286,32 @@ namespace relive::net {
                 return;
             }
         }
+    }
+
+    void Client::send_combat_event(std::uint32_t target_player_id,
+                                   std::uint8_t attack_type, float weapon_reach,
+                                   float weapon_base_damage) {
+        if (!running_.load(std::memory_order_acquire)) return;
+
+        const auto now_ms = static_cast<std::uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch())
+                .count());
+
+        flatbuffers::FlatBufferBuilder fbb(64);
+        re_v1::CombatEventBuilder cb(fbb);
+        cb.add_target_player_id(target_player_id);
+        cb.add_attack_type(attack_type);
+        cb.add_weapon_reach(weapon_reach);
+        cb.add_weapon_base_damage(weapon_base_damage);
+        cb.add_client_time_ms(now_ms);
+        const auto off = cb.Finish();
+        fbb.Finish(off);
+
+        std::vector<std::uint8_t> packet;
+        encode_packet(re_v1::MessageType_CombatEvent,
+                      std::span(fbb.GetBufferPointer(), fbb.GetSize()), packet);
+        sock::send_all(socket_, packet);
     }
 
 }

@@ -12,6 +12,7 @@
 #include <RE/Skyrim.h>
 
 #include "Cell.h"
+#include "Combat.h"
 #include "Commands.h"
 #include "Config.h"
 #include "Ghost.h"
@@ -182,11 +183,25 @@ namespace relive::plugin {
         return "disconnected";
     }
 
+    void send_combat_event(std::uint32_t target_player_id,
+                           std::uint8_t attack_type, float weapon_reach,
+                           float weapon_base_damage) {
+        if (g_state.load(std::memory_order_acquire) != ConnState::Connected) {
+            return;
+        }
+        g_client.send_combat_event(target_player_id, attack_type, weapon_reach,
+                                   weapon_base_damage);
+    }
+
     void on_world_loaded() {
         const auto cfg = config::load();
         // Apply cell target from config. 0 means "any cell" so solo testing
         // works everywhere by default.
         cell::instance().set_target(cfg.target_cell_form_id);
+
+        // Hit-event sink survives across connect/disconnect cycles; sends
+        // are no-ops while we're idle.
+        combat::register_sink();
 
         if (!cfg.auto_connect) {
             SKSE::log::info("SkyrimReLive: auto_connect=false; use `rl connect` in console");

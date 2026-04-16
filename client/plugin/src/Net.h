@@ -31,6 +31,13 @@ namespace relive::net {
         bool start(std::string_view host, uint16_t port, std::string_view player_name);
         void stop();
 
+        // Phase 2.3b: ship a CombatEvent for a hit the local player just
+        // landed on a known ghost. Thread-safe with the tick loop because
+        // the underlying socket send is one-shot. Drops silently when not
+        // connected.
+        void send_combat_event(uint32_t target_player_id, uint8_t attack_type,
+                               float weapon_reach, float weapon_base_damage);
+
         [[nodiscard]] uint32_t player_id() const noexcept { return player_id_; }
         [[nodiscard]] uint64_t snapshots_received() const noexcept {
             return snapshots_received_.load(std::memory_order_relaxed);

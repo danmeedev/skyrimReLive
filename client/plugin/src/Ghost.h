@@ -6,6 +6,7 @@
 #include <deque>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <span>
 #include <unordered_map>
 #include <vector>
@@ -89,6 +90,12 @@ namespace relive::ghost {
         void tick_main_thread();
 
         [[nodiscard]] std::size_t ghost_count() const;
+
+        // Reverse lookup: given an engine actor pointer (e.g., from a
+        // TESHitEvent), find which player_id owns the ghost. Main-thread
+        // only — `ghosts_` has no synchronization beyond that contract.
+        [[nodiscard]] std::optional<std::uint32_t>
+            player_id_for_actor(const RE::Actor* actor) const;
 
     private:
         struct StampedSnapshot {

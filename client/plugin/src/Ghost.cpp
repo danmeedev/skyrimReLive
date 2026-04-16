@@ -187,6 +187,15 @@ namespace relive::ghost {
         return ghosts_.size();
     }
 
+    std::optional<std::uint32_t>
+    Manager::player_id_for_actor(const RE::Actor* actor) const {
+        if (!actor) return std::nullopt;
+        for (const auto& [pid, g] : ghosts_) {
+            if (g.actor.get() == actor) return pid;
+        }
+        return std::nullopt;
+    }
+
     void Manager::tick_main_thread() {
         auto* player = RE::PlayerCharacter::GetSingleton();
         if (!player || !player->parentCell) {
