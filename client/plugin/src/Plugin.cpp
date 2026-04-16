@@ -70,7 +70,11 @@ namespace {
             const float y = center.y + kRadius * std::sin(phase);
             // Face tangent to circle (yaw leading by +90 degrees).
             const float yaw = phase + (kTwoPi / 4.0F);
-            relive::ghost::instance().inject_synthetic(kDemoId, x, y, center.z, yaw);
+            // Pretend the demo ghost is running so it plays a run animation
+            // instead of standing in idle pose. Speed 350 ~= player run speed.
+            constexpr float kRunSpeed = 350.0F;
+            relive::ghost::instance().inject_synthetic(
+                kDemoId, x, y, center.z, yaw, kRunSpeed, /*is_running=*/true);
             std::this_thread::sleep_for(50ms);
         }
     }

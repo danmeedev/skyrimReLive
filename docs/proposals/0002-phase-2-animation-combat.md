@@ -1,6 +1,6 @@
 # 0002 — Phase 2: animation graph sync + combat
 
-- **Status:** draft
+- **Status:** accepted
 - **Author(s):** SkyrimReLive contributors
 - **Created:** 2026-04-15
 - **Supersedes:** —
@@ -302,3 +302,7 @@ discrete transitions.
 ## Changelog
 
 - 2026-04-15: initial draft.
+- 2026-04-16: accepted as-is. Step 2.1 implementation simplification noted:
+  use fixed flatbuffer fields (5 variables) instead of hash-keyed arrays
+  for the locomotion sub-step. Hash arrays revisit when variable count
+  exceeds ~10 in step 2.2/2.3.

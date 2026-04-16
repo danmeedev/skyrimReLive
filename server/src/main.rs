@@ -5,12 +5,12 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use anyhow::Result;
 use bevy_ecs::prelude::*;
 use flatbuffers::FlatBufferBuilder;
-use skyrim_relive_server::components::{Connection, Player, Transform, Velocity};
+use skyrim_relive_server::components::{AnimState, Connection, Player, Transform, Velocity};
 use skyrim_relive_server::config::Config;
 use skyrim_relive_server::proto::v1::{
     Disconnect, DisconnectArgs, DisconnectCode, Hello, MessageType, PlayerInput,
-    PlayerState as FbPlayerState, Transform as FbTransform, Vec3 as FbVec3, Welcome, WelcomeArgs,
-    WorldSnapshot, WorldSnapshotArgs,
+    PlayerState as FbPlayerState, PlayerStateArgs as FbPlayerStateArgs, Transform as FbTransform,
+    Vec3 as FbVec3, Welcome, WelcomeArgs, WorldSnapshot, WorldSnapshotArgs,
 };
 use skyrim_relive_server::wire;
 use tokio::net::UdpSocket;
@@ -147,6 +147,7 @@ impl ServerState {
                 },
                 Transform::default(),
                 Velocity::default(),
+                AnimState::default(),
             ))
             .id();
         self.addr_to_entity.insert(peer, entity);
@@ -217,6 +218,14 @@ impl ServerState {
                 xf.yaw = new_yaw;
             }
         }
+        // Phase 2.1: copy locomotion anim variables from the input.
+        if let Some(mut anim) = self.world.get_mut::<AnimState>(entity) {
+            anim.speed = input.anim_speed();
+            anim.direction = input.anim_direction();
+            anim.is_running = input.anim_is_running();
+            anim.is_sprinting = input.anim_is_sprinting();
+            anim.is_sneaking = input.anim_is_sneaking();
+        }
         // Touch last_heard regardless — acts as heartbeat even when idle.
         if let Some(mut conn) = self.world.get_mut::<Connection>(entity) {
             conn.last_heard = Instant::now();
@@ -276,14 +285,15 @@ impl ServerState {
     /// a grid lookup in Phase 3.
     async fn broadcast_snapshot(&mut self) {
         // Read phase: snapshot the whole world before any await.
-        let all: Vec<(u32, Transform, SocketAddr)> = self
+        let all: Vec<(u32, Transform, AnimState, SocketAddr)> = self
             .world
-            .query::<(&Player, &Transform, &Connection)>()
+            .query::<(&Player, &Transform, &AnimState, &Connection)>()
             .iter(&self.world)
-            .map(|(p, t, c)| (p.id, *t, c.addr))
+            .map(|(p, t, a, c)| (p.id, *t, *a, c.addr))
             .collect();
 
-        if all.is_empty() {
+        if all.len() < 2 {
+            // Nothing to broadcast — solo player has no peers to mirror.
             return;
         }
 
@@ -295,26 +305,37 @@ impl ServerState {
         )
         .unwrap_or(0);
 
-        for (self_pid, _, self_addr) in &all {
-            let others: Vec<FbPlayerState> = all
+        for (self_pid, _, _, self_addr) in &all {
+            self.snap_fbb.reset();
+
+            // PlayerState is a v2 table now, so we collect WIPOffsets
+            // first and then build the vector.
+            let player_offsets: Vec<_> = all
                 .iter()
-                .filter(|(pid, _, _)| pid != self_pid)
-                .map(|(pid, t, _)| {
-                    FbPlayerState::new(
-                        *pid,
-                        &FbTransform::new(&FbVec3::new(t.pos[0], t.pos[1], t.pos[2]), t.yaw),
+                .filter(|(pid, _, _, _)| pid != self_pid)
+                .map(|(pid, t, a, _)| {
+                    let v3 = FbVec3::new(t.pos[0], t.pos[1], t.pos[2]);
+                    let xform = FbTransform::new(&v3, t.yaw);
+                    FbPlayerState::create(
+                        &mut self.snap_fbb,
+                        &FbPlayerStateArgs {
+                            player_id: *pid,
+                            transform: Some(&xform),
+                            anim_speed: a.speed,
+                            anim_direction: a.direction,
+                            anim_is_running: a.is_running,
+                            anim_is_sprinting: a.is_sprinting,
+                            anim_is_sneaking: a.is_sneaking,
+                        },
                     )
                 })
                 .collect();
 
-            // Skip building and sending when there are no other players to
-            // report — a solo player gains nothing from an empty snapshot.
-            if others.is_empty() {
+            if player_offsets.is_empty() {
                 continue;
             }
 
-            self.snap_fbb.reset();
-            let players_vec = self.snap_fbb.create_vector(&others);
+            let players_vec = self.snap_fbb.create_vector(&player_offsets);
             let snap = WorldSnapshot::create(
                 &mut self.snap_fbb,
                 &WorldSnapshotArgs {

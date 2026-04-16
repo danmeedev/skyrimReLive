@@ -21,6 +21,7 @@ struct Vec3;
 struct Transform;
 
 struct PlayerState;
+struct PlayerStateBuilder;
 
 struct PlayerInput;
 struct PlayerInputBuilder;
@@ -80,34 +81,118 @@ FLATBUFFERS_MANUALLY_ALIGNED_STRUCT(4) Transform FLATBUFFERS_FINAL_CLASS {
 };
 FLATBUFFERS_STRUCT_END(Transform, 16);
 
-FLATBUFFERS_MANUALLY_ALIGNED_STRUCT(4) PlayerState FLATBUFFERS_FINAL_CLASS {
- private:
-  uint32_t player_id_;
-  skyrim_relive::v1::Transform transform_;
-
- public:
-  PlayerState()
-      : player_id_(0),
-        transform_() {
-  }
-  PlayerState(uint32_t _player_id, const skyrim_relive::v1::Transform &_transform)
-      : player_id_(::flatbuffers::EndianScalar(_player_id)),
-        transform_(_transform) {
-  }
+struct PlayerState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef PlayerStateBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_PLAYER_ID = 4,
+    VT_TRANSFORM = 6,
+    VT_ANIM_SPEED = 8,
+    VT_ANIM_DIRECTION = 10,
+    VT_ANIM_IS_RUNNING = 12,
+    VT_ANIM_IS_SPRINTING = 14,
+    VT_ANIM_IS_SNEAKING = 16
+  };
   uint32_t player_id() const {
-    return ::flatbuffers::EndianScalar(player_id_);
+    return GetField<uint32_t>(VT_PLAYER_ID, 0);
   }
-  const skyrim_relive::v1::Transform &transform() const {
-    return transform_;
+  const skyrim_relive::v1::Transform *transform() const {
+    return GetStruct<const skyrim_relive::v1::Transform *>(VT_TRANSFORM);
+  }
+  float anim_speed() const {
+    return GetField<float>(VT_ANIM_SPEED, 0.0f);
+  }
+  float anim_direction() const {
+    return GetField<float>(VT_ANIM_DIRECTION, 0.0f);
+  }
+  bool anim_is_running() const {
+    return GetField<uint8_t>(VT_ANIM_IS_RUNNING, 0) != 0;
+  }
+  bool anim_is_sprinting() const {
+    return GetField<uint8_t>(VT_ANIM_IS_SPRINTING, 0) != 0;
+  }
+  bool anim_is_sneaking() const {
+    return GetField<uint8_t>(VT_ANIM_IS_SNEAKING, 0) != 0;
+  }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_PLAYER_ID, 4) &&
+           VerifyField<skyrim_relive::v1::Transform>(verifier, VT_TRANSFORM, 4) &&
+           VerifyField<float>(verifier, VT_ANIM_SPEED, 4) &&
+           VerifyField<float>(verifier, VT_ANIM_DIRECTION, 4) &&
+           VerifyField<uint8_t>(verifier, VT_ANIM_IS_RUNNING, 1) &&
+           VerifyField<uint8_t>(verifier, VT_ANIM_IS_SPRINTING, 1) &&
+           VerifyField<uint8_t>(verifier, VT_ANIM_IS_SNEAKING, 1) &&
+           verifier.EndTable();
   }
 };
-FLATBUFFERS_STRUCT_END(PlayerState, 20);
+
+struct PlayerStateBuilder {
+  typedef PlayerState Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_player_id(uint32_t player_id) {
+    fbb_.AddElement<uint32_t>(PlayerState::VT_PLAYER_ID, player_id, 0);
+  }
+  void add_transform(const skyrim_relive::v1::Transform *transform) {
+    fbb_.AddStruct(PlayerState::VT_TRANSFORM, transform);
+  }
+  void add_anim_speed(float anim_speed) {
+    fbb_.AddElement<float>(PlayerState::VT_ANIM_SPEED, anim_speed, 0.0f);
+  }
+  void add_anim_direction(float anim_direction) {
+    fbb_.AddElement<float>(PlayerState::VT_ANIM_DIRECTION, anim_direction, 0.0f);
+  }
+  void add_anim_is_running(bool anim_is_running) {
+    fbb_.AddElement<uint8_t>(PlayerState::VT_ANIM_IS_RUNNING, static_cast<uint8_t>(anim_is_running), 0);
+  }
+  void add_anim_is_sprinting(bool anim_is_sprinting) {
+    fbb_.AddElement<uint8_t>(PlayerState::VT_ANIM_IS_SPRINTING, static_cast<uint8_t>(anim_is_sprinting), 0);
+  }
+  void add_anim_is_sneaking(bool anim_is_sneaking) {
+    fbb_.AddElement<uint8_t>(PlayerState::VT_ANIM_IS_SNEAKING, static_cast<uint8_t>(anim_is_sneaking), 0);
+  }
+  explicit PlayerStateBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<PlayerState> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<PlayerState>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<PlayerState> CreatePlayerState(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t player_id = 0,
+    const skyrim_relive::v1::Transform *transform = nullptr,
+    float anim_speed = 0.0f,
+    float anim_direction = 0.0f,
+    bool anim_is_running = false,
+    bool anim_is_sprinting = false,
+    bool anim_is_sneaking = false) {
+  PlayerStateBuilder builder_(_fbb);
+  builder_.add_anim_direction(anim_direction);
+  builder_.add_anim_speed(anim_speed);
+  builder_.add_transform(transform);
+  builder_.add_player_id(player_id);
+  builder_.add_anim_is_sneaking(anim_is_sneaking);
+  builder_.add_anim_is_sprinting(anim_is_sprinting);
+  builder_.add_anim_is_running(anim_is_running);
+  return builder_.Finish();
+}
 
 struct PlayerInput FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef PlayerInputBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_TRANSFORM = 4,
-    VT_CLIENT_TIME_MS = 6
+    VT_CLIENT_TIME_MS = 6,
+    VT_ANIM_SPEED = 8,
+    VT_ANIM_DIRECTION = 10,
+    VT_ANIM_IS_RUNNING = 12,
+    VT_ANIM_IS_SPRINTING = 14,
+    VT_ANIM_IS_SNEAKING = 16
   };
   const skyrim_relive::v1::Transform *transform() const {
     return GetStruct<const skyrim_relive::v1::Transform *>(VT_TRANSFORM);
@@ -115,11 +200,31 @@ struct PlayerInput FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   uint64_t client_time_ms() const {
     return GetField<uint64_t>(VT_CLIENT_TIME_MS, 0);
   }
+  float anim_speed() const {
+    return GetField<float>(VT_ANIM_SPEED, 0.0f);
+  }
+  float anim_direction() const {
+    return GetField<float>(VT_ANIM_DIRECTION, 0.0f);
+  }
+  bool anim_is_running() const {
+    return GetField<uint8_t>(VT_ANIM_IS_RUNNING, 0) != 0;
+  }
+  bool anim_is_sprinting() const {
+    return GetField<uint8_t>(VT_ANIM_IS_SPRINTING, 0) != 0;
+  }
+  bool anim_is_sneaking() const {
+    return GetField<uint8_t>(VT_ANIM_IS_SNEAKING, 0) != 0;
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<skyrim_relive::v1::Transform>(verifier, VT_TRANSFORM, 4) &&
            VerifyField<uint64_t>(verifier, VT_CLIENT_TIME_MS, 8) &&
+           VerifyField<float>(verifier, VT_ANIM_SPEED, 4) &&
+           VerifyField<float>(verifier, VT_ANIM_DIRECTION, 4) &&
+           VerifyField<uint8_t>(verifier, VT_ANIM_IS_RUNNING, 1) &&
+           VerifyField<uint8_t>(verifier, VT_ANIM_IS_SPRINTING, 1) &&
+           VerifyField<uint8_t>(verifier, VT_ANIM_IS_SNEAKING, 1) &&
            verifier.EndTable();
   }
 };
@@ -133,6 +238,21 @@ struct PlayerInputBuilder {
   }
   void add_client_time_ms(uint64_t client_time_ms) {
     fbb_.AddElement<uint64_t>(PlayerInput::VT_CLIENT_TIME_MS, client_time_ms, 0);
+  }
+  void add_anim_speed(float anim_speed) {
+    fbb_.AddElement<float>(PlayerInput::VT_ANIM_SPEED, anim_speed, 0.0f);
+  }
+  void add_anim_direction(float anim_direction) {
+    fbb_.AddElement<float>(PlayerInput::VT_ANIM_DIRECTION, anim_direction, 0.0f);
+  }
+  void add_anim_is_running(bool anim_is_running) {
+    fbb_.AddElement<uint8_t>(PlayerInput::VT_ANIM_IS_RUNNING, static_cast<uint8_t>(anim_is_running), 0);
+  }
+  void add_anim_is_sprinting(bool anim_is_sprinting) {
+    fbb_.AddElement<uint8_t>(PlayerInput::VT_ANIM_IS_SPRINTING, static_cast<uint8_t>(anim_is_sprinting), 0);
+  }
+  void add_anim_is_sneaking(bool anim_is_sneaking) {
+    fbb_.AddElement<uint8_t>(PlayerInput::VT_ANIM_IS_SNEAKING, static_cast<uint8_t>(anim_is_sneaking), 0);
   }
   explicit PlayerInputBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -148,10 +268,20 @@ struct PlayerInputBuilder {
 inline ::flatbuffers::Offset<PlayerInput> CreatePlayerInput(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     const skyrim_relive::v1::Transform *transform = nullptr,
-    uint64_t client_time_ms = 0) {
+    uint64_t client_time_ms = 0,
+    float anim_speed = 0.0f,
+    float anim_direction = 0.0f,
+    bool anim_is_running = false,
+    bool anim_is_sprinting = false,
+    bool anim_is_sneaking = false) {
   PlayerInputBuilder builder_(_fbb);
   builder_.add_client_time_ms(client_time_ms);
+  builder_.add_anim_direction(anim_direction);
+  builder_.add_anim_speed(anim_speed);
   builder_.add_transform(transform);
+  builder_.add_anim_is_sneaking(anim_is_sneaking);
+  builder_.add_anim_is_sprinting(anim_is_sprinting);
+  builder_.add_anim_is_running(anim_is_running);
   return builder_.Finish();
 }
 
@@ -168,8 +298,8 @@ struct WorldSnapshot FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   uint64_t server_time_ms() const {
     return GetField<uint64_t>(VT_SERVER_TIME_MS, 0);
   }
-  const ::flatbuffers::Vector<const skyrim_relive::v1::PlayerState *> *players() const {
-    return GetPointer<const ::flatbuffers::Vector<const skyrim_relive::v1::PlayerState *> *>(VT_PLAYERS);
+  const ::flatbuffers::Vector<::flatbuffers::Offset<skyrim_relive::v1::PlayerState>> *players() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<skyrim_relive::v1::PlayerState>> *>(VT_PLAYERS);
   }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
@@ -178,6 +308,7 @@ struct WorldSnapshot FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyField<uint64_t>(verifier, VT_SERVER_TIME_MS, 8) &&
            VerifyOffset(verifier, VT_PLAYERS) &&
            verifier.VerifyVector(players()) &&
+           verifier.VerifyVectorOfTables(players()) &&
            verifier.EndTable();
   }
 };
@@ -192,7 +323,7 @@ struct WorldSnapshotBuilder {
   void add_server_time_ms(uint64_t server_time_ms) {
     fbb_.AddElement<uint64_t>(WorldSnapshot::VT_SERVER_TIME_MS, server_time_ms, 0);
   }
-  void add_players(::flatbuffers::Offset<::flatbuffers::Vector<const skyrim_relive::v1::PlayerState *>> players) {
+  void add_players(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<skyrim_relive::v1::PlayerState>>> players) {
     fbb_.AddOffset(WorldSnapshot::VT_PLAYERS, players);
   }
   explicit WorldSnapshotBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
@@ -210,7 +341,7 @@ inline ::flatbuffers::Offset<WorldSnapshot> CreateWorldSnapshot(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     uint64_t server_tick = 0,
     uint64_t server_time_ms = 0,
-    ::flatbuffers::Offset<::flatbuffers::Vector<const skyrim_relive::v1::PlayerState *>> players = 0) {
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<skyrim_relive::v1::PlayerState>>> players = 0) {
   WorldSnapshotBuilder builder_(_fbb);
   builder_.add_server_time_ms(server_time_ms);
   builder_.add_server_tick(server_tick);
@@ -222,8 +353,8 @@ inline ::flatbuffers::Offset<WorldSnapshot> CreateWorldSnapshotDirect(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     uint64_t server_tick = 0,
     uint64_t server_time_ms = 0,
-    const std::vector<skyrim_relive::v1::PlayerState> *players = nullptr) {
-  auto players__ = players ? _fbb.CreateVectorOfStructs<skyrim_relive::v1::PlayerState>(*players) : 0;
+    const std::vector<::flatbuffers::Offset<skyrim_relive::v1::PlayerState>> *players = nullptr) {
+  auto players__ = players ? _fbb.CreateVector<::flatbuffers::Offset<skyrim_relive::v1::PlayerState>>(*players) : 0;
   return skyrim_relive::v1::CreateWorldSnapshot(
       _fbb,
       server_tick,

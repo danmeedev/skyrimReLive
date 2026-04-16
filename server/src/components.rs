@@ -37,3 +37,16 @@ pub struct Transform {
 pub struct Velocity {
     pub v: [f32; 3],
 }
+
+/// Phase 2.1 locomotion animation state. Mirrors the small set of
+/// animation-graph variables we replicate (`Speed`, `Direction`, `IsRunning`,
+/// `IsSprinting`, `IsSneaking`). Will grow as Phase 2 sub-steps add weapon
+/// and combat state.
+#[derive(Component, Debug, Default, Clone, Copy)]
+pub struct AnimState {
+    pub speed: f32,
+    pub direction: f32,
+    pub is_running: bool,
+    pub is_sprinting: bool,
+    pub is_sneaking: bool,
+}

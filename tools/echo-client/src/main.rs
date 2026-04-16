@@ -156,7 +156,9 @@ async fn main() -> Result<()> {
                             if let Some(players) = snap.players() {
                                 for p in &players {
                                     other_pids.insert(p.player_id());
-                                    let pos = p.transform().pos();
+                                    // PlayerState is a table in v2 — transform() now returns Option.
+                                    let Some(t) = p.transform() else { continue };
+                                    let pos = t.pos();
                                     last_saw_other_pos = Some((pos.x(), pos.y(), pos.z()));
                                 }
                             }
@@ -218,6 +220,14 @@ async fn send_player_input(socket: &UdpSocket, x: f32, y: f32, z: f32, yaw: f32)
         &PlayerInputArgs {
             transform: Some(&xform),
             client_time_ms: now_ms,
+            // Phase 2.1: synthetic locomotion — pretend we're running.
+            // Lets the server-side ECS receive non-default anim values
+            // so headless tests exercise the new fields.
+            anim_speed: 350.0,
+            anim_direction: 0.0,
+            anim_is_running: true,
+            anim_is_sprinting: false,
+            anim_is_sneaking: false,
         },
     );
     fbb.finish(input, None);

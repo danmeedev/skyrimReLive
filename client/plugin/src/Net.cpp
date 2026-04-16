@@ -19,7 +19,7 @@
 namespace re_v1 = skyrim_relive::v1;
 
 namespace {
-    constexpr std::uint8_t kProtoVersion = 1;
+    constexpr std::uint8_t kProtoVersion = 2;
     constexpr std::size_t kHeaderLen = 4;
 
     void encode_packet(re_v1::MessageType type, std::span<const std::uint8_t> body,
@@ -172,6 +172,20 @@ namespace relive::net {
         last_z_.store(z, std::memory_order_relaxed);
         last_yaw_.store(yaw, std::memory_order_relaxed);
 
+        // Phase 2.1: read locomotion variables from the player's behavior
+        // graph. SetGraphVariable... returns false silently if the variable
+        // doesn't exist — defaults stay zero / false in that case.
+        float anim_speed = 0.0F;
+        float anim_dir = 0.0F;
+        bool anim_running = false;
+        bool anim_sprinting = false;
+        bool anim_sneaking = false;
+        player->GetGraphVariableFloat("Speed", anim_speed);
+        player->GetGraphVariableFloat("Direction", anim_dir);
+        player->GetGraphVariableBool("IsRunning", anim_running);
+        player->GetGraphVariableBool("IsSprinting", anim_sprinting);
+        player->GetGraphVariableBool("IsSneaking", anim_sneaking);
+
         flatbuffers::FlatBufferBuilder fbb(96);
         const re_v1::Vec3 v3(x, y, z);
         const re_v1::Transform tr(v3, yaw);
@@ -182,6 +196,11 @@ namespace relive::net {
         re_v1::PlayerInputBuilder ib(fbb);
         ib.add_transform(&tr);
         ib.add_client_time_ms(now_ms);
+        ib.add_anim_speed(anim_speed);
+        ib.add_anim_direction(anim_dir);
+        ib.add_anim_is_running(anim_running);
+        ib.add_anim_is_sprinting(anim_sprinting);
+        ib.add_anim_is_sneaking(anim_sneaking);
         const auto input_off = ib.Finish();
         fbb.Finish(input_off);
 
@@ -215,14 +234,23 @@ namespace relive::net {
                     for (const auto* p : *players) {
                         ghost::Manager::PlayerUpdate u;
                         u.player_id = p->player_id();
-                        const auto& t = p->transform();
-                        const auto& pos = t.pos();
+                        // PlayerState is a v2 table — transform() returns
+                        // a pointer that may be null on malformed packets.
+                        const auto* t = p->transform();
+                        if (!t) continue;
+                        const auto& pos = t->pos();
                         u.snap.server_tick = snap->server_tick();
                         u.snap.server_time_ms = snap->server_time_ms();
                         u.snap.x = pos.x();
                         u.snap.y = pos.y();
                         u.snap.z = pos.z();
-                        u.snap.yaw = t.yaw();
+                        u.snap.yaw = t->yaw();
+                        // Phase 2.1: locomotion anim variables.
+                        u.snap.speed = p->anim_speed();
+                        u.snap.direction = p->anim_direction();
+                        u.snap.is_running = p->anim_is_running();
+                        u.snap.is_sprinting = p->anim_is_sprinting();
+                        u.snap.is_sneaking = p->anim_is_sneaking();
                         updates.push_back(u);
                     }
                 }

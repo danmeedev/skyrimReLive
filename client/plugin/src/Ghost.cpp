@@ -132,13 +132,16 @@ namespace relive::ghost {
     }
 
     void Manager::inject_synthetic(std::uint32_t player_id, float x, float y,
-                                   float z, float yaw) {
+                                   float z, float yaw, float anim_speed,
+                                   bool anim_is_running) {
         PlayerUpdate u;
         u.player_id = player_id;
         u.snap.x = x;
         u.snap.y = y;
         u.snap.z = z;
         u.snap.yaw = yaw;
+        u.snap.speed = anim_speed;
+        u.snap.is_running = anim_is_running;
         // Align synthetic tick with the real server tick so unsigned
         // staleness math (last_applied_tick_ - last_seen_tick) doesn't
         // underflow. last_applied_tick_ is atomic for this read.
@@ -267,6 +270,18 @@ namespace relive::ghost {
             const RE::NiPoint3 pos{render.x, render.y, render.z};
             g.actor->SetPosition(pos, true);
             g.actor->SetAngle(RE::NiPoint3{0.0F, 0.0F, render.yaw});
+
+            // Phase 2.1: drive locomotion via animation graph variables.
+            // Latest snapshot values (no interp on bools); the graph state
+            // machine reads these and transitions between idle/walk/run/
+            // sneak. Best-effort — failures (e.g., variable not found) are
+            // silent so missing-graph cases don't spam logs.
+            const auto& latest = g.history.back().snap;
+            g.actor->SetGraphVariableFloat("Speed", latest.speed);
+            g.actor->SetGraphVariableFloat("Direction", latest.direction);
+            g.actor->SetGraphVariableBool("IsRunning", latest.is_running);
+            g.actor->SetGraphVariableBool("IsSprinting", latest.is_sprinting);
+            g.actor->SetGraphVariableBool("IsSneaking", latest.is_sneaking);
             ++it;
         }
     }

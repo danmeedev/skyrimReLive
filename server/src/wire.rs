@@ -17,7 +17,9 @@ use std::fmt;
 use crate::proto::v1::MessageType;
 
 pub const MAGIC: [u8; 2] = [b'R', b'L'];
-pub const PROTOCOL_VERSION: u8 = 1;
+// v1: Phase 0/1 (struct PlayerState). v2: Phase 2.1+ (table PlayerState
+// with locomotion fields). v1 servers/clients refuse v2 packets cleanly.
+pub const PROTOCOL_VERSION: u8 = 2;
 pub const HEADER_LEN: usize = 4;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -96,6 +98,8 @@ mod tests {
         let (mt, body) = parse(&packet).unwrap();
         assert_eq!(mt, MessageType::Hello);
         assert_eq!(body, b"hello-body");
+        // Sanity: encoded packet starts with magic + current protocol version.
+        assert_eq!(&packet[0..3], &[b'R', b'L', PROTOCOL_VERSION]);
     }
 
     #[test]
@@ -110,17 +114,17 @@ mod tests {
 
     #[test]
     fn rejects_version_mismatch() {
+        // Use a version != PROTOCOL_VERSION (currently 2). Bump as needed
+        // when the protocol version changes.
         assert_eq!(
-            parse(b"RL\x02\x01").unwrap_err(),
-            DecodeError::VersionMismatch(2)
+            parse(b"RL\x09\x01").unwrap_err(),
+            DecodeError::VersionMismatch(9)
         );
     }
 
     #[test]
     fn rejects_unknown_type() {
-        assert_eq!(
-            parse(b"RL\x01\xff").unwrap_err(),
-            DecodeError::UnknownType(255)
-        );
+        let pkt = [b'R', b'L', PROTOCOL_VERSION, 0xff];
+        assert_eq!(parse(&pkt).unwrap_err(), DecodeError::UnknownType(255));
     }
 }

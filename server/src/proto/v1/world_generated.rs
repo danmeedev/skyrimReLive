@@ -302,120 +302,255 @@ pub mod skyrim_relive {
             }
         }
 
-        // struct PlayerState, aligned to 4
-        #[repr(transparent)]
-        #[derive(Clone, Copy, PartialEq)]
-        pub struct PlayerState(pub [u8; 20]);
-        impl Default for PlayerState {
-            fn default() -> Self {
-                Self([0; 20])
-            }
+        pub enum PlayerStateOffset {}
+        #[derive(Copy, Clone, PartialEq)]
+
+        pub struct PlayerState<'a> {
+            pub _tab: ::flatbuffers::Table<'a>,
         }
-        impl ::core::fmt::Debug for PlayerState {
-            fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
-                f.debug_struct("PlayerState")
-                    .field("player_id", &self.player_id())
-                    .field("transform", &self.transform())
-                    .finish()
+
+        impl<'a> ::flatbuffers::Follow<'a> for PlayerState<'a> {
+            type Inner = PlayerState<'a>;
+            #[inline]
+            unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+                Self {
+                    _tab: unsafe { ::flatbuffers::Table::new(buf, loc) },
+                }
             }
         }
 
-        impl ::flatbuffers::SimpleToVerifyInSlice for PlayerState {}
-        impl<'a> ::flatbuffers::Follow<'a> for PlayerState {
-            type Inner = &'a PlayerState;
+        impl<'a> PlayerState<'a> {
+            pub const VT_PLAYER_ID: ::flatbuffers::VOffsetT = 4;
+            pub const VT_TRANSFORM: ::flatbuffers::VOffsetT = 6;
+            pub const VT_ANIM_SPEED: ::flatbuffers::VOffsetT = 8;
+            pub const VT_ANIM_DIRECTION: ::flatbuffers::VOffsetT = 10;
+            pub const VT_ANIM_IS_RUNNING: ::flatbuffers::VOffsetT = 12;
+            pub const VT_ANIM_IS_SPRINTING: ::flatbuffers::VOffsetT = 14;
+            pub const VT_ANIM_IS_SNEAKING: ::flatbuffers::VOffsetT = 16;
+
             #[inline]
-            unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-                unsafe { <&'a PlayerState>::follow(buf, loc) }
+            pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+                PlayerState { _tab: table }
             }
-        }
-        impl<'a> ::flatbuffers::Follow<'a> for &'a PlayerState {
-            type Inner = &'a PlayerState;
-            #[inline]
-            unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
-                unsafe { ::flatbuffers::follow_cast_ref::<PlayerState>(buf, loc) }
+            #[allow(unused_mut)]
+            pub fn create<
+                'bldr: 'args,
+                'args: 'mut_bldr,
+                'mut_bldr,
+                A: ::flatbuffers::Allocator + 'bldr,
+            >(
+                _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+                args: &'args PlayerStateArgs<'args>,
+            ) -> ::flatbuffers::WIPOffset<PlayerState<'bldr>> {
+                let mut builder = PlayerStateBuilder::new(_fbb);
+                builder.add_anim_direction(args.anim_direction);
+                builder.add_anim_speed(args.anim_speed);
+                if let Some(x) = args.transform {
+                    builder.add_transform(x);
+                }
+                builder.add_player_id(args.player_id);
+                builder.add_anim_is_sneaking(args.anim_is_sneaking);
+                builder.add_anim_is_sprinting(args.anim_is_sprinting);
+                builder.add_anim_is_running(args.anim_is_running);
+                builder.finish()
             }
-        }
-        impl<'b> ::flatbuffers::Push for PlayerState {
-            type Output = PlayerState;
+
             #[inline]
-            unsafe fn push(&self, dst: &mut [u8], _written_len: usize) {
-                let src = unsafe {
-                    ::core::slice::from_raw_parts(
-                        self as *const PlayerState as *const u8,
-                        <Self as ::flatbuffers::Push>::size(),
-                    )
-                };
-                dst.copy_from_slice(src);
+            pub fn player_id(&self) -> u32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u32>(PlayerState::VT_PLAYER_ID, Some(0))
+                        .unwrap()
+                }
             }
             #[inline]
-            fn alignment() -> ::flatbuffers::PushAlignment {
-                ::flatbuffers::PushAlignment::new(4)
+            pub fn transform(&self) -> Option<&'a Transform> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe { self._tab.get::<Transform>(PlayerState::VT_TRANSFORM, None) }
+            }
+            #[inline]
+            pub fn anim_speed(&self) -> f32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<f32>(PlayerState::VT_ANIM_SPEED, Some(0.0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn anim_direction(&self) -> f32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<f32>(PlayerState::VT_ANIM_DIRECTION, Some(0.0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn anim_is_running(&self) -> bool {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<bool>(PlayerState::VT_ANIM_IS_RUNNING, Some(false))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn anim_is_sprinting(&self) -> bool {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<bool>(PlayerState::VT_ANIM_IS_SPRINTING, Some(false))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn anim_is_sneaking(&self) -> bool {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<bool>(PlayerState::VT_ANIM_IS_SNEAKING, Some(false))
+                        .unwrap()
+                }
             }
         }
 
-        impl<'a> ::flatbuffers::Verifiable for PlayerState {
+        impl ::flatbuffers::Verifiable for PlayerState<'_> {
             #[inline]
             fn run_verifier(
                 v: &mut ::flatbuffers::Verifier,
                 pos: usize,
             ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
-                v.in_buffer::<Self>(pos)
+                v.visit_table(pos)?
+                    .visit_field::<u32>("player_id", Self::VT_PLAYER_ID, false)?
+                    .visit_field::<Transform>("transform", Self::VT_TRANSFORM, false)?
+                    .visit_field::<f32>("anim_speed", Self::VT_ANIM_SPEED, false)?
+                    .visit_field::<f32>("anim_direction", Self::VT_ANIM_DIRECTION, false)?
+                    .visit_field::<bool>("anim_is_running", Self::VT_ANIM_IS_RUNNING, false)?
+                    .visit_field::<bool>("anim_is_sprinting", Self::VT_ANIM_IS_SPRINTING, false)?
+                    .visit_field::<bool>("anim_is_sneaking", Self::VT_ANIM_IS_SNEAKING, false)?
+                    .finish();
+                Ok(())
             }
         }
-
-        impl<'a> PlayerState {
-            #[allow(clippy::too_many_arguments)]
-            pub fn new(player_id: u32, transform: &Transform) -> Self {
-                let mut s = Self([0; 20]);
-                s.set_player_id(player_id);
-                s.set_transform(transform);
-                s
-            }
-
-            pub fn player_id(&self) -> u32 {
-                let mut mem = ::core::mem::MaybeUninit::<
-                    <u32 as ::flatbuffers::EndianScalar>::Scalar,
-                >::uninit();
-                // Safety:
-                // Created from a valid Table for this object
-                // Which contains a valid value in this slot
-                ::flatbuffers::EndianScalar::from_little_endian(unsafe {
-                    ::core::ptr::copy_nonoverlapping(
-                        self.0[0..].as_ptr(),
-                        mem.as_mut_ptr() as *mut u8,
-                        ::core::mem::size_of::<<u32 as ::flatbuffers::EndianScalar>::Scalar>(),
-                    );
-                    mem.assume_init()
-                })
-            }
-
-            pub fn set_player_id(&mut self, x: u32) {
-                let x_le = ::flatbuffers::EndianScalar::to_little_endian(x);
-                // Safety:
-                // Created from a valid Table for this object
-                // Which contains a valid value in this slot
-                unsafe {
-                    ::core::ptr::copy_nonoverlapping(
-                        &x_le as *const _ as *const u8,
-                        self.0[0..].as_mut_ptr(),
-                        ::core::mem::size_of::<<u32 as ::flatbuffers::EndianScalar>::Scalar>(),
-                    );
+        pub struct PlayerStateArgs<'a> {
+            pub player_id: u32,
+            pub transform: Option<&'a Transform>,
+            pub anim_speed: f32,
+            pub anim_direction: f32,
+            pub anim_is_running: bool,
+            pub anim_is_sprinting: bool,
+            pub anim_is_sneaking: bool,
+        }
+        impl<'a> Default for PlayerStateArgs<'a> {
+            #[inline]
+            fn default() -> Self {
+                PlayerStateArgs {
+                    player_id: 0,
+                    transform: None,
+                    anim_speed: 0.0,
+                    anim_direction: 0.0,
+                    anim_is_running: false,
+                    anim_is_sprinting: false,
+                    anim_is_sneaking: false,
                 }
             }
+        }
 
-            pub fn transform(&self) -> &Transform {
-                // Safety:
-                // Created from a valid Table for this object
-                // Which contains a valid struct in this slot
-                unsafe { &*(self.0[4..].as_ptr() as *const Transform) }
+        pub struct PlayerStateBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+            fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+        }
+        impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> PlayerStateBuilder<'a, 'b, A> {
+            #[inline]
+            pub fn add_player_id(&mut self, player_id: u32) {
+                self.fbb_
+                    .push_slot::<u32>(PlayerState::VT_PLAYER_ID, player_id, 0);
             }
-
-            #[allow(clippy::identity_op)]
-            pub fn set_transform(&mut self, x: &Transform) {
-                self.0[4..4 + 16].copy_from_slice(&x.0)
+            #[inline]
+            pub fn add_transform(&mut self, transform: &Transform) {
+                self.fbb_
+                    .push_slot_always::<&Transform>(PlayerState::VT_TRANSFORM, transform);
+            }
+            #[inline]
+            pub fn add_anim_speed(&mut self, anim_speed: f32) {
+                self.fbb_
+                    .push_slot::<f32>(PlayerState::VT_ANIM_SPEED, anim_speed, 0.0);
+            }
+            #[inline]
+            pub fn add_anim_direction(&mut self, anim_direction: f32) {
+                self.fbb_
+                    .push_slot::<f32>(PlayerState::VT_ANIM_DIRECTION, anim_direction, 0.0);
+            }
+            #[inline]
+            pub fn add_anim_is_running(&mut self, anim_is_running: bool) {
+                self.fbb_.push_slot::<bool>(
+                    PlayerState::VT_ANIM_IS_RUNNING,
+                    anim_is_running,
+                    false,
+                );
+            }
+            #[inline]
+            pub fn add_anim_is_sprinting(&mut self, anim_is_sprinting: bool) {
+                self.fbb_.push_slot::<bool>(
+                    PlayerState::VT_ANIM_IS_SPRINTING,
+                    anim_is_sprinting,
+                    false,
+                );
+            }
+            #[inline]
+            pub fn add_anim_is_sneaking(&mut self, anim_is_sneaking: bool) {
+                self.fbb_.push_slot::<bool>(
+                    PlayerState::VT_ANIM_IS_SNEAKING,
+                    anim_is_sneaking,
+                    false,
+                );
+            }
+            #[inline]
+            pub fn new(
+                _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            ) -> PlayerStateBuilder<'a, 'b, A> {
+                let start = _fbb.start_table();
+                PlayerStateBuilder {
+                    fbb_: _fbb,
+                    start_: start,
+                }
+            }
+            #[inline]
+            pub fn finish(self) -> ::flatbuffers::WIPOffset<PlayerState<'a>> {
+                let o = self.fbb_.end_table(self.start_);
+                ::flatbuffers::WIPOffset::new(o.value())
             }
         }
 
+        impl ::core::fmt::Debug for PlayerState<'_> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                let mut ds = f.debug_struct("PlayerState");
+                ds.field("player_id", &self.player_id());
+                ds.field("transform", &self.transform());
+                ds.field("anim_speed", &self.anim_speed());
+                ds.field("anim_direction", &self.anim_direction());
+                ds.field("anim_is_running", &self.anim_is_running());
+                ds.field("anim_is_sprinting", &self.anim_is_sprinting());
+                ds.field("anim_is_sneaking", &self.anim_is_sneaking());
+                ds.finish()
+            }
+        }
         pub enum PlayerInputOffset {}
         #[derive(Copy, Clone, PartialEq)]
 
@@ -436,6 +571,11 @@ pub mod skyrim_relive {
         impl<'a> PlayerInput<'a> {
             pub const VT_TRANSFORM: ::flatbuffers::VOffsetT = 4;
             pub const VT_CLIENT_TIME_MS: ::flatbuffers::VOffsetT = 6;
+            pub const VT_ANIM_SPEED: ::flatbuffers::VOffsetT = 8;
+            pub const VT_ANIM_DIRECTION: ::flatbuffers::VOffsetT = 10;
+            pub const VT_ANIM_IS_RUNNING: ::flatbuffers::VOffsetT = 12;
+            pub const VT_ANIM_IS_SPRINTING: ::flatbuffers::VOffsetT = 14;
+            pub const VT_ANIM_IS_SNEAKING: ::flatbuffers::VOffsetT = 16;
 
             #[inline]
             pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -453,9 +593,14 @@ pub mod skyrim_relive {
             ) -> ::flatbuffers::WIPOffset<PlayerInput<'bldr>> {
                 let mut builder = PlayerInputBuilder::new(_fbb);
                 builder.add_client_time_ms(args.client_time_ms);
+                builder.add_anim_direction(args.anim_direction);
+                builder.add_anim_speed(args.anim_speed);
                 if let Some(x) = args.transform {
                     builder.add_transform(x);
                 }
+                builder.add_anim_is_sneaking(args.anim_is_sneaking);
+                builder.add_anim_is_sprinting(args.anim_is_sprinting);
+                builder.add_anim_is_running(args.anim_is_running);
                 builder.finish()
             }
 
@@ -477,6 +622,61 @@ pub mod skyrim_relive {
                         .unwrap()
                 }
             }
+            #[inline]
+            pub fn anim_speed(&self) -> f32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<f32>(PlayerInput::VT_ANIM_SPEED, Some(0.0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn anim_direction(&self) -> f32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<f32>(PlayerInput::VT_ANIM_DIRECTION, Some(0.0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn anim_is_running(&self) -> bool {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<bool>(PlayerInput::VT_ANIM_IS_RUNNING, Some(false))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn anim_is_sprinting(&self) -> bool {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<bool>(PlayerInput::VT_ANIM_IS_SPRINTING, Some(false))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn anim_is_sneaking(&self) -> bool {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<bool>(PlayerInput::VT_ANIM_IS_SNEAKING, Some(false))
+                        .unwrap()
+                }
+            }
         }
 
         impl ::flatbuffers::Verifiable for PlayerInput<'_> {
@@ -488,6 +688,11 @@ pub mod skyrim_relive {
                 v.visit_table(pos)?
                     .visit_field::<Transform>("transform", Self::VT_TRANSFORM, false)?
                     .visit_field::<u64>("client_time_ms", Self::VT_CLIENT_TIME_MS, false)?
+                    .visit_field::<f32>("anim_speed", Self::VT_ANIM_SPEED, false)?
+                    .visit_field::<f32>("anim_direction", Self::VT_ANIM_DIRECTION, false)?
+                    .visit_field::<bool>("anim_is_running", Self::VT_ANIM_IS_RUNNING, false)?
+                    .visit_field::<bool>("anim_is_sprinting", Self::VT_ANIM_IS_SPRINTING, false)?
+                    .visit_field::<bool>("anim_is_sneaking", Self::VT_ANIM_IS_SNEAKING, false)?
                     .finish();
                 Ok(())
             }
@@ -495,6 +700,11 @@ pub mod skyrim_relive {
         pub struct PlayerInputArgs<'a> {
             pub transform: Option<&'a Transform>,
             pub client_time_ms: u64,
+            pub anim_speed: f32,
+            pub anim_direction: f32,
+            pub anim_is_running: bool,
+            pub anim_is_sprinting: bool,
+            pub anim_is_sneaking: bool,
         }
         impl<'a> Default for PlayerInputArgs<'a> {
             #[inline]
@@ -502,6 +712,11 @@ pub mod skyrim_relive {
                 PlayerInputArgs {
                     transform: None,
                     client_time_ms: 0,
+                    anim_speed: 0.0,
+                    anim_direction: 0.0,
+                    anim_is_running: false,
+                    anim_is_sprinting: false,
+                    anim_is_sneaking: false,
                 }
             }
         }
@@ -520,6 +735,40 @@ pub mod skyrim_relive {
             pub fn add_client_time_ms(&mut self, client_time_ms: u64) {
                 self.fbb_
                     .push_slot::<u64>(PlayerInput::VT_CLIENT_TIME_MS, client_time_ms, 0);
+            }
+            #[inline]
+            pub fn add_anim_speed(&mut self, anim_speed: f32) {
+                self.fbb_
+                    .push_slot::<f32>(PlayerInput::VT_ANIM_SPEED, anim_speed, 0.0);
+            }
+            #[inline]
+            pub fn add_anim_direction(&mut self, anim_direction: f32) {
+                self.fbb_
+                    .push_slot::<f32>(PlayerInput::VT_ANIM_DIRECTION, anim_direction, 0.0);
+            }
+            #[inline]
+            pub fn add_anim_is_running(&mut self, anim_is_running: bool) {
+                self.fbb_.push_slot::<bool>(
+                    PlayerInput::VT_ANIM_IS_RUNNING,
+                    anim_is_running,
+                    false,
+                );
+            }
+            #[inline]
+            pub fn add_anim_is_sprinting(&mut self, anim_is_sprinting: bool) {
+                self.fbb_.push_slot::<bool>(
+                    PlayerInput::VT_ANIM_IS_SPRINTING,
+                    anim_is_sprinting,
+                    false,
+                );
+            }
+            #[inline]
+            pub fn add_anim_is_sneaking(&mut self, anim_is_sneaking: bool) {
+                self.fbb_.push_slot::<bool>(
+                    PlayerInput::VT_ANIM_IS_SNEAKING,
+                    anim_is_sneaking,
+                    false,
+                );
             }
             #[inline]
             pub fn new(
@@ -543,6 +792,11 @@ pub mod skyrim_relive {
                 let mut ds = f.debug_struct("PlayerInput");
                 ds.field("transform", &self.transform());
                 ds.field("client_time_ms", &self.client_time_ms());
+                ds.field("anim_speed", &self.anim_speed());
+                ds.field("anim_direction", &self.anim_direction());
+                ds.field("anim_is_running", &self.anim_is_running());
+                ds.field("anim_is_sprinting", &self.anim_is_sprinting());
+                ds.field("anim_is_sneaking", &self.anim_is_sneaking());
                 ds.finish()
             }
         }
@@ -614,12 +868,17 @@ pub mod skyrim_relive {
                 }
             }
             #[inline]
-            pub fn players(&self) -> Option<::flatbuffers::Vector<'a, PlayerState>> {
+            pub fn players(
+                &self,
+            ) -> Option<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<PlayerState<'a>>>>
+            {
                 // Safety:
                 // Created from valid Table for this object
                 // which contains a valid value in this slot
                 unsafe {
-                    self._tab.get::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'a, PlayerState>>>(WorldSnapshot::VT_PLAYERS, None)
+                    self._tab.get::<::flatbuffers::ForwardsUOffset<
+                        ::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<PlayerState>>,
+                    >>(WorldSnapshot::VT_PLAYERS, None)
                 }
             }
         }
@@ -631,17 +890,23 @@ pub mod skyrim_relive {
                 pos: usize,
             ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
                 v.visit_table(pos)?
-     .visit_field::<u64>("server_tick", Self::VT_SERVER_TICK, false)?
-     .visit_field::<u64>("server_time_ms", Self::VT_SERVER_TIME_MS, false)?
-     .visit_field::<::flatbuffers::ForwardsUOffset<::flatbuffers::Vector<'_, PlayerState>>>("players", Self::VT_PLAYERS, false)?
-     .finish();
+                    .visit_field::<u64>("server_tick", Self::VT_SERVER_TICK, false)?
+                    .visit_field::<u64>("server_time_ms", Self::VT_SERVER_TIME_MS, false)?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<
+                        ::flatbuffers::Vector<'_, ::flatbuffers::ForwardsUOffset<PlayerState>>,
+                    >>("players", Self::VT_PLAYERS, false)?
+                    .finish();
                 Ok(())
             }
         }
         pub struct WorldSnapshotArgs<'a> {
             pub server_tick: u64,
             pub server_time_ms: u64,
-            pub players: Option<::flatbuffers::WIPOffset<::flatbuffers::Vector<'a, PlayerState>>>,
+            pub players: Option<
+                ::flatbuffers::WIPOffset<
+                    ::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<PlayerState<'a>>>,
+                >,
+            >,
         }
         impl<'a> Default for WorldSnapshotArgs<'a> {
             #[inline]
@@ -672,7 +937,9 @@ pub mod skyrim_relive {
             #[inline]
             pub fn add_players(
                 &mut self,
-                players: ::flatbuffers::WIPOffset<::flatbuffers::Vector<'b, PlayerState>>,
+                players: ::flatbuffers::WIPOffset<
+                    ::flatbuffers::Vector<'b, ::flatbuffers::ForwardsUOffset<PlayerState<'b>>>,
+                >,
             ) {
                 self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(
                     WorldSnapshot::VT_PLAYERS,

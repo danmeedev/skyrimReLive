@@ -21,6 +21,12 @@ namespace relive::ghost {
         float y = 0;
         float z = 0;
         float yaw = 0;
+        // Phase 2.1 locomotion anim variables (mirrored from PlayerState).
+        float speed = 0;
+        float direction = 0;
+        bool is_running = false;
+        bool is_sprinting = false;
+        bool is_sneaking = false;
     };
 
     // Pluggable spawner. Phase 1 ships VanillaCloneSpawner (clones a known
@@ -63,9 +69,11 @@ namespace relive::ghost {
 
         // Demo hook: inject a synthetic snapshot for a single player_id as
         // if it came from the wire. Used by `rl demo` to validate ghost
-        // rendering without needing a second client.
+        // rendering without needing a second client. Phase 2.1: also takes
+        // anim variables so the demo ghost actually plays a run animation.
         void inject_synthetic(std::uint32_t player_id, float x, float y,
-                              float z, float yaw);
+                              float z, float yaw, float anim_speed,
+                              bool anim_is_running);
 
         // Immediately despawn all synthetic ghosts (id >= kSyntheticIdBase).
         // Must be called on the main thread (via AddTask).

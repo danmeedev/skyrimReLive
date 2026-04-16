@@ -1,4 +1,7 @@
-// Wire-format v1 — world-state messages.
+// Wire-format v2 -- world-state messages.
+// (Directory name is `v1/` for historical reasons; the on-wire protocol
+// version is 2 since the Phase 2 break that converted PlayerState from
+// struct to table.)
 
 namespace skyrim_relive.v1;
 
@@ -9,21 +12,36 @@ struct Vec3 {
     z: float;
 }
 
-// Phase 1: position + yaw only. Pitch/roll arrive in Phase 2 with combat sync.
+// Phase 1: position + yaw only. Pitch arrives in Phase 2.5 with weapon-aim sync.
 struct Transform {
     pos: Vec3;
     yaw: float;  // radians
 }
 
-// One entry per other player in WorldSnapshot.
-struct PlayerState {
+// Per-player state in WorldSnapshot. Was a struct in v1; converted to a
+// table in v2 so future anim/combat fields can be added safely (Hard Rule
+// H3: schemas evolve forward only).
+table PlayerState {
     player_id: uint32;
     transform: Transform;
+    // Phase 2.1 locomotion variables. Fixed fields for now; will migrate
+    // to hash-keyed arrays in step 2.2/2.3 if the variable count grows.
+    anim_speed: float = 0;             // current movement speed
+    anim_direction: float = 0;         // movement direction relative to facing (radians)
+    anim_is_running: bool = false;
+    anim_is_sprinting: bool = false;
+    anim_is_sneaking: bool = false;
 }
 
 table PlayerInput {
     transform: Transform;
     client_time_ms: uint64;
+    // Phase 2.1: same locomotion variables, mirrored from PlayerState.
+    anim_speed: float = 0;
+    anim_direction: float = 0;
+    anim_is_running: bool = false;
+    anim_is_sprinting: bool = false;
+    anim_is_sneaking: bool = false;
 }
 
 table WorldSnapshot {
