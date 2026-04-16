@@ -54,10 +54,12 @@ namespace relive::plugin {
     std::string demo_stop();
     [[nodiscard]] bool demo_running() noexcept;
 
-    // Phase 2.3b: forward a CombatEvent through the active Net::Client.
+    // Phase 2.3b/2.5: forward a CombatEvent through the active Net::Client.
     // No-op when not connected. Called from the TESHitEvent sink.
+    // attack_class: 0=Melee, 1=BowArrow, 2=Spell (maps to AttackClass enum).
     void send_combat_event(std::uint32_t target_player_id,
                            std::uint8_t attack_type, float weapon_reach,
-                           float weapon_base_damage);
+                           float weapon_base_damage,
+                           std::uint8_t attack_class = 0);
 
 }

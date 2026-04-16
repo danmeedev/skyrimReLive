@@ -80,4 +80,6 @@ pub struct AnimState {
     pub is_unequipping: bool,
     pub weapon_state: i32,
     pub weapon_drawn: bool,
+    // Phase 2.5: aim pitch (radians, +down/-up).
+    pub pitch: f32,
 }

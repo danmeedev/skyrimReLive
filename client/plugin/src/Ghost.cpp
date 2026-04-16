@@ -116,6 +116,7 @@ namespace relive::ghost {
                 .y = a.y + (b.y - a.y) * t,
                 .z = a.z + (b.z - a.z) * t,
                 .yaw = lerp_f,
+                .pitch = a.pitch + (b.pitch - a.pitch) * t,
             };
         }
 
@@ -317,7 +318,7 @@ namespace relive::ghost {
 
             const RE::NiPoint3 pos{render.x, render.y, render.z};
             g.actor->SetPosition(pos, true);
-            g.actor->SetAngle(RE::NiPoint3{0.0F, 0.0F, render.yaw});
+            g.actor->SetAngle(RE::NiPoint3{render.pitch, 0.0F, render.yaw});
 
             // Phase 2.1: drive locomotion via animation graph variables.
             // Latest snapshot values (no interp on bools); the graph state

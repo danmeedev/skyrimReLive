@@ -35,6 +35,39 @@ struct CombatEventBuilder;
 struct DamageApply;
 struct DamageApplyBuilder;
 
+enum AttackClass : uint8_t {
+  AttackClass_Melee = 0,
+  AttackClass_BowArrow = 1,
+  AttackClass_Spell = 2,
+  AttackClass_MIN = AttackClass_Melee,
+  AttackClass_MAX = AttackClass_Spell
+};
+
+inline const AttackClass (&EnumValuesAttackClass())[3] {
+  static const AttackClass values[] = {
+    AttackClass_Melee,
+    AttackClass_BowArrow,
+    AttackClass_Spell
+  };
+  return values;
+}
+
+inline const char * const *EnumNamesAttackClass() {
+  static const char * const names[4] = {
+    "Melee",
+    "BowArrow",
+    "Spell",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNameAttackClass(AttackClass e) {
+  if (::flatbuffers::IsOutRange(e, AttackClass_Melee, AttackClass_Spell)) return "";
+  const size_t index = static_cast<size_t>(e);
+  return EnumNamesAttackClass()[index];
+}
+
 FLATBUFFERS_MANUALLY_ALIGNED_STRUCT(4) Vec3 FLATBUFFERS_FINAL_CLASS {
  private:
   float x_;
@@ -100,7 +133,8 @@ struct PlayerState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_ANIM_IS_EQUIPPING = 18,
     VT_ANIM_IS_UNEQUIPPING = 20,
     VT_ANIM_WEAPON_STATE = 22,
-    VT_WEAPON_DRAWN = 24
+    VT_WEAPON_DRAWN = 24,
+    VT_PITCH = 26
   };
   uint32_t player_id() const {
     return GetField<uint32_t>(VT_PLAYER_ID, 0);
@@ -135,6 +169,9 @@ struct PlayerState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   bool weapon_drawn() const {
     return GetField<uint8_t>(VT_WEAPON_DRAWN, 0) != 0;
   }
+  float pitch() const {
+    return GetField<float>(VT_PITCH, 0.0f);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -149,6 +186,7 @@ struct PlayerState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyField<uint8_t>(verifier, VT_ANIM_IS_UNEQUIPPING, 1) &&
            VerifyField<int32_t>(verifier, VT_ANIM_WEAPON_STATE, 4) &&
            VerifyField<uint8_t>(verifier, VT_WEAPON_DRAWN, 1) &&
+           VerifyField<float>(verifier, VT_PITCH, 4) &&
            verifier.EndTable();
   }
 };
@@ -190,6 +228,9 @@ struct PlayerStateBuilder {
   void add_weapon_drawn(bool weapon_drawn) {
     fbb_.AddElement<uint8_t>(PlayerState::VT_WEAPON_DRAWN, static_cast<uint8_t>(weapon_drawn), 0);
   }
+  void add_pitch(float pitch) {
+    fbb_.AddElement<float>(PlayerState::VT_PITCH, pitch, 0.0f);
+  }
   explicit PlayerStateBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -213,8 +254,10 @@ inline ::flatbuffers::Offset<PlayerState> CreatePlayerState(
     bool anim_is_equipping = false,
     bool anim_is_unequipping = false,
     int32_t anim_weapon_state = 0,
-    bool weapon_drawn = false) {
+    bool weapon_drawn = false,
+    float pitch = 0.0f) {
   PlayerStateBuilder builder_(_fbb);
+  builder_.add_pitch(pitch);
   builder_.add_anim_weapon_state(anim_weapon_state);
   builder_.add_anim_direction(anim_direction);
   builder_.add_anim_speed(anim_speed);
@@ -242,7 +285,8 @@ struct PlayerInput FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_ANIM_IS_EQUIPPING = 18,
     VT_ANIM_IS_UNEQUIPPING = 20,
     VT_ANIM_WEAPON_STATE = 22,
-    VT_WEAPON_DRAWN = 24
+    VT_WEAPON_DRAWN = 24,
+    VT_PITCH = 26
   };
   const skyrim_relive::v1::Transform *transform() const {
     return GetStruct<const skyrim_relive::v1::Transform *>(VT_TRANSFORM);
@@ -277,6 +321,9 @@ struct PlayerInput FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   bool weapon_drawn() const {
     return GetField<uint8_t>(VT_WEAPON_DRAWN, 0) != 0;
   }
+  float pitch() const {
+    return GetField<float>(VT_PITCH, 0.0f);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -291,6 +338,7 @@ struct PlayerInput FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyField<uint8_t>(verifier, VT_ANIM_IS_UNEQUIPPING, 1) &&
            VerifyField<int32_t>(verifier, VT_ANIM_WEAPON_STATE, 4) &&
            VerifyField<uint8_t>(verifier, VT_WEAPON_DRAWN, 1) &&
+           VerifyField<float>(verifier, VT_PITCH, 4) &&
            verifier.EndTable();
   }
 };
@@ -332,6 +380,9 @@ struct PlayerInputBuilder {
   void add_weapon_drawn(bool weapon_drawn) {
     fbb_.AddElement<uint8_t>(PlayerInput::VT_WEAPON_DRAWN, static_cast<uint8_t>(weapon_drawn), 0);
   }
+  void add_pitch(float pitch) {
+    fbb_.AddElement<float>(PlayerInput::VT_PITCH, pitch, 0.0f);
+  }
   explicit PlayerInputBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -355,9 +406,11 @@ inline ::flatbuffers::Offset<PlayerInput> CreatePlayerInput(
     bool anim_is_equipping = false,
     bool anim_is_unequipping = false,
     int32_t anim_weapon_state = 0,
-    bool weapon_drawn = false) {
+    bool weapon_drawn = false,
+    float pitch = 0.0f) {
   PlayerInputBuilder builder_(_fbb);
   builder_.add_client_time_ms(client_time_ms);
+  builder_.add_pitch(pitch);
   builder_.add_anim_weapon_state(anim_weapon_state);
   builder_.add_anim_direction(anim_direction);
   builder_.add_anim_speed(anim_speed);
@@ -455,7 +508,8 @@ struct CombatEvent FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_ATTACK_TYPE = 6,
     VT_WEAPON_REACH = 8,
     VT_WEAPON_BASE_DAMAGE = 10,
-    VT_CLIENT_TIME_MS = 12
+    VT_CLIENT_TIME_MS = 12,
+    VT_ATTACK_CLASS = 14
   };
   uint32_t target_player_id() const {
     return GetField<uint32_t>(VT_TARGET_PLAYER_ID, 0);
@@ -472,6 +526,9 @@ struct CombatEvent FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   uint64_t client_time_ms() const {
     return GetField<uint64_t>(VT_CLIENT_TIME_MS, 0);
   }
+  skyrim_relive::v1::AttackClass attack_class() const {
+    return static_cast<skyrim_relive::v1::AttackClass>(GetField<uint8_t>(VT_ATTACK_CLASS, 0));
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -480,6 +537,7 @@ struct CombatEvent FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyField<float>(verifier, VT_WEAPON_REACH, 4) &&
            VerifyField<float>(verifier, VT_WEAPON_BASE_DAMAGE, 4) &&
            VerifyField<uint64_t>(verifier, VT_CLIENT_TIME_MS, 8) &&
+           VerifyField<uint8_t>(verifier, VT_ATTACK_CLASS, 1) &&
            verifier.EndTable();
   }
 };
@@ -503,6 +561,9 @@ struct CombatEventBuilder {
   void add_client_time_ms(uint64_t client_time_ms) {
     fbb_.AddElement<uint64_t>(CombatEvent::VT_CLIENT_TIME_MS, client_time_ms, 0);
   }
+  void add_attack_class(skyrim_relive::v1::AttackClass attack_class) {
+    fbb_.AddElement<uint8_t>(CombatEvent::VT_ATTACK_CLASS, static_cast<uint8_t>(attack_class), 0);
+  }
   explicit CombatEventBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -520,12 +581,14 @@ inline ::flatbuffers::Offset<CombatEvent> CreateCombatEvent(
     uint8_t attack_type = 0,
     float weapon_reach = 100.0f,
     float weapon_base_damage = 0.0f,
-    uint64_t client_time_ms = 0) {
+    uint64_t client_time_ms = 0,
+    skyrim_relive::v1::AttackClass attack_class = skyrim_relive::v1::AttackClass_Melee) {
   CombatEventBuilder builder_(_fbb);
   builder_.add_client_time_ms(client_time_ms);
   builder_.add_weapon_base_damage(weapon_base_damage);
   builder_.add_weapon_reach(weapon_reach);
   builder_.add_target_player_id(target_player_id);
+  builder_.add_attack_class(attack_class);
   builder_.add_attack_type(attack_type);
   return builder_.Finish();
 }

@@ -35,6 +35,10 @@ table PlayerState {
     anim_is_unequipping: bool = false; // sheathing weapon (transition)
     anim_weapon_state: int32 = 0;      // iState: 0=sheathed, 1+=various stances
     weapon_drawn: bool = false;        // convenience: is a weapon currently out
+    // Phase 2.5: aim pitch as a sibling field so we don't have to bump the
+    // wire version (changing the Transform struct would). Radians; Skyrim
+    // convention is +down / -up.
+    pitch: float = 0;
 }
 
 table PlayerInput {
@@ -51,12 +55,23 @@ table PlayerInput {
     anim_is_unequipping: bool = false;
     anim_weapon_state: int32 = 0;
     weapon_drawn: bool = false;
+    // Phase 2.5: aim pitch (radians, +down/-up — Skyrim convention).
+    pitch: float = 0;
 }
 
 table WorldSnapshot {
     server_tick: uint64;
     server_time_ms: uint64;
     players: [PlayerState];
+}
+
+// Phase 2.5 — what kind of attack we're reporting. Server uses this to
+// pick a validation policy (melee uses weapon_reach + slack; ranged trusts
+// the engine's TESHitEvent and just caps at MAX_RANGED_DIST).
+enum AttackClass: ubyte {
+    Melee = 0,
+    BowArrow = 1,
+    Spell = 2,
 }
 
 // Phase 2.3 — combat. Client reports it landed an attack on a peer; server
@@ -68,6 +83,9 @@ table CombatEvent {
     weapon_reach: float = 100;    // for server-side range check
     weapon_base_damage: float = 0;// client-reported, server clamps
     client_time_ms: uint64;
+    // Phase 2.5: melee vs ranged — additive, default Melee keeps existing
+    // clients valid (they never sent ranged before this step).
+    attack_class: AttackClass = Melee;
 }
 
 // Server's verdict on a hit. Sent to the target player's client; the

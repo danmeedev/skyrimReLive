@@ -33,6 +33,8 @@ namespace relive::ghost {
         bool is_unequipping = false;
         std::int32_t weapon_state = 0;
         bool weapon_drawn = false;
+        // Phase 2.5: aim pitch (radians, +down/-up).
+        float pitch = 0;
     };
 
     // Pluggable spawner. Phase 1 ships VanillaCloneSpawner (clones a known

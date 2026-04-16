@@ -193,6 +193,7 @@ namespace relive::net {
         player->GetGraphVariableBool("IsUnequipping", anim_unequipping);
         player->GetGraphVariableInt("iState", anim_weapon_state);
         const bool weapon_drawn = player->AsActorState()->IsWeaponDrawn();
+        const float pitch = player->GetAngleX();
 
         flatbuffers::FlatBufferBuilder fbb(96);
         const re_v1::Vec3 v3(x, y, z);
@@ -213,6 +214,7 @@ namespace relive::net {
         ib.add_anim_is_unequipping(anim_unequipping);
         ib.add_anim_weapon_state(anim_weapon_state);
         ib.add_weapon_drawn(weapon_drawn);
+        ib.add_pitch(pitch);
         const auto input_off = ib.Finish();
         fbb.Finish(input_off);
 
@@ -268,6 +270,7 @@ namespace relive::net {
                         u.snap.is_unequipping = p->anim_is_unequipping();
                         u.snap.weapon_state = p->anim_weapon_state();
                         u.snap.weapon_drawn = p->weapon_drawn();
+                        u.snap.pitch = p->pitch();
                         updates.push_back(u);
                     }
                 }
@@ -290,7 +293,8 @@ namespace relive::net {
 
     void Client::send_combat_event(std::uint32_t target_player_id,
                                    std::uint8_t attack_type, float weapon_reach,
-                                   float weapon_base_damage) {
+                                   float weapon_base_damage,
+                                   std::uint8_t attack_class) {
         if (!running_.load(std::memory_order_acquire)) return;
 
         const auto now_ms = static_cast<std::uint64_t>(
@@ -305,6 +309,8 @@ namespace relive::net {
         cb.add_weapon_reach(weapon_reach);
         cb.add_weapon_base_damage(weapon_base_damage);
         cb.add_client_time_ms(now_ms);
+        cb.add_attack_class(
+            static_cast<re_v1::AttackClass>(attack_class));
         const auto off = cb.Finish();
         fbb.Finish(off);
 

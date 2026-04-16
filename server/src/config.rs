@@ -21,6 +21,10 @@ pub struct Config {
     pub connection_timeout_s: u64,
     /// How often the timeout sweep runs, in milliseconds.
     pub gc_interval_ms: u64,
+    /// Whether cross-player damage is allowed. Default off — hosts opt in.
+    pub pvp_enabled: bool,
+    /// Flat damage used for spell hits (true magnitude lookup is deferred).
+    pub spell_damage_default: f32,
 }
 
 impl Default for Config {
@@ -31,6 +35,8 @@ impl Default for Config {
             snapshot_rate_hz: 20,
             connection_timeout_s: 5,
             gc_interval_ms: 500,
+            pvp_enabled: false,
+            spell_damage_default: 25.0,
         }
     }
 }

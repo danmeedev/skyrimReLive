@@ -10,10 +10,10 @@ use skyrim_relive_server::components::{
 };
 use skyrim_relive_server::config::Config;
 use skyrim_relive_server::proto::v1::{
-    CombatEvent, DamageApply, DamageApplyArgs, Disconnect, DisconnectArgs, DisconnectCode, Hello,
-    MessageType, PlayerInput, PlayerState as FbPlayerState, PlayerStateArgs as FbPlayerStateArgs,
-    Transform as FbTransform, Vec3 as FbVec3, Welcome, WelcomeArgs, WorldSnapshot,
-    WorldSnapshotArgs,
+    AttackClass, CombatEvent, DamageApply, DamageApplyArgs, Disconnect, DisconnectArgs,
+    DisconnectCode, Hello, MessageType, PlayerInput, PlayerState as FbPlayerState,
+    PlayerStateArgs as FbPlayerStateArgs, Transform as FbTransform, Vec3 as FbVec3, Welcome,
+    WelcomeArgs, WorldSnapshot, WorldSnapshotArgs,
 };
 use skyrim_relive_server::wire;
 use tokio::net::UdpSocket;
@@ -238,6 +238,7 @@ impl ServerState {
             anim.is_unequipping = input.anim_is_unequipping();
             anim.weapon_state = input.anim_weapon_state();
             anim.weapon_drawn = input.weapon_drawn();
+            anim.pitch = input.pitch();
         }
         // Touch last_heard regardless — acts as heartbeat even when idle.
         if let Some(mut conn) = self.world.get_mut::<Connection>(entity) {
@@ -255,6 +256,12 @@ impl ServerState {
         const REACH_SLACK: f32 = 50.0; // forgive small lag-induced overruns
         const STAGGER_THRESHOLD: f32 = 30.0;
         const MIN_ATTACK_INTERVAL: Duration = Duration::from_millis(200); // 5 hits/sec max
+        const MAX_RANGED_DIST: f32 = 5000.0; // ~one cell
+
+        if !self.config.pvp_enabled {
+            info!(%peer, "CombatEvent dropped: PvP disabled");
+            return;
+        }
 
         let Some(&attacker_entity) = self.addr_to_entity.get(&peer) else {
             warn!(%peer, "CombatEvent from unknown peer (no Hello?)");
@@ -318,7 +325,9 @@ impl ServerState {
             return;
         };
 
-        // Range check: Euclidean distance attacker→target vs claimed reach.
+        // Range check: Euclidean distance attacker→target. Policy depends
+        // on AttackClass — melee uses weapon_reach + slack; ranged trusts
+        // the engine's TESHitEvent and only caps at MAX_RANGED_DIST.
         let attacker_pos = self.world.get::<Transform>(attacker_entity).map(|t| t.pos);
         let target_pos = self.world.get::<Transform>(target_entity).map(|t| t.pos);
         let (Some(a), Some(t)) = (attacker_pos, target_pos) else {
@@ -329,13 +338,17 @@ impl ServerState {
         let dy = a[1] - t[1];
         let dz = a[2] - t[2];
         let dist = (dx * dx + dy * dy + dz * dz).sqrt();
-        let max_dist = event.weapon_reach() + REACH_SLACK;
+        let max_dist = match event.attack_class() {
+            AttackClass::BowArrow | AttackClass::Spell => MAX_RANGED_DIST,
+            _ => event.weapon_reach() + REACH_SLACK,
+        };
         if dist > max_dist {
             warn!(
                 %peer,
                 target_id,
                 dist,
                 max_dist,
+                attack_class = event.attack_class().0,
                 "CombatEvent rejected: out of range"
             );
             return;
@@ -483,6 +496,7 @@ impl ServerState {
                             anim_is_unequipping: a.is_unequipping,
                             anim_weapon_state: a.weapon_state,
                             weapon_drawn: a.weapon_drawn,
+                            pitch: a.pitch,
                         },
                     )
                 })
@@ -552,6 +566,7 @@ async fn main() -> Result<()> {
         tick_hz = config.tick_rate_hz,
         snap_hz = config.snapshot_rate_hz,
         timeout_s = config.connection_timeout_s,
+        pvp = config.pvp_enabled,
         dual_stack = bind.is_ipv6(),
         "skyrim-relive-server listening"
     );

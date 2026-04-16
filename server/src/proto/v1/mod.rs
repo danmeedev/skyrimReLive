@@ -14,6 +14,7 @@ pub use lifecycle_generated::skyrim_relive::v_1::{
 };
 pub use types_generated::skyrim_relive::v_1::{DisconnectCode, MessageType};
 pub use world_generated::skyrim_relive::v_1::{
-    CombatEvent, CombatEventArgs, DamageApply, DamageApplyArgs, PlayerInput, PlayerInputArgs,
-    PlayerState, PlayerStateArgs, Transform, Vec3, WorldSnapshot, WorldSnapshotArgs,
+    AttackClass, CombatEvent, CombatEventArgs, DamageApply, DamageApplyArgs, PlayerInput,
+    PlayerInputArgs, PlayerState, PlayerStateArgs, Transform, Vec3, WorldSnapshot,
+    WorldSnapshotArgs,
 };

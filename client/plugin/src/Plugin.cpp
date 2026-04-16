@@ -185,12 +185,13 @@ namespace relive::plugin {
 
     void send_combat_event(std::uint32_t target_player_id,
                            std::uint8_t attack_type, float weapon_reach,
-                           float weapon_base_damage) {
+                           float weapon_base_damage,
+                           std::uint8_t attack_class) {
         if (g_state.load(std::memory_order_acquire) != ConnState::Connected) {
             return;
         }
         g_client.send_combat_event(target_player_id, attack_type, weapon_reach,
-                                   weapon_base_damage);
+                                   weapon_base_damage, attack_class);
     }
 
     void on_world_loaded() {

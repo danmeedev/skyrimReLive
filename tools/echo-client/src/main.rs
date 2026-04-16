@@ -3,8 +3,8 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use anyhow::{bail, Context, Result};
 use flatbuffers::FlatBufferBuilder;
 use skyrim_relive_server::proto::v1::{
-    CombatEvent, CombatEventArgs, DamageApply, Disconnect, Heartbeat, HeartbeatArgs, Hello,
-    HelloArgs, LeaveNotify, LeaveNotifyArgs, MessageType, PlayerInput, PlayerInputArgs,
+    AttackClass, CombatEvent, CombatEventArgs, DamageApply, Disconnect, Heartbeat, HeartbeatArgs,
+    Hello, HelloArgs, LeaveNotify, LeaveNotifyArgs, MessageType, PlayerInput, PlayerInputArgs,
     Transform as FbTransform, Vec3 as FbVec3, Welcome, WorldSnapshot,
 };
 use skyrim_relive_server::wire;
@@ -268,6 +268,7 @@ async fn send_player_input(socket: &UdpSocket, x: f32, y: f32, z: f32, yaw: f32)
             anim_is_unequipping: false,
             anim_weapon_state: 1, // iState=1 == sword/dagger right hand
             weapon_drawn: true,
+            pitch: 0.0,
         },
     );
     fbb.finish(input, None);
@@ -298,6 +299,7 @@ async fn send_combat_event(
             weapon_reach,
             weapon_base_damage,
             client_time_ms: now_ms,
+            attack_class: AttackClass::Melee,
         },
     );
     fbb.finish(evt, None);

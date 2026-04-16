@@ -22,6 +22,100 @@ pub mod skyrim_relive {
     #[allow(unused_imports, dead_code)]
     pub mod v_1 {
 
+        #[deprecated(
+            since = "2.0.0",
+            note = "Use associated constants instead. This will no longer be generated in 2021."
+        )]
+        pub const ENUM_MIN_ATTACK_CLASS: u8 = 0;
+        #[deprecated(
+            since = "2.0.0",
+            note = "Use associated constants instead. This will no longer be generated in 2021."
+        )]
+        pub const ENUM_MAX_ATTACK_CLASS: u8 = 2;
+        #[deprecated(
+            since = "2.0.0",
+            note = "Use associated constants instead. This will no longer be generated in 2021."
+        )]
+        #[allow(non_camel_case_types)]
+        pub const ENUM_VALUES_ATTACK_CLASS: [AttackClass; 3] = [
+            AttackClass::Melee,
+            AttackClass::BowArrow,
+            AttackClass::Spell,
+        ];
+
+        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+        #[repr(transparent)]
+        pub struct AttackClass(pub u8);
+        #[allow(non_upper_case_globals)]
+        impl AttackClass {
+            pub const Melee: Self = Self(0);
+            pub const BowArrow: Self = Self(1);
+            pub const Spell: Self = Self(2);
+
+            pub const ENUM_MIN: u8 = 0;
+            pub const ENUM_MAX: u8 = 2;
+            pub const ENUM_VALUES: &'static [Self] = &[Self::Melee, Self::BowArrow, Self::Spell];
+            /// Returns the variant's name or "" if unknown.
+            pub fn variant_name(self) -> Option<&'static str> {
+                match self {
+                    Self::Melee => Some("Melee"),
+                    Self::BowArrow => Some("BowArrow"),
+                    Self::Spell => Some("Spell"),
+                    _ => None,
+                }
+            }
+        }
+        impl ::core::fmt::Debug for AttackClass {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
+                if let Some(name) = self.variant_name() {
+                    f.write_str(name)
+                } else {
+                    f.write_fmt(format_args!("<UNKNOWN {:?}>", self.0))
+                }
+            }
+        }
+        impl<'a> ::flatbuffers::Follow<'a> for AttackClass {
+            type Inner = Self;
+            #[inline]
+            unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+                let b = unsafe { ::flatbuffers::read_scalar_at::<u8>(buf, loc) };
+                Self(b)
+            }
+        }
+
+        impl ::flatbuffers::Push for AttackClass {
+            type Output = AttackClass;
+            #[inline]
+            unsafe fn push(&self, dst: &mut [u8], _written_len: usize) {
+                unsafe { ::flatbuffers::emplace_scalar::<u8>(dst, self.0) };
+            }
+        }
+
+        impl ::flatbuffers::EndianScalar for AttackClass {
+            type Scalar = u8;
+            #[inline]
+            fn to_little_endian(self) -> u8 {
+                self.0.to_le()
+            }
+            #[inline]
+            #[allow(clippy::wrong_self_convention)]
+            fn from_little_endian(v: u8) -> Self {
+                let b = u8::from_le(v);
+                Self(b)
+            }
+        }
+
+        impl<'a> ::flatbuffers::Verifiable for AttackClass {
+            #[inline]
+            fn run_verifier(
+                v: &mut ::flatbuffers::Verifier,
+                pos: usize,
+            ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+                u8::run_verifier(v, pos)
+            }
+        }
+
+        impl ::flatbuffers::SimpleToVerifyInSlice for AttackClass {}
         // struct Vec3, aligned to 4
         #[repr(transparent)]
         #[derive(Clone, Copy, PartialEq)]
@@ -331,6 +425,7 @@ pub mod skyrim_relive {
             pub const VT_ANIM_IS_UNEQUIPPING: ::flatbuffers::VOffsetT = 20;
             pub const VT_ANIM_WEAPON_STATE: ::flatbuffers::VOffsetT = 22;
             pub const VT_WEAPON_DRAWN: ::flatbuffers::VOffsetT = 24;
+            pub const VT_PITCH: ::flatbuffers::VOffsetT = 26;
 
             #[inline]
             pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -347,6 +442,7 @@ pub mod skyrim_relive {
                 args: &'args PlayerStateArgs<'args>,
             ) -> ::flatbuffers::WIPOffset<PlayerState<'bldr>> {
                 let mut builder = PlayerStateBuilder::new(_fbb);
+                builder.add_pitch(args.pitch);
                 builder.add_anim_weapon_state(args.anim_weapon_state);
                 builder.add_anim_direction(args.anim_direction);
                 builder.add_anim_speed(args.anim_speed);
@@ -480,6 +576,17 @@ pub mod skyrim_relive {
                         .unwrap()
                 }
             }
+            #[inline]
+            pub fn pitch(&self) -> f32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<f32>(PlayerState::VT_PITCH, Some(0.0))
+                        .unwrap()
+                }
+            }
         }
 
         impl ::flatbuffers::Verifiable for PlayerState<'_> {
@@ -504,6 +611,7 @@ pub mod skyrim_relive {
                     )?
                     .visit_field::<i32>("anim_weapon_state", Self::VT_ANIM_WEAPON_STATE, false)?
                     .visit_field::<bool>("weapon_drawn", Self::VT_WEAPON_DRAWN, false)?
+                    .visit_field::<f32>("pitch", Self::VT_PITCH, false)?
                     .finish();
                 Ok(())
             }
@@ -520,6 +628,7 @@ pub mod skyrim_relive {
             pub anim_is_unequipping: bool,
             pub anim_weapon_state: i32,
             pub weapon_drawn: bool,
+            pub pitch: f32,
         }
         impl<'a> Default for PlayerStateArgs<'a> {
             #[inline]
@@ -536,6 +645,7 @@ pub mod skyrim_relive {
                     anim_is_unequipping: false,
                     anim_weapon_state: 0,
                     weapon_drawn: false,
+                    pitch: 0.0,
                 }
             }
         }
@@ -616,6 +726,11 @@ pub mod skyrim_relive {
                     .push_slot::<bool>(PlayerState::VT_WEAPON_DRAWN, weapon_drawn, false);
             }
             #[inline]
+            pub fn add_pitch(&mut self, pitch: f32) {
+                self.fbb_
+                    .push_slot::<f32>(PlayerState::VT_PITCH, pitch, 0.0);
+            }
+            #[inline]
             pub fn new(
                 _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
             ) -> PlayerStateBuilder<'a, 'b, A> {
@@ -646,6 +761,7 @@ pub mod skyrim_relive {
                 ds.field("anim_is_unequipping", &self.anim_is_unequipping());
                 ds.field("anim_weapon_state", &self.anim_weapon_state());
                 ds.field("weapon_drawn", &self.weapon_drawn());
+                ds.field("pitch", &self.pitch());
                 ds.finish()
             }
         }
@@ -678,6 +794,7 @@ pub mod skyrim_relive {
             pub const VT_ANIM_IS_UNEQUIPPING: ::flatbuffers::VOffsetT = 20;
             pub const VT_ANIM_WEAPON_STATE: ::flatbuffers::VOffsetT = 22;
             pub const VT_WEAPON_DRAWN: ::flatbuffers::VOffsetT = 24;
+            pub const VT_PITCH: ::flatbuffers::VOffsetT = 26;
 
             #[inline]
             pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -695,6 +812,7 @@ pub mod skyrim_relive {
             ) -> ::flatbuffers::WIPOffset<PlayerInput<'bldr>> {
                 let mut builder = PlayerInputBuilder::new(_fbb);
                 builder.add_client_time_ms(args.client_time_ms);
+                builder.add_pitch(args.pitch);
                 builder.add_anim_weapon_state(args.anim_weapon_state);
                 builder.add_anim_direction(args.anim_direction);
                 builder.add_anim_speed(args.anim_speed);
@@ -827,6 +945,17 @@ pub mod skyrim_relive {
                         .unwrap()
                 }
             }
+            #[inline]
+            pub fn pitch(&self) -> f32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<f32>(PlayerInput::VT_PITCH, Some(0.0))
+                        .unwrap()
+                }
+            }
         }
 
         impl ::flatbuffers::Verifiable for PlayerInput<'_> {
@@ -851,6 +980,7 @@ pub mod skyrim_relive {
                     )?
                     .visit_field::<i32>("anim_weapon_state", Self::VT_ANIM_WEAPON_STATE, false)?
                     .visit_field::<bool>("weapon_drawn", Self::VT_WEAPON_DRAWN, false)?
+                    .visit_field::<f32>("pitch", Self::VT_PITCH, false)?
                     .finish();
                 Ok(())
             }
@@ -867,6 +997,7 @@ pub mod skyrim_relive {
             pub anim_is_unequipping: bool,
             pub anim_weapon_state: i32,
             pub weapon_drawn: bool,
+            pub pitch: f32,
         }
         impl<'a> Default for PlayerInputArgs<'a> {
             #[inline]
@@ -883,6 +1014,7 @@ pub mod skyrim_relive {
                     anim_is_unequipping: false,
                     anim_weapon_state: 0,
                     weapon_drawn: false,
+                    pitch: 0.0,
                 }
             }
         }
@@ -963,6 +1095,11 @@ pub mod skyrim_relive {
                     .push_slot::<bool>(PlayerInput::VT_WEAPON_DRAWN, weapon_drawn, false);
             }
             #[inline]
+            pub fn add_pitch(&mut self, pitch: f32) {
+                self.fbb_
+                    .push_slot::<f32>(PlayerInput::VT_PITCH, pitch, 0.0);
+            }
+            #[inline]
             pub fn new(
                 _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
             ) -> PlayerInputBuilder<'a, 'b, A> {
@@ -993,6 +1130,7 @@ pub mod skyrim_relive {
                 ds.field("anim_is_unequipping", &self.anim_is_unequipping());
                 ds.field("anim_weapon_state", &self.anim_weapon_state());
                 ds.field("weapon_drawn", &self.weapon_drawn());
+                ds.field("pitch", &self.pitch());
                 ds.finish()
             }
         }
@@ -1191,6 +1329,7 @@ pub mod skyrim_relive {
             pub const VT_WEAPON_REACH: ::flatbuffers::VOffsetT = 8;
             pub const VT_WEAPON_BASE_DAMAGE: ::flatbuffers::VOffsetT = 10;
             pub const VT_CLIENT_TIME_MS: ::flatbuffers::VOffsetT = 12;
+            pub const VT_ATTACK_CLASS: ::flatbuffers::VOffsetT = 14;
 
             #[inline]
             pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -1211,6 +1350,7 @@ pub mod skyrim_relive {
                 builder.add_weapon_base_damage(args.weapon_base_damage);
                 builder.add_weapon_reach(args.weapon_reach);
                 builder.add_target_player_id(args.target_player_id);
+                builder.add_attack_class(args.attack_class);
                 builder.add_attack_type(args.attack_type);
                 builder.finish()
             }
@@ -1270,6 +1410,17 @@ pub mod skyrim_relive {
                         .unwrap()
                 }
             }
+            #[inline]
+            pub fn attack_class(&self) -> AttackClass {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<AttackClass>(CombatEvent::VT_ATTACK_CLASS, Some(AttackClass::Melee))
+                        .unwrap()
+                }
+            }
         }
 
         impl ::flatbuffers::Verifiable for CombatEvent<'_> {
@@ -1284,6 +1435,7 @@ pub mod skyrim_relive {
                     .visit_field::<f32>("weapon_reach", Self::VT_WEAPON_REACH, false)?
                     .visit_field::<f32>("weapon_base_damage", Self::VT_WEAPON_BASE_DAMAGE, false)?
                     .visit_field::<u64>("client_time_ms", Self::VT_CLIENT_TIME_MS, false)?
+                    .visit_field::<AttackClass>("attack_class", Self::VT_ATTACK_CLASS, false)?
                     .finish();
                 Ok(())
             }
@@ -1294,6 +1446,7 @@ pub mod skyrim_relive {
             pub weapon_reach: f32,
             pub weapon_base_damage: f32,
             pub client_time_ms: u64,
+            pub attack_class: AttackClass,
         }
         impl<'a> Default for CombatEventArgs {
             #[inline]
@@ -1304,6 +1457,7 @@ pub mod skyrim_relive {
                     weapon_reach: 100.0,
                     weapon_base_damage: 0.0,
                     client_time_ms: 0,
+                    attack_class: AttackClass::Melee,
                 }
             }
         }
@@ -1342,6 +1496,14 @@ pub mod skyrim_relive {
                     .push_slot::<u64>(CombatEvent::VT_CLIENT_TIME_MS, client_time_ms, 0);
             }
             #[inline]
+            pub fn add_attack_class(&mut self, attack_class: AttackClass) {
+                self.fbb_.push_slot::<AttackClass>(
+                    CombatEvent::VT_ATTACK_CLASS,
+                    attack_class,
+                    AttackClass::Melee,
+                );
+            }
+            #[inline]
             pub fn new(
                 _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
             ) -> CombatEventBuilder<'a, 'b, A> {
@@ -1366,6 +1528,7 @@ pub mod skyrim_relive {
                 ds.field("weapon_reach", &self.weapon_reach());
                 ds.field("weapon_base_damage", &self.weapon_base_damage());
                 ds.field("client_time_ms", &self.client_time_ms());
+                ds.field("attack_class", &self.attack_class());
                 ds.finish()
             }
         }

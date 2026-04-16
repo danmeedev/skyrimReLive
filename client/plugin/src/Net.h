@@ -36,7 +36,8 @@ namespace relive::net {
         // the underlying socket send is one-shot. Drops silently when not
         // connected.
         void send_combat_event(uint32_t target_player_id, uint8_t attack_type,
-                               float weapon_reach, float weapon_base_damage);
+                               float weapon_reach, float weapon_base_damage,
+                               uint8_t attack_class = 0);
 
         [[nodiscard]] uint32_t player_id() const noexcept { return player_id_; }
         [[nodiscard]] uint64_t snapshots_received() const noexcept {

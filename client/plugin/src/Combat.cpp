@@ -12,23 +12,36 @@
 namespace relive::combat {
 
     namespace {
-        // Resolve the source TESForm into a melee weapon and pull (reach,
-        // base damage). Returns sentinel defaults when the source isn't a
-        // weapon (unarmed, magic, projectile) — server applies its own
-        // clamps either way.
-        struct WeaponStats {
+        // AttackClass mirrors the FlatBuffer enum (Melee=0, BowArrow=1, Spell=2).
+        constexpr std::uint8_t kClassMelee = 0;
+        constexpr std::uint8_t kClassBow   = 1;
+        constexpr std::uint8_t kClassSpell = 2;
+        constexpr float kSpellDamageSentinel = 25.0F;
+
+        struct HitStats {
             float reach;
             float damage;
+            std::uint8_t attack_class;
         };
-        WeaponStats stats_for_source(RE::FormID source_form_id) {
-            constexpr WeaponStats kUnarmed{100.0F, 5.0F};
+        HitStats stats_for_source(RE::FormID source_form_id, RE::FormID projectile_id) {
+            constexpr HitStats kUnarmed{100.0F, 5.0F, kClassMelee};
             if (source_form_id == 0) return kUnarmed;
             auto* form = RE::TESForm::LookupByID(source_form_id);
             if (!form) return kUnarmed;
-            auto* weap = form->As<RE::TESObjectWEAP>();
-            if (!weap) return kUnarmed;
-            return WeaponStats{weap->GetReach(),
-                               static_cast<float>(weap->GetAttackDamage())};
+            if (auto* weap = form->As<RE::TESObjectWEAP>()) {
+                const float dmg = static_cast<float>(weap->GetAttackDamage());
+                if (weap->IsBow() || weap->IsCrossbow() || projectile_id != 0) {
+                    return HitStats{0.0F, dmg, kClassBow};
+                }
+                if (weap->IsStaff()) {
+                    return HitStats{0.0F, kSpellDamageSentinel, kClassSpell};
+                }
+                return HitStats{weap->GetReach(), dmg, kClassMelee};
+            }
+            if (form->As<RE::SpellItem>() || form->As<RE::MagicItem>()) {
+                return HitStats{0.0F, kSpellDamageSentinel, kClassSpell};
+            }
+            return kUnarmed;
         }
 
         std::uint8_t classify_attack(REX::EnumSet<RE::TESHitEvent::Flag, std::uint8_t> flags) {
@@ -65,13 +78,15 @@ namespace relive::combat {
                     return RE::BSEventNotifyControl::kContinue;
                 }
 
-                const auto stats = stats_for_source(event->source);
+                const auto stats = stats_for_source(event->source, event->projectile);
                 const auto attack_type = classify_attack(event->flags);
                 plugin::send_combat_event(*target_pid, attack_type,
-                                          stats.reach, stats.damage);
+                                          stats.reach, stats.damage,
+                                          stats.attack_class);
                 SKSE::log::info(
-                    "shipped CombatEvent: target_pid={} type={} reach={:.0f} dmg={:.1f}",
-                    *target_pid, attack_type, stats.reach, stats.damage);
+                    "shipped CombatEvent: target_pid={} class={} type={} reach={:.0f} dmg={:.1f}",
+                    *target_pid, stats.attack_class, attack_type,
+                    stats.reach, stats.damage);
                 return RE::BSEventNotifyControl::kContinue;
             }
         };
