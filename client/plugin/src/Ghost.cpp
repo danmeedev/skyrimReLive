@@ -139,14 +139,29 @@ namespace relive::ghost {
         u.snap.y = y;
         u.snap.z = z;
         u.snap.yaw = yaw;
-        // Use monotonic synthetic tick so staleness math works without
-        // colliding with real server ticks.
-        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                             std::chrono::steady_clock::now().time_since_epoch())
-                             .count();
-        u.snap.server_tick = static_cast<std::uint64_t>(ms / 16);  // synthetic 60 Hz
-        u.snap.server_time_ms = static_cast<std::uint64_t>(ms);
-        ingest(u.snap.server_tick, u.snap.server_time_ms, std::span(&u, 1));
+        // Align synthetic tick with the real server tick so unsigned
+        // staleness math (last_applied_tick_ - last_seen_tick) doesn't
+        // underflow. last_applied_tick_ is atomic for this read.
+        const auto tick = last_applied_tick_.load(std::memory_order_relaxed) + 1;
+        const auto ms = static_cast<std::uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count());
+        u.snap.server_tick = tick;
+        u.snap.server_time_ms = ms;
+        ingest(tick, ms, std::span(&u, 1));
+    }
+
+    void Manager::clear_synthetic_ghosts() {
+        for (auto it = ghosts_.begin(); it != ghosts_.end();) {
+            if (it->first >= kSyntheticIdBase) {
+                SKSE::log::info("despawning demo ghost player_id=0x{:x}", it->first);
+                spawner_->despawn(it->second.actor);
+                it = ghosts_.erase(it);
+            } else {
+                ++it;
+            }
+        }
     }
 
     std::size_t Manager::ghost_count() const {

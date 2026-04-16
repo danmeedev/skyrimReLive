@@ -67,6 +67,10 @@ namespace relive::ghost {
         void inject_synthetic(std::uint32_t player_id, float x, float y,
                               float z, float yaw);
 
+        // Immediately despawn all synthetic ghosts (id >= kSyntheticIdBase).
+        // Must be called on the main thread (via AddTask).
+        void clear_synthetic_ghosts();
+
         // Consumer: called from the main thread (SKSE TaskInterface). Drains
         // the queue, spawns new ghosts, updates transforms, despawns stale.
         void tick_main_thread();
@@ -105,9 +109,10 @@ namespace relive::ghost {
         mutable std::mutex queue_mu_;
         std::deque<QueuedSnapshot> pending_;
 
-        // Main-thread only.
+        // Main-thread only (ghosts_). last_applied_tick_ is atomic so
+        // inject_synthetic (demo thread) can read it for tick alignment.
         std::unordered_map<std::uint32_t, Ghost> ghosts_;
-        std::uint64_t last_applied_tick_ = 0;
+        std::atomic<std::uint64_t> last_applied_tick_{0};
     };
 
     // One global manager per plugin instance. Access via this.

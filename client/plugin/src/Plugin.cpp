@@ -118,8 +118,13 @@ namespace relive::plugin {
     std::string demo_stop() {
         const bool was = g_demo_active.exchange(false, std::memory_order_acq_rel);
         if (!was) return "demo not running";
-        Toast("[SkyrimReLive] demo ghost stopping (despawns in ~3s)");
-        return "demo stopped (ghost will fade within 3s via staleness)";
+        // Explicitly despawn on the main thread instead of waiting for
+        // the 3-second staleness timer.
+        if (auto* task = SKSE::GetTaskInterface()) {
+            task->AddTask([]() { ghost::instance().clear_synthetic_ghosts(); });
+        }
+        Toast("[SkyrimReLive] demo ghost stopped");
+        return "demo stopped";
     }
 
     std::string current_server() noexcept {
