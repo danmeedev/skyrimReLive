@@ -1,0 +1,7 @@
+edition = "2021"
+max_width = 100
+newline_style = "Unix"
+
+# Nightly-only options we'd like once they stabilize:
+#   imports_granularity = "Module"
+#   group_imports = "StdExternalCrate"

@@ -1,0 +1,242 @@
+#include "Net.h"
+
+#include <array>
+#include <chrono>
+#include <vector>
+
+#include <flatbuffers/flatbuffers.h>
+
+#include "lifecycle_generated.h"
+#include "types_generated.h"
+#include "world_generated.h"
+
+#include <RE/Skyrim.h>
+#include <SKSE/Logger.h>
+
+#include "Ghost.h"
+#include "Socket.h"
+
+namespace re_v1 = skyrim_relive::v1;
+
+namespace {
+    constexpr std::uint8_t kProtoVersion = 1;
+    constexpr std::size_t kHeaderLen = 4;
+
+    void encode_packet(re_v1::MessageType type, std::span<const std::uint8_t> body,
+                       std::vector<std::uint8_t>& out) {
+        out.clear();
+        out.reserve(kHeaderLen + body.size());
+        out.push_back(static_cast<std::uint8_t>('R'));
+        out.push_back(static_cast<std::uint8_t>('L'));
+        out.push_back(kProtoVersion);
+        out.push_back(static_cast<std::uint8_t>(type));
+        out.insert(out.end(), body.begin(), body.end());
+    }
+
+    bool parse_packet(std::span<const std::uint8_t> packet, re_v1::MessageType& type,
+                      std::span<const std::uint8_t>& body) {
+        if (packet.size() < kHeaderLen) return false;
+        if (packet[0] != 'R' || packet[1] != 'L') return false;
+        if (packet[2] != kProtoVersion) return false;
+        type = static_cast<re_v1::MessageType>(packet[3]);
+        body = packet.subspan(kHeaderLen);
+        return true;
+    }
+}
+
+namespace relive::net {
+
+    Client::~Client() {
+        stop();
+    }
+
+    bool Client::start(std::string_view host, std::uint16_t port,
+                       std::string_view player_name) {
+        const auto h = sock::udp_connect_ipv4(host, port);
+        if (h == sock::kInvalid) {
+            SKSE::log::error("UDP connect failed");
+            return false;
+        }
+        socket_ = h;
+
+        if (!send_hello(player_name) || !wait_for_welcome()) {
+            sock::close(socket_);
+            socket_ = sock::kInvalid;
+            return false;
+        }
+
+        running_.store(true, std::memory_order_release);
+        thread_ = std::thread([this]() { run(); });
+        SKSE::log::info("net client started; sending PlayerInput @60Hz");
+        return true;
+    }
+
+    void Client::stop() {
+        if (!running_.exchange(false, std::memory_order_acq_rel)) return;
+        if (thread_.joinable()) {
+            // Detached so process exit isn't blocked on the recv timeout.
+            thread_.detach();
+        }
+        sock::close(socket_);
+        socket_ = sock::kInvalid;
+    }
+
+    bool Client::send_hello(std::string_view name) {
+        flatbuffers::FlatBufferBuilder fbb(64);
+        const std::string name_s{name};
+        const auto name_off = fbb.CreateString(name_s);
+        re_v1::HelloBuilder hb(fbb);
+        hb.add_name(name_off);
+        hb.add_client_protocol_version(kProtoVersion);
+        const auto hello_off = hb.Finish();
+        fbb.Finish(hello_off);
+
+        std::vector<std::uint8_t> packet;
+        encode_packet(re_v1::MessageType_Hello,
+                      std::span(fbb.GetBufferPointer(), fbb.GetSize()), packet);
+
+        if (!sock::send_all(socket_, packet)) {
+            SKSE::log::error("Hello send failed");
+            return false;
+        }
+        return true;
+    }
+
+    bool Client::wait_for_welcome() {
+        sock::set_recv_timeout(socket_, 2000);
+
+        std::array<std::uint8_t, 2048> buf{};
+        const int n = sock::recv_one(socket_, buf);
+        if (n <= 0) {
+            SKSE::log::error("timed out waiting for Welcome");
+            return false;
+        }
+
+        re_v1::MessageType type;
+        std::span<const std::uint8_t> body;
+        if (!parse_packet(std::span(buf.data(), static_cast<std::size_t>(n)), type, body)) {
+            SKSE::log::error("malformed reply to Hello");
+            return false;
+        }
+        if (type == re_v1::MessageType_Disconnect) {
+            const auto* d = flatbuffers::GetRoot<re_v1::Disconnect>(body.data());
+            SKSE::log::error("server Disconnect: code={} reason={}",
+                             static_cast<int>(d->code()),
+                             d->reason() ? d->reason()->c_str() : "");
+            return false;
+        }
+        if (type != re_v1::MessageType_Welcome) {
+            SKSE::log::error("expected Welcome, got type {}", static_cast<int>(type));
+            return false;
+        }
+
+        const auto* w = flatbuffers::GetRoot<re_v1::Welcome>(body.data());
+        player_id_ = w->player_id();
+        SKSE::log::info("Welcome: player_id={} tick={}Hz snap={}Hz", player_id_,
+                        static_cast<int>(w->server_tick_rate_hz()),
+                        static_cast<int>(w->server_snapshot_rate_hz()));
+        return true;
+    }
+
+    void Client::run() {
+        // Short recv timeout so we don't blow the next 16ms tick deadline.
+        sock::set_recv_timeout(socket_, 5);
+
+        auto next = std::chrono::steady_clock::now();
+        const auto period = std::chrono::microseconds(16667);
+
+        while (running_.load(std::memory_order_acquire)) {
+            send_player_input();
+            drain_incoming();
+            next += period;
+            std::this_thread::sleep_until(next);
+        }
+    }
+
+    void Client::send_player_input() {
+        const auto* player = RE::PlayerCharacter::GetSingleton();
+        // parentCell is non-null only when the player is in a loaded world.
+        // Skip on main-menu / save-load-in-progress — reading a half-torn
+        // PlayerCharacter from this background thread is undefined and has
+        // crashed in the wild.
+        if (!player || !player->parentCell) {
+            return;
+        }
+        const auto pos = player->GetPosition();
+        const float x = pos.x;
+        const float y = pos.y;
+        const float z = pos.z;
+        const float yaw = player->GetAngleZ();
+        last_x_.store(x, std::memory_order_relaxed);
+        last_y_.store(y, std::memory_order_relaxed);
+        last_z_.store(z, std::memory_order_relaxed);
+        last_yaw_.store(yaw, std::memory_order_relaxed);
+
+        flatbuffers::FlatBufferBuilder fbb(96);
+        const re_v1::Vec3 v3(x, y, z);
+        const re_v1::Transform tr(v3, yaw);
+        const auto now_ms = static_cast<std::uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch())
+                .count());
+        re_v1::PlayerInputBuilder ib(fbb);
+        ib.add_transform(&tr);
+        ib.add_client_time_ms(now_ms);
+        const auto input_off = ib.Finish();
+        fbb.Finish(input_off);
+
+        std::vector<std::uint8_t> packet;
+        encode_packet(re_v1::MessageType_PlayerInput,
+                      std::span(fbb.GetBufferPointer(), fbb.GetSize()), packet);
+
+        if (sock::send_all(socket_, packet)) {
+            player_inputs_sent_.fetch_add(1, std::memory_order_relaxed);
+        }
+    }
+
+    void Client::drain_incoming() {
+        std::array<std::uint8_t, 2048> buf{};
+        for (;;) {
+            const int n = sock::recv_one(socket_, buf);
+            if (n <= 0) return;
+
+            re_v1::MessageType type;
+            std::span<const std::uint8_t> body;
+            if (!parse_packet(std::span(buf.data(), static_cast<std::size_t>(n)), type, body)) {
+                continue;
+            }
+
+            if (type == re_v1::MessageType_WorldSnapshot) {
+                snapshots_received_.fetch_add(1, std::memory_order_relaxed);
+                const auto* snap = flatbuffers::GetRoot<re_v1::WorldSnapshot>(body.data());
+                std::vector<ghost::Manager::PlayerUpdate> updates;
+                if (const auto* players = snap->players()) {
+                    updates.reserve(players->size());
+                    for (const auto* p : *players) {
+                        ghost::Manager::PlayerUpdate u;
+                        u.player_id = p->player_id();
+                        const auto& t = p->transform();
+                        const auto& pos = t.pos();
+                        u.snap.server_tick = snap->server_tick();
+                        u.snap.server_time_ms = snap->server_time_ms();
+                        u.snap.x = pos.x();
+                        u.snap.y = pos.y();
+                        u.snap.z = pos.z();
+                        u.snap.yaw = t.yaw();
+                        updates.push_back(u);
+                    }
+                }
+                ghost::instance().ingest(snap->server_tick(),
+                                         snap->server_time_ms(), updates);
+            } else if (type == re_v1::MessageType_Disconnect) {
+                const auto* d = flatbuffers::GetRoot<re_v1::Disconnect>(body.data());
+                SKSE::log::warn("server sent Disconnect: code={} reason={}",
+                                static_cast<int>(d->code()),
+                                d->reason() ? d->reason()->c_str() : "");
+                running_.store(false, std::memory_order_release);
+                return;
+            }
+        }
+    }
+
+}

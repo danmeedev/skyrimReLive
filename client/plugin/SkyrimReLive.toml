@@ -1,0 +1,21 @@
+# SkyrimReLive plugin config.
+# Deployed to <Skyrim>/Data/SKSE/Plugins/SkyrimReLive.toml by tools/setup.ps1.
+# Any field omitted here uses its compiled-in default.
+
+# UDP host + port of the SkyrimReLive server.
+# Localhost for solo tests; your LAN IP when a friend connects.
+server_host = "127.0.0.1"
+server_port = 27015
+
+# Display name used in the Hello packet. Shows up in server logs.
+player_name = "dovahkiin"
+
+# If true (default), connect automatically when a save loads. If false, the
+# plugin does nothing until you type `rl connect` in the in-game console (~).
+auto_connect = true
+
+# Hex form ID of the single cell where multiplayer is active. "0" means "any
+# cell" (dev/solo). Phase 1's design is one-cell, so for shared play set this
+# to the form ID of e.g. Whiterun exterior. Run `rl cell` in-game to see the
+# current cell, then `rl cell set` to pin it.
+target_cell = "0x0"

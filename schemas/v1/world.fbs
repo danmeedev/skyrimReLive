@@ -1,0 +1,33 @@
+// Wire-format v1 — world-state messages.
+
+namespace skyrim_relive.v1;
+
+// Position. World coordinates (Skyrim's exterior cell frame).
+struct Vec3 {
+    x: float;
+    y: float;
+    z: float;
+}
+
+// Phase 1: position + yaw only. Pitch/roll arrive in Phase 2 with combat sync.
+struct Transform {
+    pos: Vec3;
+    yaw: float;  // radians
+}
+
+// One entry per other player in WorldSnapshot.
+struct PlayerState {
+    player_id: uint32;
+    transform: Transform;
+}
+
+table PlayerInput {
+    transform: Transform;
+    client_time_ms: uint64;
+}
+
+table WorldSnapshot {
+    server_tick: uint64;
+    server_time_ms: uint64;
+    players: [PlayerState];
+}

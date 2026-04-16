@@ -1,0 +1,42 @@
+# Rust
+target/
+**/*.rs.bk
+Cargo.lock.bak
+
+# C++ / CMake
+build/
+build-*/
+out/
+CMakeCache.txt
+CMakeFiles/
+cmake-build-*/
+*.o
+*.obj
+*.exp
+*.ilk
+*.lib
+*.pdb
+*.dll
+
+# vcpkg
+vcpkg_installed/
+.vcpkg-root
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.sln.docstates
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Local config
+.env
+.env.local
+*.local.toml
+
+# Claude Code local settings
+.claude/

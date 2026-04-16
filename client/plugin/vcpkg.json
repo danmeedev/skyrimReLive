@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg/master/scripts/vcpkg.schema.json",
+  "name": "skyrim-relive-plugin",
+  "version-string": "0.0.1",
+  "description": "SKSE plugin for SkyrimReLive. C++ deps required by CommonLibSSE-NG (alandtse fork).",
+  "dependencies": [
+    "directxmath",
+    "directxtk",
+    "flatbuffers",
+    "fmt",
+    "rapidcsv",
+    "spdlog",
+    "tomlplusplus",
+    "xbyak"
+  ]
+}

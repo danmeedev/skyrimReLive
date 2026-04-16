@@ -1,0 +1,45 @@
+[workspace]
+resolver = "2"
+members = [
+    "server",
+    "tools/echo-client",
+]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2021"
+license = "Apache-2.0"
+rust-version = "1.85"
+repository = "https://github.com/skyrim-relive/skyrim-relive"
+
+[workspace.dependencies]
+bevy_ecs = "0.16"
+flatbuffers = "25"
+tokio = { version = "1", features = ["rt-multi-thread", "net", "macros", "signal", "time"] }
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+socket2 = "0.5"
+toml = "0.8"
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+unused_must_use = "deny"
+rust_2018_idioms = { level = "warn", priority = -1 }
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+todo = "warn"
+unimplemented = "warn"
+dbg_macro = "warn"
+# Allow-list for things pedantic flags that we don't care about:
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

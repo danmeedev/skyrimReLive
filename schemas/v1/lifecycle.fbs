@@ -1,0 +1,30 @@
+// Wire-format v1 — connection lifecycle messages.
+
+include "types.fbs";
+
+namespace skyrim_relive.v1;
+
+table Hello {
+    name: string;                  // player display name
+    client_protocol_version: ubyte; // = 1 in this version; redundant with header byte but explicit
+}
+
+table Welcome {
+    player_id: uint32;
+    server_tick_rate_hz: ubyte;     // 60
+    server_snapshot_rate_hz: ubyte; // 20
+    your_addr: string;              // optional, helpful for client logging
+}
+
+table Heartbeat {
+    client_time_ms: uint64;
+}
+
+table LeaveNotify {
+    reason: string;
+}
+
+table Disconnect {
+    code: DisconnectCode;
+    reason: string;  // human-readable for logs
+}

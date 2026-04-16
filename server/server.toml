@@ -1,0 +1,11 @@
+# SkyrimReLive server config.
+# Override this file's path with the RELIVE_CONFIG env var.
+# Any field omitted here uses its compiled-in default.
+
+# `[::]:27015` binds both IPv4 and IPv6 on most OSes (we enable
+# dual-stack via IPV6_V6ONLY=0). Use `0.0.0.0:27015` for IPv4-only.
+bind                  = "[::]:27015"
+tick_rate_hz          = 60
+snapshot_rate_hz      = 20
+connection_timeout_s  = 5
+gc_interval_ms        = 500

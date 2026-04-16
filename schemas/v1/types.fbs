@@ -1,0 +1,28 @@
+// Wire-format v1 — message-type discriminator.
+// MUST stay in sync with the byte at offset 3 of the packet header (R L ver type).
+// Add new entries with NEW values; never reuse a removed one (Hard Rule H3).
+
+namespace skyrim_relive.v1;
+
+enum MessageType : ubyte {
+    // Lifecycle (1..15 reserved)
+    Hello         =  1,
+    Welcome       =  2,
+    Heartbeat     =  3,
+    LeaveNotify   =  4,
+    Disconnect    =  5,
+
+    // World state (16..)
+    PlayerInput   = 16,
+    WorldSnapshot = 17,
+}
+
+enum DisconnectCode : ubyte {
+    Ok               = 0,
+    VersionMismatch  = 1,
+    Timeout          = 2,
+    ServerFull       = 3,
+    ServerShutdown   = 4,
+    BadPacket        = 5,
+    DuplicateName    = 6,
+}
