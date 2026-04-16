@@ -22,6 +22,13 @@ namespace relive::ghost {
         // that time. 10 gives us 500 ms of runway for bad network jitter.
         constexpr std::size_t kHistoryMax = 10;
 
+        // Maximum distance (Skyrim world units) at which we'll spawn or
+        // keep a ghost. ~5000 units is roughly one exterior cell + slack.
+        // Beyond this, SetPosition would warp the ghost across unloaded
+        // cells, which crashes the engine. Phase 3's proper cell-aware
+        // AoI replaces this; for Phase 2 it's a hard distance cap.
+        constexpr float kMaxGhostDist = 5000.0F;
+
         // Client renders this far behind the most-recently-arrived snapshot
         // so we can always linearly interpolate between bracketing pairs
         // instead of extrapolating past the latest.
@@ -183,6 +190,10 @@ namespace relive::ghost {
             return;
         }
 
+        // Capture local player position once per tick for the per-ghost
+        // distance gate (see kMaxGhostDist below).
+        const auto local_pos = player->GetPosition();
+
         std::deque<QueuedSnapshot> local_pending;
         {
             const std::lock_guard lock(queue_mu_);
@@ -225,6 +236,26 @@ namespace relive::ghost {
                 ++it;
                 continue;
             }
+
+            // Distance gate: if remote is far away (different cell or
+            // wildly invalid position), skip spawn / despawn existing.
+            // Prevents cross-cell SetPosition warps that crash the engine.
+            const auto& latest_for_dist = g.history.back().snap;
+            const float dx = latest_for_dist.x - local_pos.x;
+            const float dy = latest_for_dist.y - local_pos.y;
+            const float dz = latest_for_dist.z - local_pos.z;
+            const float dist_sq = dx * dx + dy * dy + dz * dz;
+            if (dist_sq > kMaxGhostDist * kMaxGhostDist) {
+                if (g.actor) {
+                    SKSE::log::info(
+                        "ghost player_id={} out of range ({:.0f}u); despawning",
+                        pid, std::sqrt(dist_sq));
+                    spawner_->despawn(g.actor);
+                }
+                ++it;
+                continue;
+            }
+
             if (!g.actor) {
                 g.actor = spawner_->spawn_near_player();
                 if (g.actor) {
