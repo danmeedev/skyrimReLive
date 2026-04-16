@@ -194,8 +194,10 @@ namespace relive::net {
         player->GetGraphVariableInt("iState", anim_weapon_state);
         const bool weapon_drawn = player->AsActorState()->IsWeaponDrawn();
         const float pitch = player->GetAngleX();
+        const std::uint32_t cell_form_id =
+            player->parentCell ? player->parentCell->GetFormID() : 0;
 
-        flatbuffers::FlatBufferBuilder fbb(96);
+        flatbuffers::FlatBufferBuilder fbb(128);
         const re_v1::Vec3 v3(x, y, z);
         const re_v1::Transform tr(v3, yaw);
         const auto now_ms = static_cast<std::uint64_t>(
@@ -215,6 +217,7 @@ namespace relive::net {
         ib.add_anim_weapon_state(anim_weapon_state);
         ib.add_weapon_drawn(weapon_drawn);
         ib.add_pitch(pitch);
+        ib.add_cell_form_id(cell_form_id);
         const auto input_off = ib.Finish();
         fbb.Finish(input_off);
 
@@ -271,6 +274,7 @@ namespace relive::net {
                         u.snap.weapon_state = p->anim_weapon_state();
                         u.snap.weapon_drawn = p->weapon_drawn();
                         u.snap.pitch = p->pitch();
+                        u.snap.cell_form_id = p->cell_form_id();
                         updates.push_back(u);
                     }
                 }

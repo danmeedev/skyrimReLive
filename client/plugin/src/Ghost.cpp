@@ -255,19 +255,31 @@ namespace relive::ghost {
                 continue;
             }
 
-            // Distance gate: if remote is far away (different cell or
-            // wildly invalid position), skip spawn / despawn existing.
-            // Prevents cross-cell SetPosition warps that crash the engine.
-            const auto& latest_for_dist = g.history.back().snap;
-            const float dx = latest_for_dist.x - local_pos.x;
-            const float dy = latest_for_dist.y - local_pos.y;
-            const float dz = latest_for_dist.z - local_pos.z;
-            const float dist_sq = dx * dx + dy * dy + dz * dz;
-            if (dist_sq > kMaxGhostDist * kMaxGhostDist) {
+            // Phase 3.1: cell-based AoI. Server already filters by cell,
+            // but as a belt-and-suspenders, skip ghosts whose cell doesn't
+            // match ours. For exteriors (cell_form_id=0), fall back to the
+            // old distance gate so we never warp a ghost across unloaded
+            // terrain. Interior cells use matching FormIDs — coordinates
+            // are in the same frame, so SetPosition is safe.
+            const auto& latest_snap = g.history.back().snap;
+            const auto local_cell_id = player->parentCell
+                ? player->parentCell->GetFormID() : 0u;
+            const bool same_cell = [&]() {
+                if (latest_snap.cell_form_id == 0 || local_cell_id == 0) {
+                    // Exterior / unknown — use distance gate.
+                    const float dx = latest_snap.x - local_pos.x;
+                    const float dy = latest_snap.y - local_pos.y;
+                    const float dz = latest_snap.z - local_pos.z;
+                    return (dx * dx + dy * dy + dz * dz)
+                           <= kMaxGhostDist * kMaxGhostDist;
+                }
+                return latest_snap.cell_form_id == local_cell_id;
+            }();
+            if (!same_cell) {
                 if (g.actor) {
                     SKSE::log::info(
-                        "ghost player_id={} out of range ({:.0f}u); despawning",
-                        pid, std::sqrt(dist_sq));
+                        "ghost player_id={} cell mismatch (local=0x{:x} remote=0x{:x}); despawning",
+                        pid, local_cell_id, latest_snap.cell_form_id);
                     spawner_->despawn(g.actor);
                 }
                 ++it;

@@ -35,6 +35,8 @@ namespace relive::ghost {
         bool weapon_drawn = false;
         // Phase 2.5: aim pitch (radians, +down/-up).
         float pitch = 0;
+        // Phase 3.1: cell FormID the remote player is in. 0 = exterior/unknown.
+        std::uint32_t cell_form_id = 0;
     };
 
     // Pluggable spawner. Phase 1 ships VanillaCloneSpawner (clones a known

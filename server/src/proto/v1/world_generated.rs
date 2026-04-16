@@ -426,6 +426,7 @@ pub mod skyrim_relive {
             pub const VT_ANIM_WEAPON_STATE: ::flatbuffers::VOffsetT = 22;
             pub const VT_WEAPON_DRAWN: ::flatbuffers::VOffsetT = 24;
             pub const VT_PITCH: ::flatbuffers::VOffsetT = 26;
+            pub const VT_CELL_FORM_ID: ::flatbuffers::VOffsetT = 28;
 
             #[inline]
             pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -442,6 +443,7 @@ pub mod skyrim_relive {
                 args: &'args PlayerStateArgs<'args>,
             ) -> ::flatbuffers::WIPOffset<PlayerState<'bldr>> {
                 let mut builder = PlayerStateBuilder::new(_fbb);
+                builder.add_cell_form_id(args.cell_form_id);
                 builder.add_pitch(args.pitch);
                 builder.add_anim_weapon_state(args.anim_weapon_state);
                 builder.add_anim_direction(args.anim_direction);
@@ -587,6 +589,17 @@ pub mod skyrim_relive {
                         .unwrap()
                 }
             }
+            #[inline]
+            pub fn cell_form_id(&self) -> u32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u32>(PlayerState::VT_CELL_FORM_ID, Some(0))
+                        .unwrap()
+                }
+            }
         }
 
         impl ::flatbuffers::Verifiable for PlayerState<'_> {
@@ -612,6 +625,7 @@ pub mod skyrim_relive {
                     .visit_field::<i32>("anim_weapon_state", Self::VT_ANIM_WEAPON_STATE, false)?
                     .visit_field::<bool>("weapon_drawn", Self::VT_WEAPON_DRAWN, false)?
                     .visit_field::<f32>("pitch", Self::VT_PITCH, false)?
+                    .visit_field::<u32>("cell_form_id", Self::VT_CELL_FORM_ID, false)?
                     .finish();
                 Ok(())
             }
@@ -629,6 +643,7 @@ pub mod skyrim_relive {
             pub anim_weapon_state: i32,
             pub weapon_drawn: bool,
             pub pitch: f32,
+            pub cell_form_id: u32,
         }
         impl<'a> Default for PlayerStateArgs<'a> {
             #[inline]
@@ -646,6 +661,7 @@ pub mod skyrim_relive {
                     anim_weapon_state: 0,
                     weapon_drawn: false,
                     pitch: 0.0,
+                    cell_form_id: 0,
                 }
             }
         }
@@ -731,6 +747,11 @@ pub mod skyrim_relive {
                     .push_slot::<f32>(PlayerState::VT_PITCH, pitch, 0.0);
             }
             #[inline]
+            pub fn add_cell_form_id(&mut self, cell_form_id: u32) {
+                self.fbb_
+                    .push_slot::<u32>(PlayerState::VT_CELL_FORM_ID, cell_form_id, 0);
+            }
+            #[inline]
             pub fn new(
                 _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
             ) -> PlayerStateBuilder<'a, 'b, A> {
@@ -762,6 +783,7 @@ pub mod skyrim_relive {
                 ds.field("anim_weapon_state", &self.anim_weapon_state());
                 ds.field("weapon_drawn", &self.weapon_drawn());
                 ds.field("pitch", &self.pitch());
+                ds.field("cell_form_id", &self.cell_form_id());
                 ds.finish()
             }
         }
@@ -795,6 +817,7 @@ pub mod skyrim_relive {
             pub const VT_ANIM_WEAPON_STATE: ::flatbuffers::VOffsetT = 22;
             pub const VT_WEAPON_DRAWN: ::flatbuffers::VOffsetT = 24;
             pub const VT_PITCH: ::flatbuffers::VOffsetT = 26;
+            pub const VT_CELL_FORM_ID: ::flatbuffers::VOffsetT = 28;
 
             #[inline]
             pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -812,6 +835,7 @@ pub mod skyrim_relive {
             ) -> ::flatbuffers::WIPOffset<PlayerInput<'bldr>> {
                 let mut builder = PlayerInputBuilder::new(_fbb);
                 builder.add_client_time_ms(args.client_time_ms);
+                builder.add_cell_form_id(args.cell_form_id);
                 builder.add_pitch(args.pitch);
                 builder.add_anim_weapon_state(args.anim_weapon_state);
                 builder.add_anim_direction(args.anim_direction);
@@ -956,6 +980,17 @@ pub mod skyrim_relive {
                         .unwrap()
                 }
             }
+            #[inline]
+            pub fn cell_form_id(&self) -> u32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u32>(PlayerInput::VT_CELL_FORM_ID, Some(0))
+                        .unwrap()
+                }
+            }
         }
 
         impl ::flatbuffers::Verifiable for PlayerInput<'_> {
@@ -981,6 +1016,7 @@ pub mod skyrim_relive {
                     .visit_field::<i32>("anim_weapon_state", Self::VT_ANIM_WEAPON_STATE, false)?
                     .visit_field::<bool>("weapon_drawn", Self::VT_WEAPON_DRAWN, false)?
                     .visit_field::<f32>("pitch", Self::VT_PITCH, false)?
+                    .visit_field::<u32>("cell_form_id", Self::VT_CELL_FORM_ID, false)?
                     .finish();
                 Ok(())
             }
@@ -998,6 +1034,7 @@ pub mod skyrim_relive {
             pub anim_weapon_state: i32,
             pub weapon_drawn: bool,
             pub pitch: f32,
+            pub cell_form_id: u32,
         }
         impl<'a> Default for PlayerInputArgs<'a> {
             #[inline]
@@ -1015,6 +1052,7 @@ pub mod skyrim_relive {
                     anim_weapon_state: 0,
                     weapon_drawn: false,
                     pitch: 0.0,
+                    cell_form_id: 0,
                 }
             }
         }
@@ -1100,6 +1138,11 @@ pub mod skyrim_relive {
                     .push_slot::<f32>(PlayerInput::VT_PITCH, pitch, 0.0);
             }
             #[inline]
+            pub fn add_cell_form_id(&mut self, cell_form_id: u32) {
+                self.fbb_
+                    .push_slot::<u32>(PlayerInput::VT_CELL_FORM_ID, cell_form_id, 0);
+            }
+            #[inline]
             pub fn new(
                 _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
             ) -> PlayerInputBuilder<'a, 'b, A> {
@@ -1131,6 +1174,7 @@ pub mod skyrim_relive {
                 ds.field("anim_weapon_state", &self.anim_weapon_state());
                 ds.field("weapon_drawn", &self.weapon_drawn());
                 ds.field("pitch", &self.pitch());
+                ds.field("cell_form_id", &self.cell_form_id());
                 ds.finish()
             }
         }

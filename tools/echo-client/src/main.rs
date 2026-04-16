@@ -269,6 +269,7 @@ async fn send_player_input(socket: &UdpSocket, x: f32, y: f32, z: f32, yaw: f32)
             anim_weapon_state: 1, // iState=1 == sword/dagger right hand
             weapon_drawn: true,
             pitch: 0.0,
+            cell_form_id: 0,
         },
     );
     fbb.finish(input, None);

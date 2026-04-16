@@ -83,3 +83,9 @@ pub struct AnimState {
     // Phase 2.5: aim pitch (radians, +down/-up).
     pub pitch: f32,
 }
+
+/// Phase 3.1: which cell the player is in. 0 = unknown / exterior wildcard.
+#[derive(Component, Debug, Default, Clone, Copy)]
+pub struct Cell {
+    pub form_id: u32,
+}

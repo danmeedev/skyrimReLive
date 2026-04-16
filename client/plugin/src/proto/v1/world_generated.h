@@ -134,7 +134,8 @@ struct PlayerState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_ANIM_IS_UNEQUIPPING = 20,
     VT_ANIM_WEAPON_STATE = 22,
     VT_WEAPON_DRAWN = 24,
-    VT_PITCH = 26
+    VT_PITCH = 26,
+    VT_CELL_FORM_ID = 28
   };
   uint32_t player_id() const {
     return GetField<uint32_t>(VT_PLAYER_ID, 0);
@@ -172,6 +173,9 @@ struct PlayerState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   float pitch() const {
     return GetField<float>(VT_PITCH, 0.0f);
   }
+  uint32_t cell_form_id() const {
+    return GetField<uint32_t>(VT_CELL_FORM_ID, 0);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -187,6 +191,7 @@ struct PlayerState FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyField<int32_t>(verifier, VT_ANIM_WEAPON_STATE, 4) &&
            VerifyField<uint8_t>(verifier, VT_WEAPON_DRAWN, 1) &&
            VerifyField<float>(verifier, VT_PITCH, 4) &&
+           VerifyField<uint32_t>(verifier, VT_CELL_FORM_ID, 4) &&
            verifier.EndTable();
   }
 };
@@ -231,6 +236,9 @@ struct PlayerStateBuilder {
   void add_pitch(float pitch) {
     fbb_.AddElement<float>(PlayerState::VT_PITCH, pitch, 0.0f);
   }
+  void add_cell_form_id(uint32_t cell_form_id) {
+    fbb_.AddElement<uint32_t>(PlayerState::VT_CELL_FORM_ID, cell_form_id, 0);
+  }
   explicit PlayerStateBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -255,8 +263,10 @@ inline ::flatbuffers::Offset<PlayerState> CreatePlayerState(
     bool anim_is_unequipping = false,
     int32_t anim_weapon_state = 0,
     bool weapon_drawn = false,
-    float pitch = 0.0f) {
+    float pitch = 0.0f,
+    uint32_t cell_form_id = 0) {
   PlayerStateBuilder builder_(_fbb);
+  builder_.add_cell_form_id(cell_form_id);
   builder_.add_pitch(pitch);
   builder_.add_anim_weapon_state(anim_weapon_state);
   builder_.add_anim_direction(anim_direction);
@@ -286,7 +296,8 @@ struct PlayerInput FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
     VT_ANIM_IS_UNEQUIPPING = 20,
     VT_ANIM_WEAPON_STATE = 22,
     VT_WEAPON_DRAWN = 24,
-    VT_PITCH = 26
+    VT_PITCH = 26,
+    VT_CELL_FORM_ID = 28
   };
   const skyrim_relive::v1::Transform *transform() const {
     return GetStruct<const skyrim_relive::v1::Transform *>(VT_TRANSFORM);
@@ -324,6 +335,9 @@ struct PlayerInput FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   float pitch() const {
     return GetField<float>(VT_PITCH, 0.0f);
   }
+  uint32_t cell_form_id() const {
+    return GetField<uint32_t>(VT_CELL_FORM_ID, 0);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -339,6 +353,7 @@ struct PlayerInput FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
            VerifyField<int32_t>(verifier, VT_ANIM_WEAPON_STATE, 4) &&
            VerifyField<uint8_t>(verifier, VT_WEAPON_DRAWN, 1) &&
            VerifyField<float>(verifier, VT_PITCH, 4) &&
+           VerifyField<uint32_t>(verifier, VT_CELL_FORM_ID, 4) &&
            verifier.EndTable();
   }
 };
@@ -383,6 +398,9 @@ struct PlayerInputBuilder {
   void add_pitch(float pitch) {
     fbb_.AddElement<float>(PlayerInput::VT_PITCH, pitch, 0.0f);
   }
+  void add_cell_form_id(uint32_t cell_form_id) {
+    fbb_.AddElement<uint32_t>(PlayerInput::VT_CELL_FORM_ID, cell_form_id, 0);
+  }
   explicit PlayerInputBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -407,9 +425,11 @@ inline ::flatbuffers::Offset<PlayerInput> CreatePlayerInput(
     bool anim_is_unequipping = false,
     int32_t anim_weapon_state = 0,
     bool weapon_drawn = false,
-    float pitch = 0.0f) {
+    float pitch = 0.0f,
+    uint32_t cell_form_id = 0) {
   PlayerInputBuilder builder_(_fbb);
   builder_.add_client_time_ms(client_time_ms);
+  builder_.add_cell_form_id(cell_form_id);
   builder_.add_pitch(pitch);
   builder_.add_anim_weapon_state(anim_weapon_state);
   builder_.add_anim_direction(anim_direction);

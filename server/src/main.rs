@@ -6,7 +6,7 @@ use anyhow::Result;
 use bevy_ecs::prelude::*;
 use flatbuffers::FlatBufferBuilder;
 use skyrim_relive_server::components::{
-    AnimState, Connection, Health, Player, Transform, Velocity,
+    AnimState, Cell, Connection, Health, Player, Transform, Velocity,
 };
 use skyrim_relive_server::config::Config;
 use skyrim_relive_server::proto::v1::{
@@ -157,6 +157,7 @@ impl ServerState {
                 Velocity::default(),
                 AnimState::default(),
                 Health::default(),
+                Cell::default(),
             ))
             .id();
         self.addr_to_entity.insert(peer, entity);
@@ -239,6 +240,9 @@ impl ServerState {
             anim.weapon_state = input.anim_weapon_state();
             anim.weapon_drawn = input.weapon_drawn();
             anim.pitch = input.pitch();
+        }
+        if let Some(mut cell) = self.world.get_mut::<Cell>(entity) {
+            cell.form_id = input.cell_form_id();
         }
         // Touch last_heard regardless — acts as heartbeat even when idle.
         if let Some(mut conn) = self.world.get_mut::<Connection>(entity) {
@@ -451,11 +455,11 @@ impl ServerState {
     /// a grid lookup in Phase 3.
     async fn broadcast_snapshot(&mut self) {
         // Read phase: snapshot the whole world before any await.
-        let all: Vec<(u32, Transform, AnimState, SocketAddr)> = self
+        let all: Vec<(u32, Transform, AnimState, Cell, SocketAddr)> = self
             .world
-            .query::<(&Player, &Transform, &AnimState, &Connection)>()
+            .query::<(&Player, &Transform, &AnimState, &Cell, &Connection)>()
             .iter(&self.world)
-            .map(|(p, t, a, c)| (p.id, *t, *a, c.addr))
+            .map(|(p, t, a, cell, c)| (p.id, *t, *a, *cell, c.addr))
             .collect();
 
         if all.len() < 2 {
@@ -471,15 +475,26 @@ impl ServerState {
         )
         .unwrap_or(0);
 
-        for (self_pid, _, _, self_addr) in &all {
+        for (self_pid, _, _, self_cell, self_addr) in &all {
             self.snap_fbb.reset();
 
-            // PlayerState is a v2 table now, so we collect WIPOffsets
-            // first and then build the vector.
+            // AoI filter: include peers in the same cell. cell_form_id=0
+            // means "unknown/exterior" — treat as wildcard (visible to
+            // everyone in the same worldspace). Two interior players only
+            // see each other if their cell FormIDs match.
             let player_offsets: Vec<_> = all
                 .iter()
-                .filter(|(pid, _, _, _)| pid != self_pid)
-                .map(|(pid, t, a, _)| {
+                .filter(|(pid, _, _, peer_cell, _)| {
+                    if pid == self_pid {
+                        return false;
+                    }
+                    // 0 = exterior / unknown → visible to everyone
+                    if self_cell.form_id == 0 || peer_cell.form_id == 0 {
+                        return true;
+                    }
+                    self_cell.form_id == peer_cell.form_id
+                })
+                .map(|(pid, t, a, cell, _)| {
                     let v3 = FbVec3::new(t.pos[0], t.pos[1], t.pos[2]);
                     let xform = FbTransform::new(&v3, t.yaw);
                     FbPlayerState::create(
@@ -497,6 +512,7 @@ impl ServerState {
                             anim_weapon_state: a.weapon_state,
                             weapon_drawn: a.weapon_drawn,
                             pitch: a.pitch,
+                            cell_form_id: cell.form_id,
                         },
                     )
                 })

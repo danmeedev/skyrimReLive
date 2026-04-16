@@ -39,6 +39,10 @@ table PlayerState {
     // wire version (changing the Transform struct would). Radians; Skyrim
     // convention is +down / -up.
     pitch: float = 0;
+    // Phase 3.1: which cell the player is in. 0 = unknown / treat as
+    // exterior-worldspace wildcard. Interior cells carry a nonzero FormID
+    // that the server uses for AoI filtering.
+    cell_form_id: uint32 = 0;
 }
 
 table PlayerInput {
@@ -57,6 +61,8 @@ table PlayerInput {
     weapon_drawn: bool = false;
     // Phase 2.5: aim pitch (radians, +down/-up — Skyrim convention).
     pitch: float = 0;
+    // Phase 3.1: cell (see PlayerState.cell_form_id).
+    cell_form_id: uint32 = 0;
 }
 
 table WorldSnapshot {
