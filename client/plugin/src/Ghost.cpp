@@ -28,11 +28,29 @@ namespace relive::ghost {
         constexpr auto kRenderDelay = std::chrono::milliseconds(100);
 
         class VanillaCloneSpawner final : public Spawner {
+            static RE::TESNPC* resolve_base() {
+                if (auto* b = RE::TESForm::LookupByID<RE::TESNPC>(kTemplateFormID)) {
+                    return b;
+                }
+                if (auto* ref = RE::TESForm::LookupByID<RE::Actor>(kTemplateFormID)) {
+                    if (auto* b = ref->GetActorBase()) return b;
+                }
+                if (auto* p = RE::PlayerCharacter::GetSingleton()) {
+                    if (auto* b = p->GetActorBase()) {
+                        SKSE::log::warn(
+                            "ghost template 0x{:08x} unresolvable; using player base",
+                            kTemplateFormID);
+                        return b;
+                    }
+                }
+                return nullptr;
+            }
+
         public:
             RE::NiPointer<RE::Actor> spawn_near_player() override {
-                auto* base = RE::TESForm::LookupByID<RE::TESNPC>(kTemplateFormID);
+                auto* base = resolve_base();
                 if (!base) {
-                    SKSE::log::error("ghost template form 0x{:08x} not found", kTemplateFormID);
+                    SKSE::log::error("no ghost base form available");
                     return nullptr;
                 }
                 auto* player = RE::PlayerCharacter::GetSingleton();
