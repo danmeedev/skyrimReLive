@@ -66,6 +66,11 @@ namespace relive::ghost {
                 if (!actor) {
                     return nullptr;
                 }
+                // PlaceObjectAtMe can leave the clone disabled/unloaded,
+                // especially when cloning the player's own base. Explicitly
+                // enable and force 3D load so the ghost is visible immediately.
+                actor->Enable(false);
+                actor->Load3D(false);
                 actor->EnableAI(false);
                 actor->AllowBleedoutDialogue(false);
                 return actor;
