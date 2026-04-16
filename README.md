@@ -33,6 +33,10 @@ Short version: `cargo run --release` in `server/`. Configure via
 Tailscale recommended for friend groups; IPv6 dual-stack or port-forwarding
 as fallback.
 
+### Quick reference for commands, configs, and troubleshooting
+
+Read **[`docs/CHEATSHEET.md`](docs/CHEATSHEET.md)**.
+
 ### I want to contribute code
 
 Read **[`CONTRIBUTING.md`](CONTRIBUTING.md)** and
