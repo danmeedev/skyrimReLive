@@ -63,6 +63,8 @@ Cons: everyone needs to install Tailscale on their machine.
 
 **What changes on the server side:** nothing. Our `bind = "[::]:27015"` already listens on all interfaces, including the Tailscale virtual one.
 
+**Hardening (recommended once friends are in your tailnet):** see [`TAILSCALE_HARDENING.md`](TAILSCALE_HARDENING.md) — locks the friends group down to UDP 27015 only on your gaming PC so they can't reach anything else on your network. ~10 minutes.
+
 ### 2. IPv6 direct — free, works when both of you have IPv6
 
 Pros: no third-party software, peer-to-peer, zero cost.
