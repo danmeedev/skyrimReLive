@@ -58,7 +58,11 @@ Per accepted proposal `docs/proposals/0002-phase-2-animation-combat.md`.
   AnimState component; plugin reads graph vars from PlayerCharacter and
   applies to ghost actors via SetGraphVariableFloat/Bool. Demo ghost
   synthesizes run animation. Wire-format version bumped to 2.
-- [ ] Step 2.2: weapon state sync (draw/sheath, stance detection)
+- [x] **Step 2.2: weapon state sync.** PlayerInput/PlayerState gain
+  IsEquipping/IsUnequipping/iState/weapon_drawn (additive to v2 tables,
+  no version bump). Plugin reads the local player's graph vars + queries
+  IsWeaponDrawn(); Ghost applies via SetGraphVariableBool/Int so remote
+  ghosts play draw/sheath transitions and hold the right combat stance.
 - [ ] Step 2.3: combat events + server damage authority
 - [ ] Step 2.4: server-side transform validation (anti-teleport / speedhack)
 - [ ] Step 2.5: pitch replication + ranged combat prep
