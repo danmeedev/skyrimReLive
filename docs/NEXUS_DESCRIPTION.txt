@@ -1,0 +1,111 @@
+# SkyrimReLive
+
+*Open-source multiplayer for Skyrim Special Edition.*
+
+Connect with a friend (or a small group) and see each other walking, running, sneaking, and drawing weapons in real time, across a shared world. Built from scratch in Rust + C++ with no proprietary dependencies. Self-hosted: you run the server (or your friend does) on any PC.
+
+**Source code, issues, and dev discussion:** [GitHub - SkyrimReLive](https://github.com/danmeedev/skyrimReLive)
+
+## ⚠️ ALPHA — read before installing
+
+This is a Phase 2 alpha. Things work, but expect rough edges. Specifically:
+
+- Position, locomotion animation, and weapon draw/sheath are synced.
+- Combat damage, NPC sync, persistence, and accounts are NOT in yet.
+- Other players currently appear as a clone of your own character (placeholder ghost).
+- No public server exists. You and your friend host one yourselves.
+- Crashes are possible. Save often. Don't use it on a save you care about.
+
+If that doesn't put you off, read on.
+
+## Requirements
+
+- Skyrim Special Edition, runtime **1.6.1170** (current Steam version)
+- [SKSE64 2.2.6](https://skse.silverlock.org/)
+- [Address Library for SKSE Plugins](https://www.nexusmods.com/skyrimspecialedition/mods/32444) — "All in one (all game versions)"
+- A computer running the SkyrimReLive server (yours, your friend's, or a small VPS)
+
+## What it does today
+
+- **See another player** in the same cell as a ghost actor.
+- **Watch them move** — position is replicated at 60 Hz client to server, 20 Hz server to client, with 100 ms snapshot interpolation for smooth motion.
+- **Watch them animate** — walk/run/sneak transitions, weapon draw/sheath, combat stance.
+- **In-game console commands** (press `~`):
+  - `rl status` — connection state, ghosts, packet counters, your position
+  - `rl connect [host] [port]` — connect to a server (overrides config)
+  - `rl disconnect` — close the connection
+  - `rl cell` / `rl cell set` / `rl cell clear` — restrict replication to one cell
+  - `rl demo start` / `rl demo stop` — spawn a synthetic ghost orbiting you (solo test, no server needed)
+  - `rl help` — full command list
+- **Configurable via TOML** — server host/port, player name, auto-connect, target cell.
+
+## What it does NOT do yet
+
+- No damage / combat outcomes are replicated. You can swing at each other, but no hits register.
+- No NPC sync. Your bandit will not be your friend's bandit.
+- No quest sync, no inventory sync, no equipment-appearance sync.
+- No persistence. Each session is independent.
+- No matchmaking, no public servers, no accounts.
+- No anti-cheat (this is a small-group friend-trust mod for now).
+
+## Installation
+
+1. Install **SKSE64 2.2.6**: download from skse.silverlock.org, extract loader + core DLLs into the Skyrim install folder.
+2. Install **Address Library** from the link above. Extract and copy every `versionlib-1-6-*.bin` into `Skyrim Special Edition\Data\SKSE\Plugins\`.
+3. Install **SkyrimReLive**: copy `SkyrimReLive.dll` and `SkyrimReLive.toml` into `Skyrim Special Edition\Data\SKSE\Plugins\`.
+4. Edit `SkyrimReLive.toml`: set `server_host` to your friend's server address (their Tailscale IP, LAN IP, or public IP). Set `player_name` to whatever you want.
+5. Launch via **`skse64_loader.exe`**, *not* `SkyrimSELauncher.exe`.
+6. Load any save. The plugin auto-connects on save load. Press `~` and type `rl status` to confirm.
+
+## Hosting a server
+
+The server is a small Rust binary (~2 MB). Build it from source per the [HOST_SETUP guide on GitHub](https://github.com/danmeedev/skyrimReLive/blob/master/docs/HOST_SETUP.md). Quick options:
+
+- **Tailscale** (recommended for friends): install Tailscale on both PCs, share the address. No port forwarding.
+- **IPv6**: works directly if both you and your friend have IPv6 from your ISP.
+- **Port forwarding**: forward UDP port 27015 on your router.
+- **Cloud VPS**: rent a small Linux VM, run the binary there, give players the public IP.
+
+## Configuration
+
+```toml
+# SkyrimReLive.toml — lives in Data\SKSE\Plugins\
+server_host = "127.0.0.1"      # set to friend's address
+server_port = 27015
+player_name = "dovahkiin"
+auto_connect = true             # connect on save load
+target_cell = "0x0"             # 0 = any cell; pin via `rl cell set`
+```
+
+## Known issues
+
+- Ghost actors look like a clone of your own character (custom NPC base coming in a future version).
+- Ghost may "float" slightly above ground (no gravity simulation on AI-disabled actors).
+- Animations may look disconnected from world motion since we teleport the ghost between snapshots.
+- No HUD notifications — status output goes to the in-game console (press `~`).
+- Crashes possible during early load if you connect before the world is loaded — the plugin defers connection to `kPostLoadGame`, so this should be rare.
+
+## Compatibility
+
+- **Skyrim version**: 1.6.1170 only at this time. Other versions need a rebuild with a different runtime target.
+- **Other mods**: should be compatible with most. We don't modify any vanilla forms.
+- **ESP load order**: SkyrimReLive ships no ESP, no scripts, no records. DLL only.
+- **Multiplayer mods**: Do NOT install alongside Skyrim Together Reborn. They will conflict.
+
+## License & credits
+
+Apache-2.0. Permissive. Forks, commercial hosting, and derived projects are all explicitly allowed. The full source is at [github.com/danmeedev/skyrimReLive](https://github.com/danmeedev/skyrimReLive).
+
+Built on:
+
+- [CommonLibSSE-NG](https://github.com/alandtse/CommonLibVR) (alandtse fork) — SKSE plugin framework
+- [Flatbuffers](https://google.github.io/flatbuffers/) — wire format
+- [bevy_ecs](https://bevyengine.org/) — server-side ECS
+- [tokio](https://tokio.rs/) — async runtime
+- No code or assets from Skyrim Together Reborn or other multiplayer mods.
+
+Inspired by **Skyrim Together Reborn** and **Keizaal Online**. This project is independently implemented from scratch as a permissively-licensed alternative.
+
+## Bugs, ideas, contributions
+
+File issues or PRs at [GitHub Issues](https://github.com/danmeedev/skyrimReLive/issues). The full development roadmap, architecture docs, and proposal-driven design history are in the repo's `docs/` folder.

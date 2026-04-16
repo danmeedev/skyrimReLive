@@ -1,0 +1,116 @@
+[size=5][b]SkyrimReLive: an open-source multiplayer mod, and why it had to exist[/b][/size]
+
+[size=4][b]What this mod is[/b][/size]
+
+SkyrimReLive lets you and other people play in the same Skyrim world at the same time. You see them. They see you. You both walk around Whiterun together, draw your weapons together, and (eventually) fight the same dragon together. There's no Bethesda server you connect to. There's no central matchmaker. You or a friend run the server on a regular PC, and your group connects directly to it.
+
+It's a Skyrim Script Extender plugin (a [i].dll[/i] you drop in [i]Data\SKSE\Plugins\[/i]) plus a small stand-alone server program. No Bethesda assets are modified, no Creation Kit content ships with it, no other mod gets touched. It's pure additive code.
+
+[size=4][b]Where it's going[/b][/size]
+
+The mod is being built so the same codebase scales from [b]two friends in your living room[/b] all the way up to [b]a public role-play server with dozens of players[/b]. The exact same server binary handles both — for small groups you run it on your gaming PC alongside Skyrim. For a public RP community you'd put it on a cheap Linux VPS and let people connect over the internet.
+
+The phased roadmap, in plain language:
+[list]
+[*][b]Phase 1 (done)[/b] — see your friend, watch them move
+[*][b]Phase 2 (in progress)[/b] — see them animate properly: walking, running, sneaking, drawing weapons
+[*][b]Phase 3[/b] — cell transitions, doors, containers, basic world state shared
+[*][b]Phase 4[/b] — NPCs that exist in the shared world rather than per-client
+[*][b]Phase 5[/b] — character persistence, accounts, save state
+[*][b]Phase 6[/b] — proper public-server hosting, MMO-grade infrastructure
+[*][b]Phase 7[/b] — class systems, PvP zones, economy, the gameplay layer that turns a multiplayer engine into a multiplayer [i]game[/i]
+[/list]
+
+The architecture is server-authoritative from day one specifically so the small-group story doesn't make the large-group story impossible later. Every design decision is documented as a proposal in the GitHub repo, peer-reviewable, with the trade-offs spelled out.
+
+[size=4][b]What works today (Phase 1 + Phase 2 steps 2.1 & 2.2)[/b][/size]
+
+[list]
+[*][b]Connect to a server[/b] by entering its address in [i]SkyrimReLive.toml[/i] and loading any save.
+[*][b]See other players[/b] in the same cell as ghost actors. They appear, move, and despawn on disconnect.
+[*][b]Watch them walk, run, sneak[/b] — locomotion animations are synchronized, not just position.
+[*][b]Watch them draw and sheath weapons[/b] — combat stance is mirrored across clients.
+[*][b]In-game console commands[/b] for everything: [i]rl status[/i] to see what's happening, [i]rl connect[/i]/[i]disconnect[/i] to control the link, [i]rl cell[/i] to pin replication to one cell, [i]rl demo[/i] to spawn a synthetic ghost for solo testing.
+[*][b]Smooth motion[/b] via 100 ms snapshot interpolation — ghosts glide rather than teleport between updates.
+[*][b]Self-hosted networking[/b] that just works: Tailscale for friend groups (zero port-forwarding), IPv6 direct, port-forwarding, or cloud VPS. Pick whichever your network situation allows.
+[/list]
+
+[size=4][b]What's coming (next few releases)[/b][/size]
+
+[list]
+[*][b]Combat that actually does damage[/b] (Phase 2.3) — server validates the swing, applies the hit, the target's client plays the stagger. No more swinging through each other.
+[*][b]Anti-cheat basics[/b] (Phase 2.4) — server-side teleport detection, speed clamps. Phase 1 trusts the client too much; Phase 2 starts tightening.
+[*][b]Aim direction[/b] (Phase 2.5) — pitch replication so people can see where you're looking, prep for ranged combat.
+[*][b]Cell transitions[/b] (Phase 3) — walk into Dragonsreach together, not just stand outside.
+[*][b]Persistent characters[/b] (Phase 5) — your level, inventory, and equipment survive disconnects.
+[*][b]Custom ghost appearance[/b] — right now you appear as a clone of yourself; the longer plan is shipping with a proper custom NPC base so each player has their own appearance.
+[/list]
+
+The full roadmap with status checkboxes lives in the [url=https://github.com/danmeedev/skyrimReLive/blob/master/docs/ROADMAP.md]GitHub repo[/url].
+
+[size=4][b]Setting it up (the short version)[/b][/size]
+
+The Description tab on this mod page has the full step-by-step. The five-second version:
+
+[list=1]
+[*]Install [b]SKSE64 2.2.6[/b] and [b]Address Library for SKSE Plugins[/b].
+[*]Drop [i]SkyrimReLive.dll[/i] and [i]SkyrimReLive.toml[/i] in [i]Data\SKSE\Plugins\[/i].
+[*]Edit [i]SkyrimReLive.toml[/i] — set [b]server_host[/b] to whatever address your server is at.
+[*]Launch via [i]skse64_loader.exe[/i].
+[*]Load a save. Press [b]~[/b], type [b]rl status[/b] to confirm you're connected.
+[/list]
+
+You also need [i]somewhere[/i] to run the server. The recommended setup for friend groups is [b]Tailscale[/b] — a free mesh-VPN that lets your friend reach your PC over the internet without you opening any ports on your router. Setup takes about ten minutes per person. Full hosting walkthrough is in the [url=https://github.com/danmeedev/skyrimReLive/blob/master/docs/HOST_SETUP.md]HOST_SETUP guide[/url].
+
+[size=4][b]Why this mod matters[/b][/size]
+
+I'm going to be direct about this part because it's the reason the project exists.
+
+The other multiplayer Skyrim mods I tried all had the same three problems:
+
+[b]They're closed source.[/b] Skyrim Together Reborn is technically MIT-licensed in theory but the build pipeline, the design decisions, and the actual development happen behind closed doors. Keizaal Online is fully private. When something breaks, you can't see why. When you want a feature, you can't add it. When the original devs lose interest or get into a dispute, the project dies and there's nothing the community can salvage.
+
+[b]They're buggy at a foundational level.[/b] Not surface bugs — [i]architectural[/i] bugs. State desyncs that no patch will ever fix because the network model assumes things that aren't true. Crashes that recur for years. The kind of problems that mean the codebase needs a rewrite, but a rewrite needs the source.
+
+[b]They're restrictive about who gets to use them and how.[/b] Hosting decisions are made for you. Mod compatibility is gated. Servers are sometimes pulled or restricted at the dev's discretion. You're a guest on someone else's project even though you're playing on your own machine.
+
+I started SkyrimReLive because I think those three problems are connected, and the answer to all three is the same answer: [b]build it open, build it independent, build it so anyone can host, fork, or replace any piece.[/b]
+
+Concretely:
+
+[list]
+[*][b]Apache-2.0 license.[/b] Take the code. Fork it. Run a paid hosting service with it if you want. Modify it. The only thing the license requires is that you keep the copyright notice. There's no "non-commercial only" trap, no "must contribute back" trap, no "you can use it but we own your changes" trap.
+[*][b]Every design decision is a proposal in the repo.[/b] Why is the wire format what it is? Why does the server use Rust? Why does the ghost render the way it does? It's all in [i]docs/proposals/[/i], with the alternatives I considered and rejected. If you disagree, you can say so in an issue and the conversation is public.
+[*][b]No private build pipeline.[/b] What you see on GitHub is exactly what's in the DLL. CI runs on every commit. The schemas, the server, the tools, the helper scripts — all checked in.
+[*][b]No telemetry, no phone-home, no analytics.[/b] The plugin connects to the server you tell it to and nothing else. The server logs what you'd expect a game server to log (who connected, who disconnected) and nothing else. There are no third-party services involved at all.
+[*][b]No credit hoarding.[/b] I don't gatekeep contributors, I don't lock anyone out of the build process, and if someone makes a meaningful contribution they get credit in the commit log and the changelog. If this project ever has a "team," that team will be the people who actually showed up and did the work, not the ones who got there first.
+[/list]
+
+If you've been burned by closed-source multiplayer mods that got abandoned, broken, or dramatic, this one is meant to be the opposite of that. Not because I'm a better person — because the structure of the project doesn't let me become the bottleneck. If I get hit by a bus, someone forks the repo and keeps going. The project survives the developer.
+
+[size=4][b]What I'd love help with[/b][/size]
+
+If you can do any of these, you can move the project forward:
+
+[list]
+[*][b]Test it and file good bug reports.[/b] The more situations the mod gets into, the more bugs we find. GitHub Issues link is in the description.
+[*][b]Build the C++ plugin from source[/b] to verify the build works on your machine — different MSVC versions, different VS installs, different Skyrim install paths. The setup guide is in the repo.
+[*][b]Run a server, even a tiny one,[/b] and let a friend connect. Real users in real conditions surface things that automated tests can't.
+[*][b]Contribute code.[/b] Phase 2 needs an animation-graph variable whitelist explorer. Phase 3 needs cell-transition design. Phase 4 needs a server-side AI subset. There's room.
+[*][b]Document.[/b] If something in the setup tripped you up, the docs probably need a fix. PRs welcome.
+[*][b]Use it.[/b] The mod gets better as more people play it. Even if you just hop on with one friend for an hour, that's data the project didn't have before.
+[/list]
+
+[size=4][b]Credits[/b][/size]
+
+[list]
+[*][b]Inspired by[/b] Skyrim Together Reborn and Keizaal Online. They proved Skyrim multiplayer is possible. SkyrimReLive is what I wished those mods were structurally — not better gameplay, just an open foundation.
+[*][b]Built on[/b] CommonLibSSE-NG (alandtse fork) for the SKSE plugin layer, Flatbuffers for the wire format, bevy_ecs for the server simulation, tokio for async I/O, and a long list of permissively-licensed open-source libraries you can find in [i]Cargo.toml[/i] and [i]vcpkg.json[/i].
+[*][b]No assets, code, or design lifted from any other multiplayer Skyrim mod.[/b] This is independent re-implementation from public Skyrim/SKSE documentation.
+[/list]
+
+[size=4][b]Final word[/b][/size]
+
+If you only take one thing from this article: [b]the source is at [url=https://github.com/danmeedev/skyrimReLive]github.com/danmeedev/skyrimReLive[/url][/b]. Everything I wrote above is verifiable by reading the code and the proposals. If you find something in the codebase that contradicts what's in this article, file an issue and I'll either fix the code or fix the article. That's the deal.
+
+Have fun. Don't trust mod authors who won't show their work.

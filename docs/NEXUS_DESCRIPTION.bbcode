@@ -1,0 +1,118 @@
+[size=5][b]SkyrimReLive[/b][/size]
+[i]Open-source multiplayer for Skyrim Special Edition.[/i]
+
+Connect with a friend (or a small group) and see each other walking, running, sneaking, and drawing weapons in real time, across a shared world. Built from scratch in Rust + C++ with no proprietary dependencies. Self-hosted: you run the server (or your friend does) on any PC.
+
+[b]Source code, issues, and dev discussion:[/b] [url=https://github.com/danmeedev/skyrimReLive]GitHub - SkyrimReLive[/url]
+
+[size=4][b][color=#ffaa00]ALPHA - read before installing[/color][/b][/size]
+
+This is a Phase 2 alpha. Things work, but expect rough edges. Specifically:
+[list]
+[*]Position, locomotion animation, and weapon draw/sheath are synced.
+[*]Combat damage, NPC sync, persistence, and accounts are NOT in yet.
+[*]Other players currently appear as a clone of your own character (placeholder ghost).
+[*]No public server exists. You and your friend host one yourselves.
+[*]Crashes are possible. Save often. Don't use it on a save you care about.
+[/list]
+If that doesn't put you off, read on.
+
+[size=4][b]Requirements[/b][/size]
+[list]
+[*]Skyrim Special Edition, runtime [b]1.6.1170[/b] (current Steam version)
+[*][url=https://skse.silverlock.org/]SKSE64 2.2.6[/url]
+[*][url=https://www.nexusmods.com/skyrimspecialedition/mods/32444]Address Library for SKSE Plugins[/url] - "All in one (all game versions)"
+[*]A computer running the SkyrimReLive server (yours, your friend's, or a small VPS)
+[/list]
+
+[size=4][b]What it does today[/b][/size]
+[list]
+[*][b]See another player[/b] in the same cell as a ghost actor.
+[*][b]Watch them move[/b] - position is replicated at 60 Hz client to server, 20 Hz server to client, with 100 ms snapshot interpolation for smooth motion.
+[*][b]Watch them animate[/b] - walk/run/sneak transitions, weapon draw/sheath, combat stance.
+[*][b]In-game console commands[/b] (press [b]~[/b]):
+[list]
+[*][b]rl status[/b] - connection state, ghosts, packet counters, your position
+[*][b]rl connect [host] [port][/b] - connect to a server (overrides config)
+[*][b]rl disconnect[/b] - close the connection
+[*][b]rl cell[/b] / [b]rl cell set[/b] / [b]rl cell clear[/b] - restrict replication to one cell
+[*][b]rl demo start[/b] / [b]rl demo stop[/b] - spawn a synthetic ghost orbiting you (solo test, no server needed)
+[*][b]rl help[/b] - full command list
+[/list]
+[*][b]Configurable via TOML[/b] - server host/port, player name, auto-connect, target cell.
+[/list]
+
+[size=4][b]What it does NOT do yet[/b][/size]
+[list]
+[*]No damage / combat outcomes are replicated. You can swing at each other, but no hits register.
+[*]No NPC sync. Your bandit will not be your friend's bandit.
+[*]No quest sync, no inventory sync, no equipment-appearance sync.
+[*]No persistence. Each session is independent.
+[*]No matchmaking, no public servers, no accounts.
+[*]No anti-cheat (this is a small-group friend-trust mod for now).
+[/list]
+
+[size=4][b]Installation[/b][/size]
+[list=1]
+[*]Install [b]SKSE64 2.2.6[/b]: download from skse.silverlock.org, extract loader + core DLLs into the Skyrim install folder.
+[*]Install [b]Address Library[/b] from the link above. Extract and copy every [i]versionlib-1-6-*.bin[/i] into [i]Skyrim Special Edition\Data\SKSE\Plugins\[/i].
+[*]Install [b]SkyrimReLive[/b]: copy [i]SkyrimReLive.dll[/i] and [i]SkyrimReLive.toml[/i] into [i]Skyrim Special Edition\Data\SKSE\Plugins\[/i].
+[*]Edit [i]SkyrimReLive.toml[/i]: set [b]server_host[/b] to your friend's server address (their Tailscale IP, LAN IP, or public IP). Set [b]player_name[/b] to whatever you want.
+[*]Launch via [b]skse64_loader.exe[/b], [i]not[/i] SkyrimSELauncher.exe.
+[*]Load any save. The plugin auto-connects on save load. Press [b]~[/b] and type [b]rl status[/b] to confirm.
+[/list]
+
+[size=4][b]Hosting a server[/b][/size]
+
+The server is a small Rust binary (~2 MB). Build it from source per the [url=https://github.com/danmeedev/skyrimReLive/blob/master/docs/HOST_SETUP.md]HOST_SETUP guide on GitHub[/url]. Quick options:
+[list]
+[*][b]Tailscale[/b] (recommended for friends): install Tailscale on both PCs, share the address. No port forwarding.
+[*][b]IPv6[/b]: works directly if both you and your friend have IPv6 from your ISP.
+[*][b]Port forwarding[/b]: forward UDP port 27015 on your router.
+[*][b]Cloud VPS[/b]: rent a small Linux VM, run the binary there, give players the public IP.
+[/list]
+
+[size=4][b]Configuration[/b][/size]
+
+[code]# SkyrimReLive.toml - lives in Data\SKSE\Plugins\
+server_host = "127.0.0.1"      # set to friend's address
+server_port = 27015
+player_name = "dovahkiin"
+auto_connect = true             # connect on save load
+target_cell = "0x0"             # 0 = any cell; pin via `rl cell set`[/code]
+
+[size=4][b]Known issues[/b][/size]
+[list]
+[*]Ghost actors look like a clone of your own character (custom NPC base coming in a future version).
+[*]Ghost may "float" slightly above ground (no gravity simulation on AI-disabled actors).
+[*]Animations may look disconnected from world motion since we teleport the ghost between snapshots.
+[*]No HUD notifications - status output goes to the in-game console (press ~).
+[*]Crashes possible during early load if you connect before the world is loaded - the plugin defers connection to kPostLoadGame, so this should be rare.
+[/list]
+
+[size=4][b]Compatibility[/b][/size]
+[list]
+[*][b]Skyrim version[/b]: 1.6.1170 only at this time. Other versions need a rebuild with a different runtime target.
+[*][b]Other mods[/b]: should be compatible with most. We don't modify any vanilla forms.
+[*][b]ESP load order[/b]: SkyrimReLive ships no ESP, no scripts, no records. DLL only.
+[*][b]Multiplayer mods[/b]: Do NOT install alongside Skyrim Together Reborn. They will conflict.
+[/list]
+
+[size=4][b]License & credits[/b][/size]
+
+Apache-2.0. Permissive. Forks, commercial hosting, and derived projects are all explicitly allowed. The full source is at [url=https://github.com/danmeedev/skyrimReLive]github.com/danmeedev/skyrimReLive[/url].
+
+Built on:
+[list]
+[*][url=https://github.com/alandtse/CommonLibVR]CommonLibSSE-NG[/url] (alandtse fork) - SKSE plugin framework
+[*][url=https://google.github.io/flatbuffers/]Flatbuffers[/url] - wire format
+[*][url=https://bevyengine.org/]bevy_ecs[/url] - server-side ECS
+[*][url=https://tokio.rs/]tokio[/url] - async runtime
+[*]No code or assets from Skyrim Together Reborn or other multiplayer mods.
+[/list]
+
+Inspired by [b]Skyrim Together Reborn[/b] and [b]Keizaal Online[/b]. This project is independently implemented from scratch as a permissively-licensed alternative.
+
+[size=4][b]Bugs, ideas, contributions[/b][/size]
+
+File issues or PRs at [url=https://github.com/danmeedev/skyrimReLive/issues]GitHub Issues[/url]. The full development roadmap, architecture docs, and proposal-driven design history are in the repo's [b]docs/[/b] folder.
