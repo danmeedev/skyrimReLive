@@ -1,0 +1,18 @@
+# SkyrimReLive plugin config — preconfigured for {{HOST_NAME}}'s server.
+#
+# This file lives at:
+#   <Skyrim install>\Data\SKSE\Plugins\SkyrimReLive.toml
+
+# Host's Tailscale IP. Don't change unless {{HOST_NAME}} tells you to.
+server_host = "{{HOST_IP}}"
+server_port = 27015
+
+# Your in-game display name. Shows up in {{HOST_NAME}}'s server log.
+player_name = "friend"
+
+# Auto-connect when a save loads. Set false if you want to manually
+# control the connection with `rl connect` in the in-game console.
+auto_connect = true
+
+# Restrict replication to one cell. 0 = any cell (recommended for now).
+target_cell = "0x0"

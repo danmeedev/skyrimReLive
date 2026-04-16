@@ -1,0 +1,130 @@
+SkyrimReLive — friend install package
+======================================
+
+Quick start:
+
+  1. Double-click  INSTALL.bat
+     The installer walks you through the rest.
+
+  2. Once installed, double-click  LAUNCH.bat  to play.
+
+  3. To remove the mod later, double-click  UNINSTALL.bat
+
+
+What's in this package
+----------------------
+
+  INSTALL.bat        Run this first. Checks dependencies, installs the plugin.
+  LAUNCH.bat         Run this to play (after INSTALL succeeds).
+  UNINSTALL.bat      Removes the SkyrimReLive plugin only (leaves SKSE etc).
+  README.txt         This file.
+
+  files\
+    SkyrimReLive.dll      The plugin DLL
+    SkyrimReLive.toml     Plugin config (preconfigured for {{HOST_NAME}}'s server: {{HOST_IP}})
+
+  scripts\
+    install.ps1           Installer logic (called by INSTALL.bat)
+    launch.ps1            Launcher (called by LAUNCH.bat)
+    uninstall.ps1         Uninstaller (called by UNINSTALL.bat)
+
+
+What you'll need
+----------------
+
+  Skyrim Special Edition on Steam, runtime 1.6.1170.
+
+The installer will pop open download pages for these if you don't have them:
+
+  - SKSE64 2.2.6        (https://skse.silverlock.org/)
+  - Address Library     (https://www.nexusmods.com/skyrimspecialedition/mods/32444)
+  - Tailscale           (the installer offers to install this for you via winget)
+
+
+How to play
+-----------
+
+  1. {{HOST_NAME}} runs the SkyrimReLive server.
+  2. You launch Skyrim via LAUNCH.bat.
+  3. Load any save. Wait for the world to load.
+  4. Press the tilde (~) key to open the in-game console.
+  5. Type:    rl status
+     You should see:    state=connected server={{HOST_IP}}:27015 player_id=N
+
+If state is "idle" or "failed":
+  - Check Tailscale is connected (tray icon should be green)
+  - Check that {{HOST_NAME}} has the server running
+  - Type:    rl connect    to retry
+
+
+In-game console commands
+------------------------
+
+Press tilde (~) to open the console, then type:
+
+  rl status               connection state, ghost count, packet stats
+  rl connect              manually connect (if auto_connect is off)
+  rl disconnect           cleanly close the connection
+  rl cell                 show your current cell
+  rl demo start           spawn a fake "ghost" orbiting you (solo test)
+  rl demo stop            despawn the demo ghost
+  rl help                 list all commands
+
+
+What works right now
+--------------------
+
+  - See {{HOST_NAME}} as a ghost actor in the same cell as you.
+  - Watch them walk, run, sneak.
+  - See them draw / sheath weapons.
+  - Smooth motion (100ms snapshot interpolation).
+
+What doesn't work yet
+---------------------
+
+  - No combat damage between players.
+  - No NPC sync — your bandits aren't their bandits.
+  - No persistent inventory / quest state across sessions.
+  - Other players currently look like a clone of YOUR character (custom
+    appearance is on the roadmap).
+
+
+Troubleshooting
+---------------
+
+"plugin SkyrimReLive.dll disabled, address library needs to be updated"
+  Address Library isn't installed. Re-run INSTALL.bat — it'll send you
+  to the Nexus page.
+
+"timed out waiting for Welcome" in SkyrimReLive.log
+  Either {{HOST_NAME}}'s server isn't running, Tailscale isn't connected,
+  or you're behind a firewall blocking outgoing UDP. Tailscale fixes
+  most cases — make sure the tray icon is green.
+
+Skyrim crashes during save load
+  Try a different save first to confirm. If that works, the original
+  save may be incompatible (rare). If both crash, check that no other
+  multiplayer mod (Skyrim Together Reborn) is installed alongside —
+  they conflict.
+
+Game freezes on connection
+  Edit  Data\SKSE\Plugins\SkyrimReLive.toml
+  Change:    auto_connect = true
+  To:        auto_connect = false
+  Then load the save and manually connect:    rl connect
+
+
+Logs (if you need to send something to {{HOST_NAME}} for debugging)
+-------------------------------------------------------------------
+
+  C:\Users\<you>\Documents\My Games\Skyrim Special Edition\SKSE\
+    SkyrimReLive.log     ← our plugin's log
+    skse64.log           ← SKSE's log (look for SkyrimReLive lines)
+
+
+Source code & bug reports
+-------------------------
+
+  https://github.com/danmeedev/skyrimReLive
+
+Open an issue on GitHub or just message {{HOST_NAME}} directly.
