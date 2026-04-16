@@ -40,3 +40,6 @@ Thumbs.db
 
 # Claude Code local settings
 .claude/
+
+# Built release bundles for friends/Nexus uploads
+dist/
