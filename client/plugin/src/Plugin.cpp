@@ -29,6 +29,10 @@ namespace {
     std::string g_target_host;
     std::uint16_t g_target_port = 0;
 
+    // Zeus: latest player roster from server.
+    std::mutex g_pl_mu;
+    std::vector<relive::plugin::PlayerEntry> g_player_list;
+
     void Toast(const std::string& msg) {
         SKSE::log::info("{}", msg);
         // ConsoleLog is always available; press ~ to see. Proper HUD
@@ -181,6 +185,16 @@ namespace relive::plugin {
         g_client.stop();
         Toast("[SkyrimReLive] disconnected");
         return "disconnected";
+    }
+
+    std::vector<PlayerEntry> get_player_list() noexcept {
+        const std::lock_guard lock(g_pl_mu);
+        return g_player_list;
+    }
+
+    void update_player_list(std::vector<PlayerEntry> list) {
+        const std::lock_guard lock(g_pl_mu);
+        g_player_list = std::move(list);
     }
 
     void send_combat_event(std::uint32_t target_player_id,

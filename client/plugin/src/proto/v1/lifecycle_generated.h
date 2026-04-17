@@ -37,7 +37,10 @@ struct Hello FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef HelloBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_NAME = 4,
-    VT_CLIENT_PROTOCOL_VERSION = 6
+    VT_CLIENT_PROTOCOL_VERSION = 6,
+    VT_CHARACTER_NAME = 8,
+    VT_CHARACTER_LEVEL = 10,
+    VT_TOP_SKILLS = 12
   };
   const ::flatbuffers::String *name() const {
     return GetPointer<const ::flatbuffers::String *>(VT_NAME);
@@ -45,12 +48,27 @@ struct Hello FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   uint8_t client_protocol_version() const {
     return GetField<uint8_t>(VT_CLIENT_PROTOCOL_VERSION, 0);
   }
+  const ::flatbuffers::String *character_name() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_CHARACTER_NAME);
+  }
+  uint16_t character_level() const {
+    return GetField<uint16_t>(VT_CHARACTER_LEVEL, 1);
+  }
+  const ::flatbuffers::Vector<::flatbuffers::Offset<skyrim_relive::v1::SkillEntry>> *top_skills() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<skyrim_relive::v1::SkillEntry>> *>(VT_TOP_SKILLS);
+  }
   template <bool B = false>
   bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_NAME) &&
            verifier.VerifyString(name()) &&
            VerifyField<uint8_t>(verifier, VT_CLIENT_PROTOCOL_VERSION, 1) &&
+           VerifyOffset(verifier, VT_CHARACTER_NAME) &&
+           verifier.VerifyString(character_name()) &&
+           VerifyField<uint16_t>(verifier, VT_CHARACTER_LEVEL, 2) &&
+           VerifyOffset(verifier, VT_TOP_SKILLS) &&
+           verifier.VerifyVector(top_skills()) &&
+           verifier.VerifyVectorOfTables(top_skills()) &&
            verifier.EndTable();
   }
 };
@@ -64,6 +82,15 @@ struct HelloBuilder {
   }
   void add_client_protocol_version(uint8_t client_protocol_version) {
     fbb_.AddElement<uint8_t>(Hello::VT_CLIENT_PROTOCOL_VERSION, client_protocol_version, 0);
+  }
+  void add_character_name(::flatbuffers::Offset<::flatbuffers::String> character_name) {
+    fbb_.AddOffset(Hello::VT_CHARACTER_NAME, character_name);
+  }
+  void add_character_level(uint16_t character_level) {
+    fbb_.AddElement<uint16_t>(Hello::VT_CHARACTER_LEVEL, character_level, 1);
+  }
+  void add_top_skills(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<skyrim_relive::v1::SkillEntry>>> top_skills) {
+    fbb_.AddOffset(Hello::VT_TOP_SKILLS, top_skills);
   }
   explicit HelloBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -79,9 +106,15 @@ struct HelloBuilder {
 inline ::flatbuffers::Offset<Hello> CreateHello(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     ::flatbuffers::Offset<::flatbuffers::String> name = 0,
-    uint8_t client_protocol_version = 0) {
+    uint8_t client_protocol_version = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> character_name = 0,
+    uint16_t character_level = 1,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<skyrim_relive::v1::SkillEntry>>> top_skills = 0) {
   HelloBuilder builder_(_fbb);
+  builder_.add_top_skills(top_skills);
+  builder_.add_character_name(character_name);
   builder_.add_name(name);
+  builder_.add_character_level(character_level);
   builder_.add_client_protocol_version(client_protocol_version);
   return builder_.Finish();
 }
@@ -89,12 +122,20 @@ inline ::flatbuffers::Offset<Hello> CreateHello(
 inline ::flatbuffers::Offset<Hello> CreateHelloDirect(
     ::flatbuffers::FlatBufferBuilder &_fbb,
     const char *name = nullptr,
-    uint8_t client_protocol_version = 0) {
+    uint8_t client_protocol_version = 0,
+    const char *character_name = nullptr,
+    uint16_t character_level = 1,
+    const std::vector<::flatbuffers::Offset<skyrim_relive::v1::SkillEntry>> *top_skills = nullptr) {
   auto name__ = name ? _fbb.CreateString(name) : 0;
+  auto character_name__ = character_name ? _fbb.CreateString(character_name) : 0;
+  auto top_skills__ = top_skills ? _fbb.CreateVector<::flatbuffers::Offset<skyrim_relive::v1::SkillEntry>>(*top_skills) : 0;
   return skyrim_relive::v1::CreateHello(
       _fbb,
       name__,
-      client_protocol_version);
+      client_protocol_version,
+      character_name__,
+      character_level,
+      top_skills__);
 }
 
 struct Welcome FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {

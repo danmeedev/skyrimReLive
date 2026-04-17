@@ -31,13 +31,13 @@ pub mod skyrim_relive {
             since = "2.0.0",
             note = "Use associated constants instead. This will no longer be generated in 2021."
         )]
-        pub const ENUM_MAX_MESSAGE_TYPE: u8 = 33;
+        pub const ENUM_MAX_MESSAGE_TYPE: u8 = 48;
         #[deprecated(
             since = "2.0.0",
             note = "Use associated constants instead. This will no longer be generated in 2021."
         )]
         #[allow(non_camel_case_types)]
-        pub const ENUM_VALUES_MESSAGE_TYPE: [MessageType; 9] = [
+        pub const ENUM_VALUES_MESSAGE_TYPE: [MessageType; 10] = [
             MessageType::Hello,
             MessageType::Welcome,
             MessageType::Heartbeat,
@@ -47,6 +47,7 @@ pub mod skyrim_relive {
             MessageType::WorldSnapshot,
             MessageType::CombatEvent,
             MessageType::DamageApply,
+            MessageType::PlayerList,
         ];
 
         #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -63,9 +64,10 @@ pub mod skyrim_relive {
             pub const WorldSnapshot: Self = Self(17);
             pub const CombatEvent: Self = Self(32);
             pub const DamageApply: Self = Self(33);
+            pub const PlayerList: Self = Self(48);
 
             pub const ENUM_MIN: u8 = 1;
-            pub const ENUM_MAX: u8 = 33;
+            pub const ENUM_MAX: u8 = 48;
             pub const ENUM_VALUES: &'static [Self] = &[
                 Self::Hello,
                 Self::Welcome,
@@ -76,6 +78,7 @@ pub mod skyrim_relive {
                 Self::WorldSnapshot,
                 Self::CombatEvent,
                 Self::DamageApply,
+                Self::PlayerList,
             ];
             /// Returns the variant's name or "" if unknown.
             pub fn variant_name(self) -> Option<&'static str> {
@@ -89,6 +92,7 @@ pub mod skyrim_relive {
                     Self::WorldSnapshot => Some("WorldSnapshot"),
                     Self::CombatEvent => Some("CombatEvent"),
                     Self::DamageApply => Some("DamageApply"),
+                    Self::PlayerList => Some("PlayerList"),
                     _ => None,
                 }
             }
@@ -258,5 +262,141 @@ pub mod skyrim_relive {
         }
 
         impl ::flatbuffers::SimpleToVerifyInSlice for DisconnectCode {}
+        pub enum SkillEntryOffset {}
+        #[derive(Copy, Clone, PartialEq)]
+
+        pub struct SkillEntry<'a> {
+            pub _tab: ::flatbuffers::Table<'a>,
+        }
+
+        impl<'a> ::flatbuffers::Follow<'a> for SkillEntry<'a> {
+            type Inner = SkillEntry<'a>;
+            #[inline]
+            unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+                Self {
+                    _tab: unsafe { ::flatbuffers::Table::new(buf, loc) },
+                }
+            }
+        }
+
+        impl<'a> SkillEntry<'a> {
+            pub const VT_NAME: ::flatbuffers::VOffsetT = 4;
+            pub const VT_LEVEL: ::flatbuffers::VOffsetT = 6;
+
+            #[inline]
+            pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+                SkillEntry { _tab: table }
+            }
+            #[allow(unused_mut)]
+            pub fn create<
+                'bldr: 'args,
+                'args: 'mut_bldr,
+                'mut_bldr,
+                A: ::flatbuffers::Allocator + 'bldr,
+            >(
+                _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+                args: &'args SkillEntryArgs<'args>,
+            ) -> ::flatbuffers::WIPOffset<SkillEntry<'bldr>> {
+                let mut builder = SkillEntryBuilder::new(_fbb);
+                builder.add_level(args.level);
+                if let Some(x) = args.name {
+                    builder.add_name(x);
+                }
+                builder.finish()
+            }
+
+            #[inline]
+            pub fn name(&self) -> Option<&'a str> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<::flatbuffers::ForwardsUOffset<&str>>(SkillEntry::VT_NAME, None)
+                }
+            }
+            #[inline]
+            pub fn level(&self) -> f32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<f32>(SkillEntry::VT_LEVEL, Some(0.0))
+                        .unwrap()
+                }
+            }
+        }
+
+        impl ::flatbuffers::Verifiable for SkillEntry<'_> {
+            #[inline]
+            fn run_verifier(
+                v: &mut ::flatbuffers::Verifier,
+                pos: usize,
+            ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+                v.visit_table(pos)?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<&str>>(
+                        "name",
+                        Self::VT_NAME,
+                        false,
+                    )?
+                    .visit_field::<f32>("level", Self::VT_LEVEL, false)?
+                    .finish();
+                Ok(())
+            }
+        }
+        pub struct SkillEntryArgs<'a> {
+            pub name: Option<::flatbuffers::WIPOffset<&'a str>>,
+            pub level: f32,
+        }
+        impl<'a> Default for SkillEntryArgs<'a> {
+            #[inline]
+            fn default() -> Self {
+                SkillEntryArgs {
+                    name: None,
+                    level: 0.0,
+                }
+            }
+        }
+
+        pub struct SkillEntryBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+            fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+        }
+        impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> SkillEntryBuilder<'a, 'b, A> {
+            #[inline]
+            pub fn add_name(&mut self, name: ::flatbuffers::WIPOffset<&'b str>) {
+                self.fbb_
+                    .push_slot_always::<::flatbuffers::WIPOffset<_>>(SkillEntry::VT_NAME, name);
+            }
+            #[inline]
+            pub fn add_level(&mut self, level: f32) {
+                self.fbb_.push_slot::<f32>(SkillEntry::VT_LEVEL, level, 0.0);
+            }
+            #[inline]
+            pub fn new(
+                _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            ) -> SkillEntryBuilder<'a, 'b, A> {
+                let start = _fbb.start_table();
+                SkillEntryBuilder {
+                    fbb_: _fbb,
+                    start_: start,
+                }
+            }
+            #[inline]
+            pub fn finish(self) -> ::flatbuffers::WIPOffset<SkillEntry<'a>> {
+                let o = self.fbb_.end_table(self.start_);
+                ::flatbuffers::WIPOffset::new(o.value())
+            }
+        }
+
+        impl ::core::fmt::Debug for SkillEntry<'_> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                let mut ds = f.debug_struct("SkillEntry");
+                ds.field("name", &self.name());
+                ds.field("level", &self.level());
+                ds.finish()
+            }
+        }
     } // pub mod v1
 } // pub mod skyrim_relive

@@ -6,13 +6,16 @@ use anyhow::Result;
 use bevy_ecs::prelude::*;
 use flatbuffers::FlatBufferBuilder;
 use skyrim_relive_server::components::{
-    AnimState, Cell, Connection, Health, Player, Transform, Velocity,
+    AnimState, Cell, CharacterInfo, Connection, Health, Player, Transform, Velocity,
 };
 use skyrim_relive_server::config::Config;
 use skyrim_relive_server::proto::v1::{
     AttackClass, CombatEvent, DamageApply, DamageApplyArgs, Disconnect, DisconnectArgs,
-    DisconnectCode, Hello, MessageType, PlayerInput, PlayerState as FbPlayerState,
-    PlayerStateArgs as FbPlayerStateArgs, Transform as FbTransform, Vec3 as FbVec3, Welcome,
+    DisconnectCode, Hello, MessageType, PlayerInput, PlayerList as FbPlayerList,
+    PlayerListArgs as FbPlayerListArgs, PlayerListEntry as FbPlayerListEntry,
+    PlayerListEntryArgs as FbPlayerListEntryArgs, PlayerState as FbPlayerState,
+    PlayerStateArgs as FbPlayerStateArgs, SkillEntry as FbSkillEntry,
+    SkillEntryArgs as FbSkillEntryArgs, Transform as FbTransform, Vec3 as FbVec3, Welcome,
     WelcomeArgs, WorldSnapshot, WorldSnapshotArgs,
 };
 use skyrim_relive_server::wire;
@@ -59,10 +62,18 @@ impl ServerState {
             Duration::from_micros(1_000_000 / u64::from(self.config.snapshot_rate_hz));
         let gc_period = Duration::from_millis(self.config.gc_interval_ms);
 
+        let player_list_period = if self.config.player_list_poll_s > 0 {
+            Duration::from_secs(self.config.player_list_poll_s)
+        } else {
+            Duration::from_secs(3600)
+        };
+        let player_list_enabled = self.config.player_list_poll_s > 0;
+
         let mut sim_tick = interval(sim_period);
         let mut snap_tick = interval(snap_period);
         let mut gc_tick = interval(gc_period);
-        for t in [&mut sim_tick, &mut snap_tick, &mut gc_tick] {
+        let mut pl_tick = interval(player_list_period);
+        for t in [&mut sim_tick, &mut snap_tick, &mut gc_tick, &mut pl_tick] {
             t.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         }
 
@@ -71,10 +82,6 @@ impl ServerState {
                 recv = self.socket.recv_from(&mut buf) => {
                     match recv {
                         Ok((len, peer)) => self.handle_packet(peer, &buf[..len]).await,
-                        // ECONNRESET on UDP is the kernel telling us our last
-                        // send_to elicited an ICMP "port unreachable" — i.e.
-                        // the client we tried to Disconnect already exited.
-                        // Expected after a timeout, not a real error.
                         Err(e) if e.raw_os_error() == Some(10054) => {}
                         Err(e) => warn!(error = %e, "recv_from failed"),
                     }
@@ -82,6 +89,9 @@ impl ServerState {
                 _ = sim_tick.tick() => self.advance_sim(),
                 _ = snap_tick.tick() => self.broadcast_snapshot().await,
                 _ = gc_tick.tick() => self.expire_stale().await,
+                _ = pl_tick.tick(), if player_list_enabled => {
+                    self.broadcast_player_list().await;
+                }
             }
         }
     }
@@ -115,7 +125,8 @@ impl ServerState {
             MessageType::Welcome
             | MessageType::Disconnect
             | MessageType::WorldSnapshot
-            | MessageType::DamageApply => {
+            | MessageType::DamageApply
+            | MessageType::PlayerList => {
                 warn!(%peer, ?mt, "client sent server-only message; ignoring");
             }
             _ => warn!(%peer, ?mt, "unhandled message type"),
@@ -131,6 +142,16 @@ impl ServerState {
             }
         };
         let name = hello.name().unwrap_or("(anonymous)").to_owned();
+        let char_name = hello.character_name().unwrap_or("(unknown)").to_owned();
+        let char_level = hello.character_level();
+        let top_skills: Vec<(String, f32)> = hello
+            .top_skills()
+            .map(|v| {
+                v.iter()
+                    .map(|s| (s.name().unwrap_or("?").to_owned(), s.level()))
+                    .collect()
+            })
+            .unwrap_or_default();
 
         // Reconnect from the same addr → drop the old entity first so we
         // don't end up with ghost duplicates.
@@ -158,6 +179,11 @@ impl ServerState {
                 AnimState::default(),
                 Health::default(),
                 Cell::default(),
+                CharacterInfo {
+                    character_name: char_name.clone(),
+                    level: char_level,
+                    top_skills,
+                },
             ))
             .id();
         self.addr_to_entity.insert(peer, entity);
@@ -165,6 +191,8 @@ impl ServerState {
         info!(
             %peer,
             %name,
+            %char_name,
+            char_level,
             player_id = pid,
             entity = ?entity,
             connected = self.addr_to_entity.len(),
@@ -537,6 +565,84 @@ impl ServerState {
             if let Err(e) = self.socket.send_to(&packet, *self_addr).await {
                 warn!(peer = %self_addr, error = %e, "WorldSnapshot send failed");
             }
+        }
+    }
+
+    async fn broadcast_player_list(&mut self) {
+        let now_ms = u64::try_from(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_millis())
+                .unwrap_or(0),
+        )
+        .unwrap_or(0);
+
+        let mut fbb = FlatBufferBuilder::with_capacity(512);
+
+        let entries: Vec<_> = self
+            .world
+            .query::<(
+                &Player,
+                &CharacterInfo,
+                &Transform,
+                &Cell,
+                &Health,
+                &Connection,
+            )>()
+            .iter(&self.world)
+            .map(|(p, ci, t, cell, hp, _)| {
+                let display_name = fbb.create_string(&p.name);
+                let char_name = fbb.create_string(&ci.character_name);
+                let skills: Vec<_> = ci
+                    .top_skills
+                    .iter()
+                    .map(|(name, level)| {
+                        let n = fbb.create_string(name);
+                        FbSkillEntry::create(
+                            &mut fbb,
+                            &FbSkillEntryArgs {
+                                name: Some(n),
+                                level: *level,
+                            },
+                        )
+                    })
+                    .collect();
+                let skills_vec = fbb.create_vector(&skills);
+                let pos = FbVec3::new(t.pos[0], t.pos[1], t.pos[2]);
+                FbPlayerListEntry::create(
+                    &mut fbb,
+                    &FbPlayerListEntryArgs {
+                        player_id: p.id,
+                        display_name: Some(display_name),
+                        character_name: Some(char_name),
+                        character_level: ci.level,
+                        top_skills: Some(skills_vec),
+                        pos: Some(&pos),
+                        cell_form_id: cell.form_id,
+                        hp: hp.current,
+                        hp_max: hp.max,
+                    },
+                )
+            })
+            .collect();
+
+        let players_vec = fbb.create_vector(&entries);
+        let pl = FbPlayerList::create(
+            &mut fbb,
+            &FbPlayerListArgs {
+                server_time_ms: now_ms,
+                players: Some(players_vec),
+            },
+        );
+        fbb.finish(pl, None);
+        let packet = wire::encode(MessageType::PlayerList, fbb.finished_data());
+
+        for (_, conn) in self
+            .world
+            .query::<(Entity, &Connection)>()
+            .iter(&self.world)
+        {
+            let _ = self.socket.send_to(&packet, conn.addr).await;
         }
     }
 

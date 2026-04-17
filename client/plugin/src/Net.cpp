@@ -15,6 +15,7 @@
 
 #include "Combat.h"
 #include "Ghost.h"
+#include "Plugin.h"
 #include "Socket.h"
 
 namespace re_v1 = skyrim_relive::v1;
@@ -82,13 +83,76 @@ namespace relive::net {
         socket_ = sock::kInvalid;
     }
 
+    namespace {
+        struct SkillPair {
+            const char* name;
+            RE::ActorValue av;
+        };
+        constexpr SkillPair kSkills[] = {
+            {"OneHanded",    RE::ActorValue::kOneHanded},
+            {"TwoHanded",    RE::ActorValue::kTwoHanded},
+            {"Archery",      RE::ActorValue::kArchery},
+            {"Block",        RE::ActorValue::kBlock},
+            {"Smithing",     RE::ActorValue::kSmithing},
+            {"HeavyArmor",   RE::ActorValue::kHeavyArmor},
+            {"LightArmor",   RE::ActorValue::kLightArmor},
+            {"Pickpocket",   RE::ActorValue::kPickpocket},
+            {"Lockpicking",  RE::ActorValue::kLockpicking},
+            {"Sneak",        RE::ActorValue::kSneak},
+            {"Alchemy",      RE::ActorValue::kAlchemy},
+            {"Speech",       RE::ActorValue::kSpeech},
+            {"Alteration",   RE::ActorValue::kAlteration},
+            {"Conjuration",  RE::ActorValue::kConjuration},
+            {"Destruction",  RE::ActorValue::kDestruction},
+            {"Illusion",     RE::ActorValue::kIllusion},
+            {"Restoration",  RE::ActorValue::kRestoration},
+            {"Enchanting",   RE::ActorValue::kEnchanting},
+        };
+    }
+
     bool Client::send_hello(std::string_view name) {
-        flatbuffers::FlatBufferBuilder fbb(64);
+        flatbuffers::FlatBufferBuilder fbb(256);
         const std::string name_s{name};
         const auto name_off = fbb.CreateString(name_s);
+
+        // Read character data from the loaded save.
+        std::string char_name_str = "(unknown)";
+        std::uint16_t char_level = 1;
+        struct SkillVal { const char* name; float level; };
+        std::vector<SkillVal> all_skills;
+
+        if (auto* player = RE::PlayerCharacter::GetSingleton()) {
+            if (auto* base = player->GetActorBase()) {
+                if (const char* n = base->GetName(); n && n[0]) {
+                    char_name_str = n;
+                }
+            }
+            char_level = static_cast<std::uint16_t>(player->GetLevel());
+            for (const auto& [sname, av] : kSkills) {
+                all_skills.push_back({sname, player->GetActorValue(av)});
+            }
+            std::sort(all_skills.begin(), all_skills.end(),
+                      [](const auto& a, const auto& b) { return a.level > b.level; });
+            if (all_skills.size() > 3) all_skills.resize(3);
+        }
+
+        const auto char_name_off = fbb.CreateString(char_name_str);
+        std::vector<flatbuffers::Offset<re_v1::SkillEntry>> skill_offsets;
+        for (const auto& [sname, slevel] : all_skills) {
+            const auto sn = fbb.CreateString(sname);
+            re_v1::SkillEntryBuilder sb(fbb);
+            sb.add_name(sn);
+            sb.add_level(slevel);
+            skill_offsets.push_back(sb.Finish());
+        }
+        const auto skills_vec = fbb.CreateVector(skill_offsets);
+
         re_v1::HelloBuilder hb(fbb);
         hb.add_name(name_off);
         hb.add_client_protocol_version(kProtoVersion);
+        hb.add_character_name(char_name_off);
+        hb.add_character_level(char_level);
+        hb.add_top_skills(skills_vec);
         const auto hello_off = hb.Finish();
         fbb.Finish(hello_off);
 
@@ -100,6 +164,8 @@ namespace relive::net {
             SKSE::log::error("Hello send failed");
             return false;
         }
+        SKSE::log::info("Hello sent: char='{}' level={} skills={}",
+                        char_name_str, char_level, all_skills.size());
         return true;
     }
 
@@ -285,6 +351,36 @@ namespace relive::net {
                 }
                 ghost::instance().ingest(snap->server_tick(),
                                          snap->server_time_ms(), updates);
+            } else if (type == re_v1::MessageType_PlayerList) {
+                const auto* pl = flatbuffers::GetRoot<re_v1::PlayerList>(body.data());
+                std::vector<relive::plugin::PlayerEntry> entries;
+                if (const auto* players = pl->players()) {
+                    entries.reserve(players->size());
+                    for (const auto* e : *players) {
+                        relive::plugin::PlayerEntry pe;
+                        pe.player_id = e->player_id();
+                        pe.display_name = e->display_name() ? e->display_name()->str() : "";
+                        pe.character_name = e->character_name() ? e->character_name()->str() : "";
+                        pe.level = e->character_level();
+                        if (const auto* skills = e->top_skills()) {
+                            for (const auto* s : *skills) {
+                                pe.top_skills.emplace_back(
+                                    s->name() ? s->name()->str() : "?", s->level());
+                            }
+                        }
+                        if (const auto* p = e->pos()) {
+                            pe.x = p->x();
+                            pe.y = p->y();
+                            pe.z = p->z();
+                        }
+                        pe.cell_form_id = e->cell_form_id();
+                        pe.hp = e->hp();
+                        pe.hp_max = e->hp_max();
+                        entries.push_back(std::move(pe));
+                    }
+                }
+                plugin::update_player_list(
+                    static_cast<decltype(entries)&&>(entries));
             } else if (type == re_v1::MessageType_DamageApply) {
                 const auto* d = flatbuffers::GetRoot<re_v1::DamageApply>(body.data());
                 combat::on_damage_apply(d->attacker_player_id(), d->damage(),

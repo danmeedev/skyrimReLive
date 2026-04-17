@@ -84,6 +84,9 @@ async fn main() -> Result<()> {
         &HelloArgs {
             name: Some(name_str),
             client_protocol_version: wire::PROTOCOL_VERSION,
+            character_name: None,
+            character_level: 1,
+            top_skills: None,
         },
     );
     fbb.finish(hello, None);

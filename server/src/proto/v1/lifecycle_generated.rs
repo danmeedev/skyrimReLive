@@ -47,6 +47,9 @@ pub mod skyrim_relive {
         impl<'a> Hello<'a> {
             pub const VT_NAME: ::flatbuffers::VOffsetT = 4;
             pub const VT_CLIENT_PROTOCOL_VERSION: ::flatbuffers::VOffsetT = 6;
+            pub const VT_CHARACTER_NAME: ::flatbuffers::VOffsetT = 8;
+            pub const VT_CHARACTER_LEVEL: ::flatbuffers::VOffsetT = 10;
+            pub const VT_TOP_SKILLS: ::flatbuffers::VOffsetT = 12;
 
             #[inline]
             pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -63,9 +66,16 @@ pub mod skyrim_relive {
                 args: &'args HelloArgs<'args>,
             ) -> ::flatbuffers::WIPOffset<Hello<'bldr>> {
                 let mut builder = HelloBuilder::new(_fbb);
+                if let Some(x) = args.top_skills {
+                    builder.add_top_skills(x);
+                }
+                if let Some(x) = args.character_name {
+                    builder.add_character_name(x);
+                }
                 if let Some(x) = args.name {
                     builder.add_name(x);
                 }
+                builder.add_character_level(args.character_level);
                 builder.add_client_protocol_version(args.client_protocol_version);
                 builder.finish()
             }
@@ -91,6 +101,41 @@ pub mod skyrim_relive {
                         .unwrap()
                 }
             }
+            #[inline]
+            pub fn character_name(&self) -> Option<&'a str> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<::flatbuffers::ForwardsUOffset<&str>>(Hello::VT_CHARACTER_NAME, None)
+                }
+            }
+            #[inline]
+            pub fn character_level(&self) -> u16 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u16>(Hello::VT_CHARACTER_LEVEL, Some(1))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn top_skills(
+                &self,
+            ) -> Option<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<SkillEntry<'a>>>>
+            {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab.get::<::flatbuffers::ForwardsUOffset<
+                        ::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<SkillEntry>>,
+                    >>(Hello::VT_TOP_SKILLS, None)
+                }
+            }
         }
 
         impl ::flatbuffers::Verifiable for Hello<'_> {
@@ -110,6 +155,15 @@ pub mod skyrim_relive {
                         Self::VT_CLIENT_PROTOCOL_VERSION,
                         false,
                     )?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<&str>>(
+                        "character_name",
+                        Self::VT_CHARACTER_NAME,
+                        false,
+                    )?
+                    .visit_field::<u16>("character_level", Self::VT_CHARACTER_LEVEL, false)?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<
+                        ::flatbuffers::Vector<'_, ::flatbuffers::ForwardsUOffset<SkillEntry>>,
+                    >>("top_skills", Self::VT_TOP_SKILLS, false)?
                     .finish();
                 Ok(())
             }
@@ -117,6 +171,13 @@ pub mod skyrim_relive {
         pub struct HelloArgs<'a> {
             pub name: Option<::flatbuffers::WIPOffset<&'a str>>,
             pub client_protocol_version: u8,
+            pub character_name: Option<::flatbuffers::WIPOffset<&'a str>>,
+            pub character_level: u16,
+            pub top_skills: Option<
+                ::flatbuffers::WIPOffset<
+                    ::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<SkillEntry<'a>>>,
+                >,
+            >,
         }
         impl<'a> Default for HelloArgs<'a> {
             #[inline]
@@ -124,6 +185,9 @@ pub mod skyrim_relive {
                 HelloArgs {
                     name: None,
                     client_protocol_version: 0,
+                    character_name: None,
+                    character_level: 1,
+                    top_skills: None,
                 }
             }
         }
@@ -144,6 +208,33 @@ pub mod skyrim_relive {
                     Hello::VT_CLIENT_PROTOCOL_VERSION,
                     client_protocol_version,
                     0,
+                );
+            }
+            #[inline]
+            pub fn add_character_name(
+                &mut self,
+                character_name: ::flatbuffers::WIPOffset<&'b str>,
+            ) {
+                self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(
+                    Hello::VT_CHARACTER_NAME,
+                    character_name,
+                );
+            }
+            #[inline]
+            pub fn add_character_level(&mut self, character_level: u16) {
+                self.fbb_
+                    .push_slot::<u16>(Hello::VT_CHARACTER_LEVEL, character_level, 1);
+            }
+            #[inline]
+            pub fn add_top_skills(
+                &mut self,
+                top_skills: ::flatbuffers::WIPOffset<
+                    ::flatbuffers::Vector<'b, ::flatbuffers::ForwardsUOffset<SkillEntry<'b>>>,
+                >,
+            ) {
+                self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(
+                    Hello::VT_TOP_SKILLS,
+                    top_skills,
                 );
             }
             #[inline]
@@ -168,6 +259,9 @@ pub mod skyrim_relive {
                 let mut ds = f.debug_struct("Hello");
                 ds.field("name", &self.name());
                 ds.field("client_protocol_version", &self.client_protocol_version());
+                ds.field("character_name", &self.character_name());
+                ds.field("character_level", &self.character_level());
+                ds.field("top_skills", &self.top_skills());
                 ds.finish()
             }
         }

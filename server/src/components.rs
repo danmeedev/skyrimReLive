@@ -89,3 +89,21 @@ pub struct AnimState {
 pub struct Cell {
     pub form_id: u32,
 }
+
+/// Zeus Phase 0: character identity from the loaded save.
+#[derive(Component, Debug, Clone)]
+pub struct CharacterInfo {
+    pub character_name: String,
+    pub level: u16,
+    pub top_skills: Vec<(String, f32)>,
+}
+
+impl Default for CharacterInfo {
+    fn default() -> Self {
+        Self {
+            character_name: String::new(),
+            level: 1,
+            top_skills: Vec::new(),
+        }
+    }
+}

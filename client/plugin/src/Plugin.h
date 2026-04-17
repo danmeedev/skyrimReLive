@@ -54,6 +54,20 @@ namespace relive::plugin {
     std::string demo_stop();
     [[nodiscard]] bool demo_running() noexcept;
 
+    // Zeus Phase 0: player roster received from the server.
+    struct PlayerEntry {
+        std::uint32_t player_id;
+        std::string display_name;
+        std::string character_name;
+        std::uint16_t level;
+        std::vector<std::pair<std::string, float>> top_skills;
+        float x, y, z;
+        std::uint32_t cell_form_id;
+        float hp, hp_max;
+    };
+    [[nodiscard]] std::vector<PlayerEntry> get_player_list() noexcept;
+    void update_player_list(std::vector<PlayerEntry> list);
+
     // Phase 2.3b/2.5: forward a CombatEvent through the active Net::Client.
     // No-op when not connected. Called from the TESHitEvent sink.
     // attack_class: 0=Melee, 1=BowArrow, 2=Spell (maps to AttackClass enum).

@@ -25,6 +25,8 @@ pub struct Config {
     pub pvp_enabled: bool,
     /// Flat damage used for spell hits (true magnitude lookup is deferred).
     pub spell_damage_default: f32,
+    /// Seconds between `PlayerList` broadcasts. 0 = disabled.
+    pub player_list_poll_s: u64,
 }
 
 impl Default for Config {
@@ -37,6 +39,7 @@ impl Default for Config {
             gc_interval_ms: 500,
             pvp_enabled: false,
             spell_damage_default: 25.0,
+            player_list_poll_s: 60,
         }
     }
 }

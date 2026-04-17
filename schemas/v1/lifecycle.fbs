@@ -5,8 +5,12 @@ include "types.fbs";
 namespace skyrim_relive.v1;
 
 table Hello {
-    name: string;                  // player display name
-    client_protocol_version: ubyte; // = 1 in this version; redundant with header byte but explicit
+    name: string;                  // player display name (from config)
+    client_protocol_version: ubyte; // = 2 in this version; redundant with header byte but explicit
+    // Zeus Phase 0: character data from the loaded save.
+    character_name: string;         // from player->GetName() (save-specific)
+    character_level: uint16 = 1;
+    top_skills: [SkillEntry];       // top 3 (or N) skills by level, descending
 }
 
 table Welcome {

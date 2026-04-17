@@ -48,9 +48,42 @@ namespace relive::commands {
                    "  rl cell                    show current + target cell\n"
                    "  rl cell set [hex]          pin target to current cell, or to hex form ID\n"
                    "  rl cell clear              target any cell\n"
+                   "  rl players                 show connected players\n"
                    "  rl demo start              spawn a synthetic orbiting ghost (solo test)\n"
                    "  rl demo stop               despawn the demo ghost\n"
                    "  rl help                    this message";
+        }
+
+        // Defined later in this file — forward declare for do_players.
+        std::string fmt_hex(std::uint32_t v);
+
+        std::string do_players() {
+            const auto list = plugin::get_player_list();
+            if (list.empty()) {
+                return "no player list received yet (server broadcasts every ~60s)";
+            }
+            std::string r = std::to_string(list.size()) + " player(s):\n";
+            for (const auto& e : list) {
+                char buf[256];
+                std::snprintf(buf, sizeof(buf),
+                              "  [%u] %s (%s) Lv%u HP %.0f/%.0f",
+                              e.player_id, e.character_name.c_str(),
+                              e.display_name.c_str(),
+                              static_cast<unsigned>(e.level),
+                              e.hp, e.hp_max);
+                r += buf;
+                r += " cell=" + fmt_hex(e.cell_form_id);
+                if (!e.top_skills.empty()) {
+                    r += " skills:";
+                    for (const auto& [sn, sl] : e.top_skills) {
+                        char sbuf[64];
+                        std::snprintf(sbuf, sizeof(sbuf), " %s(%.0f)", sn.c_str(), sl);
+                        r += sbuf;
+                    }
+                }
+                r += "\n";
+            }
+            return r;
         }
 
         std::string fmt_hex(std::uint32_t v) {
@@ -152,6 +185,7 @@ namespace relive::commands {
         if (args[0] == "connect")     return do_connect(args);
         if (args[0] == "disconnect")  return plugin::stop_connection();
         if (args[0] == "cell")        return do_cell(args);
+        if (args[0] == "players")     return do_players();
         if (args[0] == "demo") {
             if (args.size() < 2 || args[1] == "status") {
                 return plugin::demo_running() ? "demo running" : "demo idle";

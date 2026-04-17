@@ -19,6 +19,16 @@ enum MessageType : ubyte {
     // Combat (32..)
     CombatEvent   = 32,  // C → S: "I attacked target X"
     DamageApply   = 33,  // S → C: "you took N damage from attacker Y"
+
+    // Zeus / admin (48..)
+    PlayerList    = 48,  // S → C: periodic player roster broadcast
+}
+
+// Shared type: a skill name + level pair. String name (not enum) keeps us
+// mod-agnostic — works with Ordinator, Vokrii, or any skill tree overhaul.
+table SkillEntry {
+    name: string;     // engine ActorValue name, e.g. "OneHanded", "Destruction"
+    level: float;     // GetActorValue result
 }
 
 enum DisconnectCode : ubyte {
