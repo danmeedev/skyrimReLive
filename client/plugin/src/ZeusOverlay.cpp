@@ -148,11 +148,13 @@ namespace relive::zeus_overlay {
                     static int s_cat_filter = 0;
                     const char* categories[] = {
                         "All", "NPC", "Weapon", "Armor", "Potion",
-                        "Misc", "Ammo", "Book", "Ingredient", "Key", "Scroll"};
+                        "Misc", "Ammo", "Book", "Ingredient", "Key", "Scroll",
+                        "Static", "Tree", "Door", "Activator", "Light",
+                        "Furniture", "Flora", "MovableStatic"};
                     ImGui::InputText("Search", s_search, sizeof(s_search));
                     ImGui::SameLine();
-                    ImGui::SetNextItemWidth(100);
-                    ImGui::Combo("##cat", &s_cat_filter, categories, 11);
+                    ImGui::SetNextItemWidth(120);
+                    ImGui::Combo("##cat", &s_cat_filter, categories, 19);
 
                     {
                         std::lock_guard lock(g_data_mu);

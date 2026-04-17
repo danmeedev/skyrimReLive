@@ -367,6 +367,14 @@ namespace {
                         add("Ingredient", dh->GetFormArray<RE::IngredientItem>());
                         add("Key", dh->GetFormArray<RE::TESKey>());
                         add("Scroll", dh->GetFormArray<RE::ScrollItem>());
+                        add("Static", dh->GetFormArray<RE::TESObjectSTAT>());
+                        add("Tree", dh->GetFormArray<RE::TESObjectTREE>());
+                        add("Door", dh->GetFormArray<RE::TESObjectDOOR>());
+                        add("Activator", dh->GetFormArray<RE::TESObjectACTI>());
+                        add("Light", dh->GetFormArray<RE::TESObjectLIGH>());
+                        add("Furniture", dh->GetFormArray<RE::TESFurniture>());
+                        add("Flora", dh->GetFormArray<RE::TESFlora>());
+                        add("MovableStatic", dh->GetFormArray<RE::BGSMovableStatic>());
                         SKSE::log::info("zeus form browser: indexed {} forms",
                                         forms.size());
                         relive::zeus_overlay::push_form_library(
