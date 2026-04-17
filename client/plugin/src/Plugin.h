@@ -7,6 +7,9 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
+
+#include "Net.h"
 
 namespace relive::plugin {
 
@@ -33,7 +36,8 @@ namespace relive::plugin {
     // human-readable status string (for command output). Idempotent: if
     // already connected, returns "already connected as <id>".
     std::string start_connection(std::string host, std::uint16_t port,
-                                 std::string name);
+                                 std::string name,
+                                 const net::CharacterData& char_data = {});
 
     // Disconnects if connected; no-op otherwise. Returns a status string.
     std::string stop_connection();

@@ -143,7 +143,8 @@ namespace relive::plugin {
     }
 
     std::string start_connection(std::string host, std::uint16_t port,
-                                 std::string name) {
+                                 std::string name,
+                                 const net::CharacterData& char_data) {
         auto expected = ConnState::Idle;
         if (!g_state.compare_exchange_strong(expected, ConnState::Connected)) {
             if (expected == ConnState::Connected) {
@@ -165,7 +166,7 @@ namespace relive::plugin {
         }
 
         SKSE::log::info("SkyrimReLive: connecting to {}:{} as {}", host, port, name);
-        if (!g_client.start(host, port, name)) {
+        if (!g_client.start(host, port, name, char_data)) {
             g_state.store(ConnState::Failed, std::memory_order_release);
             Toast("[SkyrimReLive] connect failed");
             return "connect failed (see SkyrimReLive.log)";
@@ -208,23 +209,65 @@ namespace relive::plugin {
                                    weapon_base_damage, attack_class);
     }
 
+    net::CharacterData gather_character_data() {
+        net::CharacterData cd;
+        auto* player = RE::PlayerCharacter::GetSingleton();
+        if (!player) return cd;
+        if (auto* base = player->GetActorBase()) {
+            if (const char* n = base->GetName(); n && n[0]) {
+                cd.character_name = n;
+            }
+        }
+        cd.level = static_cast<std::uint16_t>(player->GetLevel());
+        struct SkillPair { const char* name; RE::ActorValue av; };
+        static constexpr SkillPair kSkills[] = {
+            {"OneHanded",    RE::ActorValue::kOneHanded},
+            {"TwoHanded",    RE::ActorValue::kTwoHanded},
+            {"Archery",      RE::ActorValue::kArchery},
+            {"Block",        RE::ActorValue::kBlock},
+            {"Smithing",     RE::ActorValue::kSmithing},
+            {"HeavyArmor",   RE::ActorValue::kHeavyArmor},
+            {"LightArmor",   RE::ActorValue::kLightArmor},
+            {"Pickpocket",   RE::ActorValue::kPickpocket},
+            {"Lockpicking",  RE::ActorValue::kLockpicking},
+            {"Sneak",        RE::ActorValue::kSneak},
+            {"Alchemy",      RE::ActorValue::kAlchemy},
+            {"Speech",       RE::ActorValue::kSpeech},
+            {"Alteration",   RE::ActorValue::kAlteration},
+            {"Conjuration",  RE::ActorValue::kConjuration},
+            {"Destruction",  RE::ActorValue::kDestruction},
+            {"Illusion",     RE::ActorValue::kIllusion},
+            {"Restoration",  RE::ActorValue::kRestoration},
+            {"Enchanting",   RE::ActorValue::kEnchanting},
+        };
+        std::vector<net::CharacterData::Skill> all;
+        for (const auto& [sname, av] : kSkills) {
+            all.push_back({sname, player->GetActorValue(av)});
+        }
+        std::sort(all.begin(), all.end(),
+                  [](const auto& a, const auto& b) { return a.value > b.value; });
+        if (all.size() > 3) all.resize(3);
+        cd.top_skills = static_cast<decltype(all)&&>(all);
+        return cd;
+    }
+
     void on_world_loaded() {
         const auto cfg = config::load();
-        // Apply cell target from config. 0 means "any cell" so solo testing
-        // works everywhere by default.
         cell::instance().set_target(cfg.target_cell_form_id);
-
-        // Hit-event sink survives across connect/disconnect cycles; sends
-        // are no-ops while we're idle.
         combat::register_sink();
+
+        // Gather character data on the main thread where game state is safe
+        // to read. The connect thread only touches the pre-gathered snapshot.
+        auto cd = gather_character_data();
 
         if (!cfg.auto_connect) {
             SKSE::log::info("SkyrimReLive: auto_connect=false; use `rl connect` in console");
             Toast("[SkyrimReLive] ready — type `rl connect` to join");
             return;
         }
-        std::thread([cfg]() {
-            start_connection(cfg.server_host, cfg.server_port, cfg.player_name);
+        std::thread([cfg, cd = static_cast<net::CharacterData&&>(cd)]() {
+            start_connection(cfg.server_host, cfg.server_port,
+                             cfg.player_name, cd);
         }).detach();
     }
 

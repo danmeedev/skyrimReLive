@@ -174,6 +174,7 @@ namespace relive::commands {
             }
             return plugin::start_connection(host, port, "dovahkiin");
         }
+
     }
 
     std::string execute(std::string_view cmdline) {

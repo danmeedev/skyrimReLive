@@ -53,7 +53,8 @@ namespace relive::net {
     }
 
     bool Client::start(std::string_view host, std::uint16_t port,
-                       std::string_view player_name) {
+                       std::string_view player_name,
+                       const CharacterData& char_data) {
         const auto h = sock::udp_connect_ipv4(host, port);
         if (h == sock::kInvalid) {
             SKSE::log::error("UDP connect failed");
@@ -61,7 +62,7 @@ namespace relive::net {
         }
         socket_ = h;
 
-        if (!send_hello(player_name) || !wait_for_welcome()) {
+        if (!send_hello(player_name, char_data) || !wait_for_welcome()) {
             sock::close(socket_);
             socket_ = sock::kInvalid;
             return false;
@@ -83,66 +84,18 @@ namespace relive::net {
         socket_ = sock::kInvalid;
     }
 
-    namespace {
-        struct SkillPair {
-            const char* name;
-            RE::ActorValue av;
-        };
-        constexpr SkillPair kSkills[] = {
-            {"OneHanded",    RE::ActorValue::kOneHanded},
-            {"TwoHanded",    RE::ActorValue::kTwoHanded},
-            {"Archery",      RE::ActorValue::kArchery},
-            {"Block",        RE::ActorValue::kBlock},
-            {"Smithing",     RE::ActorValue::kSmithing},
-            {"HeavyArmor",   RE::ActorValue::kHeavyArmor},
-            {"LightArmor",   RE::ActorValue::kLightArmor},
-            {"Pickpocket",   RE::ActorValue::kPickpocket},
-            {"Lockpicking",  RE::ActorValue::kLockpicking},
-            {"Sneak",        RE::ActorValue::kSneak},
-            {"Alchemy",      RE::ActorValue::kAlchemy},
-            {"Speech",       RE::ActorValue::kSpeech},
-            {"Alteration",   RE::ActorValue::kAlteration},
-            {"Conjuration",  RE::ActorValue::kConjuration},
-            {"Destruction",  RE::ActorValue::kDestruction},
-            {"Illusion",     RE::ActorValue::kIllusion},
-            {"Restoration",  RE::ActorValue::kRestoration},
-            {"Enchanting",   RE::ActorValue::kEnchanting},
-        };
-    }
-
-    bool Client::send_hello(std::string_view name) {
+    bool Client::send_hello(std::string_view name, const CharacterData& cd) {
         flatbuffers::FlatBufferBuilder fbb(256);
         const std::string name_s{name};
         const auto name_off = fbb.CreateString(name_s);
+        const auto char_name_off = fbb.CreateString(cd.character_name);
 
-        // Read character data from the loaded save.
-        std::string char_name_str = "(unknown)";
-        std::uint16_t char_level = 1;
-        struct SkillVal { const char* name; float level; };
-        std::vector<SkillVal> all_skills;
-
-        if (auto* player = RE::PlayerCharacter::GetSingleton()) {
-            if (auto* base = player->GetActorBase()) {
-                if (const char* n = base->GetName(); n && n[0]) {
-                    char_name_str = n;
-                }
-            }
-            char_level = static_cast<std::uint16_t>(player->GetLevel());
-            for (const auto& [sname, av] : kSkills) {
-                all_skills.push_back({sname, player->GetActorValue(av)});
-            }
-            std::sort(all_skills.begin(), all_skills.end(),
-                      [](const auto& a, const auto& b) { return a.level > b.level; });
-            if (all_skills.size() > 3) all_skills.resize(3);
-        }
-
-        const auto char_name_off = fbb.CreateString(char_name_str);
         std::vector<flatbuffers::Offset<re_v1::SkillEntry>> skill_offsets;
-        for (const auto& [sname, slevel] : all_skills) {
-            const auto sn = fbb.CreateString(sname);
+        for (const auto& sk : cd.top_skills) {
+            const auto sn = fbb.CreateString(sk.name);
             re_v1::SkillEntryBuilder sb(fbb);
             sb.add_name(sn);
-            sb.add_level(slevel);
+            sb.add_level(sk.value);
             skill_offsets.push_back(sb.Finish());
         }
         const auto skills_vec = fbb.CreateVector(skill_offsets);
@@ -151,7 +104,7 @@ namespace relive::net {
         hb.add_name(name_off);
         hb.add_client_protocol_version(kProtoVersion);
         hb.add_character_name(char_name_off);
-        hb.add_character_level(char_level);
+        hb.add_character_level(cd.level);
         hb.add_top_skills(skills_vec);
         const auto hello_off = hb.Finish();
         fbb.Finish(hello_off);
@@ -165,7 +118,7 @@ namespace relive::net {
             return false;
         }
         SKSE::log::info("Hello sent: char='{}' level={} skills={}",
-                        char_name_str, char_level, all_skills.size());
+                        cd.character_name, cd.level, cd.top_skills.size());
         return true;
     }
 
