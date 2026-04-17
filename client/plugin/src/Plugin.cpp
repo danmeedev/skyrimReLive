@@ -212,13 +212,27 @@ namespace relive::plugin {
     net::CharacterData gather_character_data() {
         net::CharacterData cd;
         auto* player = RE::PlayerCharacter::GetSingleton();
-        if (!player) return cd;
+        if (!player) {
+            SKSE::log::warn("gather_character_data: player singleton null");
+            return cd;
+        }
+        if (!player->Is3DLoaded()) {
+            SKSE::log::warn("gather_character_data: player 3D not loaded, using defaults");
+            return cd;
+        }
         if (auto* base = player->GetActorBase()) {
             if (const char* n = base->GetName(); n && n[0]) {
                 cd.character_name = n;
             }
         }
         cd.level = static_cast<std::uint16_t>(player->GetLevel());
+        // Skill reads can crash on very early saves where the actor value
+        // owner isn't fully initialized. Gate on parentCell as a proxy for
+        // "the world is actually loaded and the player is placed."
+        if (!player->parentCell) {
+            SKSE::log::warn("gather_character_data: no parentCell, skipping skills");
+            return cd;
+        }
         struct SkillPair { const char* name; RE::ActorValue av; };
         static constexpr SkillPair kSkills[] = {
             {"OneHanded",    RE::ActorValue::kOneHanded},
@@ -248,6 +262,8 @@ namespace relive::plugin {
                   [](const auto& a, const auto& b) { return a.value > b.value; });
         if (all.size() > 3) all.resize(3);
         cd.top_skills = static_cast<decltype(all)&&>(all);
+        SKSE::log::info("gather_character_data: char='{}' level={} skills={}",
+                        cd.character_name, cd.level, cd.top_skills.size());
         return cd;
     }
 
