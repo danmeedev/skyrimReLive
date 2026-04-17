@@ -391,6 +391,47 @@ namespace relive::net {
                             if (auto* c = RE::ConsoleLog::GetSingleton()) {
                                 c->Print("[Server] Time set to %.0f:00", hour);
                             }
+                        } else if (cmd == "give") {
+                            // args: "<form_id> <count>"
+                            std::uint32_t formId = 0;
+                            std::uint32_t count = 1;
+                            std::istringstream iss(args);
+                            std::string formStr;
+                            iss >> formStr >> count;
+                            try { formId = std::stoul(formStr, nullptr, 0); } catch (...) {}
+                            if (formId != 0) {
+                                auto* item = RE::TESForm::LookupByID(formId);
+                                auto* bound = item ? item->As<RE::TESBoundObject>() : nullptr;
+                                auto* player = RE::PlayerCharacter::GetSingleton();
+                                if (bound && player) {
+                                    player->AddObjectToContainer(
+                                        bound, nullptr, static_cast<std::int32_t>(count), nullptr);
+                                    if (auto* c = RE::ConsoleLog::GetSingleton()) {
+                                        c->Print("[Server] Received %u item(s)", count);
+                                    }
+                                }
+                            }
+                        } else if (cmd == "spawn") {
+                            // args: "<base_form_id> <x> <y> <z>"
+                            std::uint32_t formId = 0;
+                            float sx = 0, sy = 0, sz = 0;
+                            std::istringstream iss(args);
+                            std::string formStr;
+                            iss >> formStr >> sx >> sy >> sz;
+                            try { formId = std::stoul(formStr, nullptr, 0); } catch (...) {}
+                            if (formId != 0) {
+                                auto* base = RE::TESForm::LookupByID<RE::TESBoundObject>(formId);
+                                auto* player = RE::PlayerCharacter::GetSingleton();
+                                if (base && player && player->parentCell) {
+                                    auto ref = player->PlaceObjectAtMe(base, false);
+                                    if (ref) {
+                                        ref->SetPosition({sx, sy, sz});
+                                        if (auto* c = RE::ConsoleLog::GetSingleton()) {
+                                            c->Print("[Server] NPC spawned (0x%x)", formId);
+                                        }
+                                    }
+                                }
+                            }
                         } else if (cmd == "weather") {
                             RE::FormID formId = 0;
                             try { formId = std::stoul(args, nullptr, 0); } catch (...) {}

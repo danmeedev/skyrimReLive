@@ -461,6 +461,31 @@ impl ServerState {
         }
     }
 
+    async fn send_server_command_to(&mut self, target_pid: u32, command: &str, args: &str) {
+        let mut fbb = FlatBufferBuilder::with_capacity(64);
+        let cmd_off = fbb.create_string(command);
+        let args_off = fbb.create_string(args);
+        let sc = ServerCommand::create(
+            &mut fbb,
+            &ServerCommandArgs {
+                command: Some(cmd_off),
+                args: Some(args_off),
+            },
+        );
+        fbb.finish(sc, None);
+        let packet = wire::encode(MessageType::ServerCommand, fbb.finished_data());
+        for (_, p, c) in self
+            .world
+            .query::<(Entity, &Player, &Connection)>()
+            .iter(&self.world)
+        {
+            if p.id == target_pid {
+                let _ = self.socket.send_to(&packet, c.addr).await;
+                break;
+            }
+        }
+    }
+
     async fn send_admin_result(&self, peer: SocketAddr, success: bool, msg: &str) {
         let mut fbb = FlatBufferBuilder::with_capacity(128);
         let msg_off = fbb.create_string(msg);
@@ -673,11 +698,66 @@ impl ServerState {
                 )
                 .await;
             }
+            "give" => {
+                // give <player_id> <item_form_id> [count]
+                if parts.len() < 3 {
+                    self.send_admin_result(
+                        peer,
+                        false,
+                        "usage: give <player_id> <item_formid> [count]",
+                    )
+                    .await;
+                    return;
+                }
+                let Ok(target_pid) = parts[1].parse::<u32>() else {
+                    self.send_admin_result(peer, false, "bad player_id").await;
+                    return;
+                };
+                let item_arg = parts[2];
+                let count = parts
+                    .get(3)
+                    .and_then(|s| s.parse::<u32>().ok())
+                    .unwrap_or(1);
+                let args_str = format!("{item_arg} {count}");
+                self.send_server_command_to(target_pid, "give", &args_str)
+                    .await;
+                self.send_admin_result(
+                    peer,
+                    true,
+                    &format!("gave {count}x {item_arg} to player_id {target_pid}"),
+                )
+                .await;
+            }
+            "spawn" => {
+                // spawn <base_form_id>
+                if parts.len() < 2 {
+                    self.send_admin_result(peer, false, "usage: spawn <base_formid>")
+                        .await;
+                    return;
+                }
+                let base_arg = parts[1];
+                // Look up admin's current position for spawn location.
+                let pos = self
+                    .world
+                    .get::<Transform>(entity)
+                    .map_or([0.0_f32, 0.0, 0.0], |t| t.pos);
+                let args_str = format!("{base_arg} {:.1} {:.1} {:.1}", pos[0], pos[1], pos[2]);
+                self.broadcast_server_command("spawn", &args_str).await;
+                self.send_admin_result(
+                    peer,
+                    true,
+                    &format!(
+                        "spawning {base_arg} at ({:.0}, {:.0}, {:.0}) for all",
+                        pos[0], pos[1], pos[2]
+                    ),
+                )
+                .await;
+            }
             "help" => {
                 self.send_admin_result(
                     peer,
                     true,
-                    "admin commands: pvp on|off, kick <id>, time <hour>, weather <type|formid>, help",
+                    "admin commands: pvp on|off, kick <id>, time <hour>, weather <type>, give <pid> <item> [n], spawn <base>, help",
                 )
                 .await;
             }
@@ -686,7 +766,7 @@ impl ServerState {
                     peer,
                     false,
                     &format!(
-                        "unknown admin command '{}'; try: pvp, kick, time, weather, help",
+                        "unknown admin command '{}'; try: pvp, kick, time, weather, give, spawn, help",
                         parts[0]
                     ),
                 )
