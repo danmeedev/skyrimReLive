@@ -205,8 +205,8 @@ namespace relive::commands {
             return "";
         }
         if (args[0] == "admin") {
-            if (args.size() < 2) return "usage: rl admin <password>";
-            plugin::send_admin_auth(args[1]);
+            const auto pw = args.size() >= 2 ? args[1] : "";
+            plugin::send_admin_auth(pw);
             return "auth request sent";
         }
         if (args[0] == "cmd") {

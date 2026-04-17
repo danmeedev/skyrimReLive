@@ -465,22 +465,9 @@ impl ServerState {
             }
         };
         let password = auth.password().unwrap_or("");
-        if self.config.admin_password.is_empty() {
-            let mut fbb = FlatBufferBuilder::with_capacity(64);
-            let reason = fbb.create_string("admin disabled on this server");
-            let r = AdminAuthResult::create(
-                &mut fbb,
-                &AdminAuthResultArgs {
-                    success: false,
-                    reason: Some(reason),
-                },
-            );
-            fbb.finish(r, None);
-            let packet = wire::encode(MessageType::AdminAuthResult, fbb.finished_data());
-            let _ = self.socket.send_to(&packet, peer).await;
-            return;
-        }
-        let success = password == self.config.admin_password;
+        // Empty admin_password = no password required (friend-trust default).
+        let success =
+            self.config.admin_password.is_empty() || password == self.config.admin_password;
         if success {
             if let Some(mut conn) = self.world.get_mut::<Connection>(entity) {
                 conn.is_admin = true;
