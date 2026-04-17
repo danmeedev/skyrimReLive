@@ -392,6 +392,18 @@ namespace relive::net {
                             if (auto* c = RE::ConsoleLog::GetSingleton()) {
                                 c->Print("[Server] Time set to %.0f:00", hour);
                             }
+                        } else if (cmd == "tp") {
+                            float tx = 0, ty = 0, tz = 0;
+                            std::istringstream iss(args);
+                            iss >> tx >> ty >> tz;
+                            auto* player = RE::PlayerCharacter::GetSingleton();
+                            if (player) {
+                                player->SetPosition({tx, ty, tz}, true);
+                                if (auto* c = RE::ConsoleLog::GetSingleton()) {
+                                    c->Print("[Server] Teleported to (%.0f, %.0f, %.0f)",
+                                             tx, ty, tz);
+                                }
+                            }
                         } else if (cmd == "give") {
                             std::uint32_t formId = 0;
                             std::uint32_t count = 1;

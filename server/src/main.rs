@@ -753,6 +753,48 @@ impl ServerState {
                 )
                 .await;
             }
+            "tp" => {
+                // tp <player_id> <x> <y> <z>   — teleport to coords
+                // tp <player_id> tome           — teleport to admin
+                if parts.len() < 3 {
+                    self.send_admin_result(
+                        peer,
+                        false,
+                        "usage: tp <player_id> <x y z> OR tp <player_id> tome",
+                    )
+                    .await;
+                    return;
+                }
+                let Ok(target_pid) = parts[1].parse::<u32>() else {
+                    self.send_admin_result(peer, false, "bad player_id").await;
+                    return;
+                };
+                let args_str = if parts[2] == "tome" || parts[2] == "here" {
+                    let pos = self
+                        .world
+                        .get::<Transform>(entity)
+                        .map_or([0.0_f32, 0.0, 0.0], |t| t.pos);
+                    format!("{:.1} {:.1} {:.1}", pos[0], pos[1], pos[2])
+                } else if parts.len() >= 5 {
+                    format!("{} {} {}", parts[2], parts[3], parts[4])
+                } else {
+                    self.send_admin_result(
+                        peer,
+                        false,
+                        "usage: tp <player_id> <x y z> OR tp <player_id> tome",
+                    )
+                    .await;
+                    return;
+                };
+                self.send_server_command_to(target_pid, "tp", &args_str)
+                    .await;
+                self.send_admin_result(
+                    peer,
+                    true,
+                    &format!("teleporting player_id {target_pid} to ({args_str})"),
+                )
+                .await;
+            }
             "npc" => {
                 // npc <zeus_id> <order> [args...]
                 // Relay to ALL clients as a ServerCommand — each client
@@ -783,7 +825,7 @@ impl ServerState {
                 self.send_admin_result(
                     peer,
                     true,
-                    "admin commands:\n  pvp on|off\n  kick <id>\n  time <hour>\n  weather <type|formid>\n  give <pid> <item> [n]\n  spawn <base>\n  npc <zeus_id> <order> [args]\n  npcs\n  help",
+                    "admin commands:\n  pvp on|off\n  kick <id>\n  time <hour>\n  weather <type|formid>\n  give <pid> <item> [n]\n  spawn <base>\n  tp <pid> <x y z> | tp <pid> tome\n  npc <zeus_id> <order> [args]\n  npcs\n  help",
                 )
                 .await;
             }
