@@ -194,8 +194,13 @@ namespace relive::net {
         player->GetGraphVariableInt("iState", anim_weapon_state);
         const bool weapon_drawn = player->AsActorState()->IsWeaponDrawn();
         const float pitch = player->GetAngleX();
+        // Only send real cell FormID for interiors — exterior cells have
+        // nonzero FormIDs too but players in adjacent grid squares would
+        // mismatch and thrash ghost spawn/despawn. Exterior = 0 (wildcard)
+        // lets the distance gate handle cross-terrain culling instead.
         const std::uint32_t cell_form_id =
-            player->parentCell ? player->parentCell->GetFormID() : 0;
+            (player->parentCell && player->parentCell->IsInteriorCell())
+                ? player->parentCell->GetFormID() : 0;
 
         flatbuffers::FlatBufferBuilder fbb(128);
         const re_v1::Vec3 v3(x, y, z);

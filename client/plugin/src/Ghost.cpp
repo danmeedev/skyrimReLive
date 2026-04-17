@@ -338,8 +338,11 @@ namespace relive::ghost {
             // sneak. Best-effort — failures (e.g., variable not found) are
             // silent so missing-graph cases don't spam logs.
             const auto& latest = g.history.back().snap;
+            const bool moving = latest.speed > 1.0F;
             g.actor->SetGraphVariableFloat("Speed", latest.speed);
+            g.actor->SetGraphVariableFloat("SpeedSampled", latest.speed);
             g.actor->SetGraphVariableFloat("Direction", latest.direction);
+            g.actor->SetGraphVariableBool("IsMoving", moving);
             g.actor->SetGraphVariableBool("IsRunning", latest.is_running);
             g.actor->SetGraphVariableBool("IsSprinting", latest.is_sprinting);
             g.actor->SetGraphVariableBool("IsSneaking", latest.is_sneaking);
@@ -356,7 +359,6 @@ namespace relive::ghost {
             // leaves the idle branch.
             auto* st = g.actor->AsActorState();
             if (st) {
-                const bool moving = latest.speed > 1.0F;
                 st->actorState1.movingForward = moving ? 1 : 0;
                 st->actorState1.movingBack    = 0;
                 st->actorState1.movingLeft    = 0;
