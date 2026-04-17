@@ -479,6 +479,20 @@ namespace relive::net {
                             if (auto* c = RE::ConsoleLog::GetSingleton()) {
                                 c->Print("[Zeus NPC %u] %s", zid, result.c_str());
                             }
+                        } else if (cmd == "obj") {
+                            std::uint32_t zid = 0;
+                            std::string order;
+                            std::string order_args;
+                            std::istringstream iss(args);
+                            iss >> zid >> order;
+                            std::getline(iss, order_args);
+                            while (!order_args.empty() &&
+                                   std::isspace(static_cast<unsigned char>(order_args.front())))
+                                order_args.erase(order_args.begin());
+                            auto result = zeus::execute_obj_order(zid, order, order_args);
+                            if (auto* c = RE::ConsoleLog::GetSingleton()) {
+                                c->Print("[Zeus Obj %u] %s", zid, result.c_str());
+                            }
                         } else if (cmd == "weather") {
                             RE::FormID formId = 0;
                             try { formId = std::stoul(args, nullptr, 0); } catch (...) {}

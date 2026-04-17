@@ -325,10 +325,11 @@ namespace {
                 relive::zeus_overlay::set_input_toggle([](bool active) {
                     auto* controls = RE::ControlMap::GetSingleton();
                     if (!controls) return;
-                    // false = disable, true = enable. storeState = true so
-                    // the game remembers what was on and restores it.
                     controls->ToggleControls(
                         RE::ControlMap::UEFlag::kAll, !active, true);
+                    // AllowTextInput lets WM_CHAR through to WndProc so
+                    // ImGui text fields can receive typed characters.
+                    controls->AllowTextInput(active);
                     SKSE::log::info("zeus overlay: game controls {}",
                                     active ? "disabled" : "re-enabled");
                 });

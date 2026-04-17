@@ -795,10 +795,22 @@ impl ServerState {
                 )
                 .await;
             }
+            "obj" => {
+                if parts.len() < 3 {
+                    self.send_admin_result(
+                        peer,
+                        false,
+                        "usage: obj <zeus_id> <order> [args]\norders: delete, moveto <x y z>",
+                    )
+                    .await;
+                    return;
+                }
+                let remainder = parts[1..].join(" ");
+                self.broadcast_server_command("obj", &remainder).await;
+                self.send_admin_result(peer, true, &format!("obj order sent: {remainder}"))
+                    .await;
+            }
             "npc" => {
-                // npc <zeus_id> <order> [args...]
-                // Relay to ALL clients as a ServerCommand — each client
-                // has its own zeus registry and executes locally.
                 if parts.len() < 3 {
                     self.send_admin_result(
                         peer,

@@ -7,10 +7,8 @@ namespace relive::zeus {
     namespace {
         std::uint32_t g_next_zeus_id = 1;
         std::vector<SpawnedNpc> g_npcs;
+        std::vector<SpawnedObject> g_objects;
 
-        // Vanilla follower faction. Adding an NPC to this at rank 0 makes
-        // them eligible for the follower AI package (follow player, assist
-        // in combat, obey wait/follow commands).
         constexpr RE::FormID kCurrentFollowerFaction = 0x5C84E;
     }
 
@@ -27,12 +25,34 @@ namespace relive::zeus {
         return nullptr;
     }
 
+    std::uint32_t register_object(RE::FormID base_id, RE::NiPointer<RE::TESObjectREFR> ref) {
+        const auto id = g_next_zeus_id++;
+        g_objects.push_back({id, base_id, ref});
+        return id;
+    }
+
+    RE::TESObjectREFR* get_ref(std::uint32_t zeus_id) {
+        for (auto& n : g_npcs) {
+            if (n.zeus_id == zeus_id && n.actor) return n.actor.get();
+        }
+        for (auto& o : g_objects) {
+            if (o.zeus_id == zeus_id && o.ref) return o.ref.get();
+        }
+        return nullptr;
+    }
+
     std::vector<SpawnedNpc> list_npcs() {
-        // Prune dead/deleted refs.
         std::erase_if(g_npcs, [](const SpawnedNpc& n) {
             return !n.actor || n.actor->IsDeleted();
         });
         return g_npcs;
+    }
+
+    std::vector<SpawnedObject> list_objects() {
+        std::erase_if(g_objects, [](const SpawnedObject& o) {
+            return !o.ref || o.ref->IsDeleted();
+        });
+        return g_objects;
     }
 
     RE::NiPointer<RE::Actor> execute_spawn(RE::FormID base_form_id,
@@ -46,8 +66,10 @@ namespace relive::zeus {
 
         auto* actor = ref->As<RE::Actor>();
         if (!actor) {
-            // Not an NPC — just a placed object (weapon, item, etc.)
+            // Not an NPC — placed object (static, weapon, etc.)
             ref->SetPosition({x, y, z});
+            const auto zid = register_object(base_form_id, ref);
+            SKSE::log::info("zeus spawn object: id={} base=0x{:x}", zid, base_form_id);
             return nullptr;
         }
 
@@ -74,6 +96,27 @@ namespace relive::zeus {
             player->AddObjectToContainer(bound, nullptr,
                                          static_cast<std::int32_t>(count), nullptr);
         }
+    }
+
+    std::string execute_obj_order(std::uint32_t zeus_id, const std::string& order,
+                                   const std::string& args) {
+        auto* ref = get_ref(zeus_id);
+        if (!ref) {
+            return "zeus_id " + std::to_string(zeus_id) + " not found";
+        }
+        if (order == "delete" || order == "remove") {
+            ref->Disable();
+            ref->SetDelete(true);
+            return "deleted";
+        }
+        if (order == "moveto") {
+            float x = 0, y = 0, z = 0;
+            std::istringstream iss(args);
+            iss >> x >> y >> z;
+            ref->SetPosition({x, y, z});
+            return "moved";
+        }
+        return "unknown order '" + order + "'; try: delete, moveto";
     }
 
     std::string execute_npc_order(std::uint32_t zeus_id, const std::string& order,

@@ -272,6 +272,16 @@ namespace relive::zeus_overlay {
                     }
                 }
 
+                // ---- Spawned Objects ----
+                if (ImGui::CollapsingHeader("Spawned Objects")) {
+                    // Objects are tracked client-side in the zeus
+                    // registry but we don't push them to the overlay
+                    // yet. For now, show a note about using console.
+                    ImGui::TextDisabled("Use `rl cmd obj <id> delete` or");
+                    ImGui::TextDisabled("`rl cmd obj <id> moveto <x y z>`");
+                    ImGui::TextDisabled("Object IDs shown in console on spawn.");
+                }
+
                 // ---- Admin ----
                 if (ImGui::CollapsingHeader("Admin",
                                             ImGuiTreeNodeFlags_DefaultOpen)) {
