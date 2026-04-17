@@ -43,12 +43,33 @@ namespace {
         }
     }
 
+    std::atomic<bool> g_char_data_sent{false};
+
     void GhostTickPump() {
         using namespace std::chrono_literals;
         while (g_state.load(std::memory_order_acquire) ==
                relive::plugin::ConnState::Connected) {
             if (auto* task = SKSE::GetTaskInterface()) {
-                task->AddTask([]() { relive::ghost::instance().tick_main_thread(); });
+                task->AddTask([]() {
+                    relive::ghost::instance().tick_main_thread();
+                    // One-shot: gather character data once the player is
+                    // confirmed in-world (parentCell != null). This runs
+                    // on the main thread where game state is safe to read.
+                    if (!g_char_data_sent.load(std::memory_order_relaxed)) {
+                        auto* player = RE::PlayerCharacter::GetSingleton();
+                        if (player && player->parentCell) {
+                            auto cd = relive::plugin::gather_character_data();
+                            // TODO: send a CharacterUpdate message to the
+                            // server with the real data. For now just log.
+                            SKSE::log::info(
+                                "lazy char data: '{}' Lv{} skills={}",
+                                cd.character_name, cd.level,
+                                cd.top_skills.size());
+                            g_char_data_sent.store(true,
+                                std::memory_order_relaxed);
+                        }
+                    }
+                });
             }
             std::this_thread::sleep_for(50ms);
         }
@@ -184,6 +205,7 @@ namespace relive::plugin {
             return "not connected";
         }
         g_client.stop();
+        g_char_data_sent.store(false, std::memory_order_relaxed);
         Toast("[SkyrimReLive] disconnected");
         return "disconnected";
     }
@@ -277,21 +299,14 @@ namespace relive::plugin {
             Toast("[SkyrimReLive] ready — type `rl connect` to join");
             return;
         }
-        // Defer character data gathering by one frame. kPostLoadGame fires
-        // before the engine finishes placing the player — calling GetLevel,
-        // GetActorValue, or even Is3DLoaded can crash on early saves.
-        // SKSE::TaskInterface runs on the next main-thread pump, by which
-        // point the player is fully initialized.
-        if (auto* task = SKSE::GetTaskInterface()) {
-            task->AddTask([cfg]() {
-                SKSE::log::info("deferred gather: reading character data");
-                auto cd = gather_character_data();
-                std::thread([cfg, cd]() {
-                    start_connection(cfg.server_host, cfg.server_port,
-                                     cfg.player_name, cd);
-                }).detach();
-            });
-        }
+        // Send defaults in Hello — character data is populated lazily once
+        // the player is fully stable. Reading GetLevel/GetActorValue at
+        // kPostLoadGame (even deferred by one frame) crashes on early saves
+        // where the player's ActorValue arrays aren't allocated yet.
+        std::thread([cfg]() {
+            start_connection(cfg.server_host, cfg.server_port,
+                             cfg.player_name);
+        }).detach();
     }
 
 }

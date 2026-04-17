@@ -58,6 +58,10 @@ namespace relive::plugin {
     std::string demo_stop();
     [[nodiscard]] bool demo_running() noexcept;
 
+    // Gather character data from the loaded save. Must be called on the
+    // main thread with parentCell non-null.
+    [[nodiscard]] net::CharacterData gather_character_data();
+
     // Zeus Phase 0: player roster received from the server.
     struct PlayerEntry {
         std::uint32_t player_id;
