@@ -54,16 +54,10 @@ namespace relive::zeus {
         RE::NiPointer<RE::Actor> actor_ptr(actor);
         actor->Enable(false);
         actor->Load3D(false);
-
-        // Make it a follower via the faction system.
-        auto* faction = RE::TESForm::LookupByID<RE::TESFaction>(kCurrentFollowerFaction);
-        if (faction) {
-            actor->AddToFaction(faction, 0);
-        }
-        // Set as player teammate so it follows and assists.
-        actor->GetActorRuntimeData().boolBits.set(RE::Actor::BOOL_BITS::kPlayerTeammate);
-        actor->EvaluatePackage(true, true);
-
+        // Spawn with the NPC's default AI — don't force follower mode
+        // on every spawn. The "follow" order opts in to the follower
+        // faction when the admin explicitly requests it. This avoids
+        // behavior-graph conflicts that crash with multiple spawns.
         actor->SetPosition({x, y, z}, true);
 
         const auto zid = register_npc(base_form_id, actor_ptr);
@@ -90,7 +84,13 @@ namespace relive::zeus {
         }
 
         if (order == "follow") {
-            // Re-enable follower AI: clear do-nothing, re-evaluate packages.
+            // Add to follower faction + set teammate on demand.
+            auto* faction = RE::TESForm::LookupByID<RE::TESFaction>(kCurrentFollowerFaction);
+            if (faction) {
+                actor->AddToFaction(faction, 0);
+            }
+            actor->GetActorRuntimeData().boolBits.set(
+                RE::Actor::BOOL_BITS::kPlayerTeammate);
             actor->EvaluatePackage(true, true);
             return "following";
         }
