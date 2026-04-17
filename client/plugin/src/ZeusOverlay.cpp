@@ -4,6 +4,8 @@
 // are included here; we talk to the rest of the plugin through the opaque
 // ZeusOverlay.h interface and a minimal set of callbacks.
 
+#include "ZeusOverlay.h"
+
 #include <atomic>
 #include <cstdint>
 #include <mutex>
@@ -27,9 +29,24 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
 namespace relive::zeus_overlay {
 
     namespace {
+        using InputToggleFn = void(*)(bool);
+        using CommandFn = void(*)(const char*);
+        using OverlayPlayer = relive::zeus_overlay::OverlayPlayer;
+        using OverlayNpc = relive::zeus_overlay::OverlayNpc;
+
         std::atomic<bool> g_installed{false};
         std::atomic<bool> g_active{false};
         bool g_imgui_initialized = false;
+        InputToggleFn g_input_toggle = nullptr;
+        CommandFn g_command_fn = nullptr;
+
+        std::mutex g_data_mu;
+        std::vector<OverlayPlayer> g_players;
+        std::vector<OverlayNpc> g_npcs;
+
+        void send_cmd(const char* fmt_cmd) {
+            if (g_command_fn) g_command_fn(fmt_cmd);
+        }
 
         ID3D11Device* g_device = nullptr;
         ID3D11DeviceContext* g_context = nullptr;
@@ -75,63 +92,146 @@ namespace relive::zeus_overlay {
         }
 
         void render_zeus_panel() {
-            ImGui::SetNextWindowSize(ImVec2(420, 500), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(440, 600), ImGuiCond_FirstUseEver);
             if (ImGui::Begin("Zeus Mode", nullptr,
                              ImGuiWindowFlags_NoCollapse)) {
                 ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
                                    "SkyrimReLive Zeus Mode");
                 ImGui::Separator();
 
+                // ---- Time & Weather ----
                 if (ImGui::CollapsingHeader("Time & Weather",
                                             ImGuiTreeNodeFlags_DefaultOpen)) {
                     static float s_hour = 12.0f;
                     ImGui::SliderFloat("Time", &s_hour, 0.0f, 24.0f, "%.0f:00");
                     ImGui::SameLine();
                     if (ImGui::Button("Set##time")) {
-                        // TODO: send time command to server
+                        char buf[32];
+                        snprintf(buf, sizeof(buf), "time %.0f", s_hour);
+                        send_cmd(buf);
                     }
 
                     static int s_weather = 0;
                     const char* weather_names[] = {
                         "Clear", "Rain", "Snow", "Storm", "Fog"};
+                    const char* weather_cmds[] = {
+                        "weather clear", "weather rain", "weather snow",
+                        "weather storm", "weather fog"};
                     ImGui::Combo("Weather", &s_weather, weather_names, 5);
                     ImGui::SameLine();
                     if (ImGui::Button("Set##weather")) {
-                        // TODO: send weather command to server
+                        send_cmd(weather_cmds[s_weather]);
                     }
                 }
 
+                // ---- Spawn ----
                 if (ImGui::CollapsingHeader("Spawn",
                                             ImGuiTreeNodeFlags_DefaultOpen)) {
-                    static char s_search[128] = "";
-                    ImGui::InputText("Search", s_search, sizeof(s_search));
-                    ImGui::Text("(Form browser coming in Phase B)");
-
-                    static char s_formid[32] = "";
+                    static char s_formid[32] = "0x";
                     ImGui::InputText("FormID", s_formid, sizeof(s_formid));
                     ImGui::SameLine();
                     if (ImGui::Button("Spawn")) {
-                        // TODO: send spawn command
+                        char buf[64];
+                        snprintf(buf, sizeof(buf), "spawn %s", s_formid);
+                        send_cmd(buf);
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Give to self")) {
+                        // Give to player_id 0 (self) — need to know own id.
+                        // For now use a fixed give-to-self path.
+                        char buf[64];
+                        snprintf(buf, sizeof(buf), "give 1 %s 1", s_formid);
+                        send_cmd(buf);
                     }
                 }
 
+                // ---- Players ----
                 if (ImGui::CollapsingHeader("Players")) {
-                    ImGui::Text("(Player list coming — wired to rl players)");
+                    std::lock_guard lock(g_data_mu);
+                    if (g_players.empty()) {
+                        ImGui::TextDisabled("No players (waiting for server broadcast)");
+                    } else {
+                        ImGui::Columns(4, "player_cols", true);
+                        ImGui::Text("ID"); ImGui::NextColumn();
+                        ImGui::Text("Name"); ImGui::NextColumn();
+                        ImGui::Text("Level"); ImGui::NextColumn();
+                        ImGui::Text("HP"); ImGui::NextColumn();
+                        ImGui::Separator();
+                        for (const auto& p : g_players) {
+                            ImGui::Text("%u", p.player_id); ImGui::NextColumn();
+                            ImGui::Text("%s", p.character_name[0] ? p.character_name : p.name);
+                            ImGui::NextColumn();
+                            ImGui::Text("%u", static_cast<unsigned>(p.level)); ImGui::NextColumn();
+                            ImGui::Text("%.0f/%.0f", p.hp, p.hp_max); ImGui::NextColumn();
+                        }
+                        ImGui::Columns(1);
+                    }
                 }
 
+                // ---- Spawned NPCs ----
                 if (ImGui::CollapsingHeader("Spawned NPCs")) {
-                    ImGui::Text("(NPC list coming — wired to zeus registry)");
+                    std::lock_guard lock(g_data_mu);
+                    if (g_npcs.empty()) {
+                        ImGui::TextDisabled("No spawned NPCs");
+                    } else {
+                        for (const auto& n : g_npcs) {
+                            ImGui::PushID(static_cast<int>(n.zeus_id));
+                            ImGui::Text("Zeus #%u (0x%x)", n.zeus_id, n.base_form_id);
+                            ImGui::SameLine();
+                            if (ImGui::SmallButton("Follow")) {
+                                char buf[64];
+                                snprintf(buf, sizeof(buf), "npc %u follow", n.zeus_id);
+                                send_cmd(buf);
+                            }
+                            ImGui::SameLine();
+                            if (ImGui::SmallButton("Wait")) {
+                                char buf[64];
+                                snprintf(buf, sizeof(buf), "npc %u wait", n.zeus_id);
+                                send_cmd(buf);
+                            }
+                            ImGui::SameLine();
+                            if (ImGui::SmallButton("Combat")) {
+                                char buf[64];
+                                snprintf(buf, sizeof(buf), "npc %u combat", n.zeus_id);
+                                send_cmd(buf);
+                            }
+                            ImGui::SameLine();
+                            if (ImGui::SmallButton("Delete")) {
+                                char buf[64];
+                                snprintf(buf, sizeof(buf), "npc %u delete", n.zeus_id);
+                                send_cmd(buf);
+                            }
+                            ImGui::PopID();
+                        }
+                    }
                 }
 
-                if (ImGui::CollapsingHeader("Admin")) {
+                // ---- Admin ----
+                if (ImGui::CollapsingHeader("Admin",
+                                            ImGuiTreeNodeFlags_DefaultOpen)) {
                     static bool s_pvp = false;
                     if (ImGui::Checkbox("PvP Enabled", &s_pvp)) {
-                        // TODO: send pvp toggle
+                        send_cmd(s_pvp ? "pvp on" : "pvp off");
+                    }
+
+                    // Kick player
+                    static int s_kick_id = 1;
+                    ImGui::InputInt("Kick ID", &s_kick_id);
+                    ImGui::SameLine();
+                    if (ImGui::Button("Kick")) {
+                        char buf[32];
+                        snprintf(buf, sizeof(buf), "kick %d", s_kick_id);
+                        send_cmd(buf);
                     }
                 }
+
+                ImGui::Separator();
+                ImGui::TextDisabled("Press F8 to close");
             }
             ImGui::End();
         }
+
+        bool g_f8_was_down = false;
 
         HRESULT __stdcall hooked_present(IDXGISwapChain* swap, UINT sync,
                                           UINT flags) {
@@ -139,7 +239,37 @@ namespace relive::zeus_overlay {
                 init_imgui(swap);
             }
 
+            // Poll F8 directly — Skyrim uses DirectInput so WM_KEYDOWN
+            // doesn't reliably reach our WndProc during gameplay.
+            const bool f8_down = (GetAsyncKeyState(VK_F8) & 0x8000) != 0;
+            if (f8_down && !g_f8_was_down) {
+                const bool now_active = !g_active.load(std::memory_order_relaxed);
+                g_active.store(now_active, std::memory_order_relaxed);
+
+                if (now_active) {
+                    // Show cursor + unclip mouse so ImGui can receive clicks.
+                    ClipCursor(nullptr);
+                    while (ShowCursor(TRUE) < 0) {}
+                    auto& io = ImGui::GetIO();
+                    io.MouseDrawCursor = true;
+                } else {
+                    // Hide cursor + let game reclaim mouse.
+                    while (ShowCursor(FALSE) >= 0) {}
+                    auto& io = ImGui::GetIO();
+                    io.MouseDrawCursor = false;
+                }
+                if (g_input_toggle) g_input_toggle(now_active);
+            }
+            g_f8_was_down = f8_down;
+
             if (g_active.load(std::memory_order_relaxed)) {
+                // Manually feed mouse state — Skyrim captures mouse via
+                // DirectInput so WndProc never sees WM_LBUTTONDOWN etc.
+                auto& io = ImGui::GetIO();
+                io.MouseDown[0] = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+                io.MouseDown[1] = (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;
+                io.MouseDown[2] = (GetAsyncKeyState(VK_MBUTTON) & 0x8000) != 0;
+
                 ImGui_ImplDX11_NewFrame();
                 ImGui_ImplWin32_NewFrame();
                 ImGui::NewFrame();
@@ -147,8 +277,10 @@ namespace relive::zeus_overlay {
                 render_zeus_panel();
 
                 ImGui::Render();
-                g_context->OMSetRenderTargets(1, &g_rtv, nullptr);
-                ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+                if (g_rtv) {
+                    g_context->OMSetRenderTargets(1, &g_rtv, nullptr);
+                    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+                }
             }
 
             return g_original_present(swap, sync, flags);
@@ -156,13 +288,6 @@ namespace relive::zeus_overlay {
 
         LRESULT CALLBACK hooked_wndproc(HWND hwnd, UINT msg, WPARAM wp,
                                          LPARAM lp) {
-            // F8 toggles the overlay.
-            if (msg == WM_KEYDOWN && wp == VK_F8) {
-                g_active.store(!g_active.load(std::memory_order_relaxed),
-                               std::memory_order_relaxed);
-                return 0;
-            }
-
             // When overlay is active, feed input to ImGui.
             if (g_active.load(std::memory_order_relaxed)) {
                 if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wp, lp)) {
@@ -182,119 +307,55 @@ namespace relive::zeus_overlay {
     }
 
     void install_hooks() {
-        if (g_installed.exchange(true)) return;
-
-        // We can't install the Present hook here because the swap chain
-        // doesn't exist yet at plugin load time. Instead, we defer to the
-        // first call to toggle() or to a kPostLoadGame callback. The actual
-        // vtable swap happens in hooked_present's lazy init path.
-        //
-        // For now: use a polling approach — the first time hooked_present
-        // is called, it inits ImGui. We just need to GET the swap chain
-        // and hook its Present vtable slot.
-        //
-        // Accessing the swap chain: Skyrim's renderer is initialized by
-        // the time kDataLoaded fires. We'll try to grab it here.
-
-        // The Renderer singleton and its swap chain live behind CommonLib
-        // types we can't include here. Instead, we'll use a workaround:
-        // scan the DXGI factory for the game's swap chain via a known
-        // window class, or hook Present at a known game address.
-        //
-        // Simplest reliable approach: create a dummy D3D device + swap
-        // chain to harvest the IDXGISwapChain vtable, then hook the real
-        // one via the vtable pointer.
-
-        // Step 1: Find the game window.
-        HWND hwnd = FindWindowA("Skyrim Special Edition", nullptr);
-        if (!hwnd) {
-            hwnd = FindWindowA(nullptr, "Skyrim Special Edition");
-        }
-        if (!hwnd) return;
-
-        // Step 2: Create a dummy swap chain to get the Present vtable offset.
-        DXGI_SWAP_CHAIN_DESC sd{};
-        sd.BufferCount = 1;
-        sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        sd.OutputWindow = hwnd;
-        sd.SampleDesc.Count = 1;
-        sd.Windowed = TRUE;
-        sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-
-        D3D_FEATURE_LEVEL feat;
-        ID3D11Device* dummy_dev = nullptr;
-        ID3D11DeviceContext* dummy_ctx = nullptr;
-        IDXGISwapChain* dummy_swap = nullptr;
-
-        HRESULT hr = D3D11CreateDeviceAndSwapChain(
-            nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0,
-            D3D11_SDK_VERSION, &sd, &dummy_swap, &dummy_dev, &feat,
-            &dummy_ctx);
-        if (FAILED(hr) || !dummy_swap) {
-            if (dummy_ctx) dummy_ctx->Release();
-            if (dummy_dev) dummy_dev->Release();
-            return;
-        }
-
-        // Step 3: Read the vtable from the dummy swap chain.
-        auto** vtable = *reinterpret_cast<void***>(dummy_swap);
-        auto* present_addr = vtable[8]; // IDXGISwapChain::Present is slot 8
-
-        dummy_swap->Release();
-        dummy_ctx->Release();
-        dummy_dev->Release();
-
-        // Step 4: Now find the REAL swap chain by scanning the game's DXGI
-        // usage. Actually, the vtable pointer is shared across all swap
-        // chains created by the same DXGI factory — so we can patch the
-        // vtable entry directly and it applies to the game's swap chain too.
-        //
-        // BUT vtable patching is fragile. A more robust approach: use
-        // MinHook or a trampoline to hook the function at `present_addr`.
-        // For now, we'll do a direct vtable overwrite on the game's swap
-        // chain. We need to find it first.
-        //
-        // Re-create a dummy to get the vtable base, then find the game's
-        // real swap chain via DXGI enumeration... this is getting complex.
-        //
-        // SIMPLER: enumerate all windows and find the game's, then use
-        // the GetDevice hack... no.
-        //
-        // SIMPLEST: Hook via kDataLoaded when we have access to CommonLib.
-        // But this file can't include CommonLib.
-        //
-        // PRAGMATIC: export a function that accepts the raw swap chain
-        // pointer from Plugin.cpp (which CAN access CommonLib), and hook
-        // it here.
-
-        // For now, store the vtable address. The actual hook will be
-        // installed when set_swap_chain() is called from Plugin.cpp with
-        // the real pointer obtained via CommonLib.
-        (void)present_addr;
-
-        // Hook WndProc for input forwarding.
-        g_hwnd = hwnd;
-        g_original_wndproc = reinterpret_cast<WNDPROC>(
-            SetWindowLongPtrW(hwnd, GWLP_WNDPROC,
-                              reinterpret_cast<LONG_PTR>(hooked_wndproc)));
+        // No-op at kDataLoaded. The real setup happens in set_swap_chain
+        // when we have the renderer's swap chain pointer.
     }
 
-    // Called from Plugin.cpp with the raw swap chain pointer obtained via
-    // RE::BSGraphics::Renderer. This file can't include CommonLib headers.
     void set_swap_chain(void* swap_chain_ptr) {
         if (!swap_chain_ptr) return;
+        if (g_installed.exchange(true)) return;
+
         auto* swap = static_cast<IDXGISwapChain*>(swap_chain_ptr);
+
+        // Get the HWND from the swap chain descriptor — avoids fragile
+        // FindWindowA with guessed class names.
+        DXGI_SWAP_CHAIN_DESC desc{};
+        swap->GetDesc(&desc);
+        g_hwnd = desc.OutputWindow;
+
+        // Hook WndProc for input forwarding (F8 toggle + ImGui mouse/kb).
+        if (g_hwnd) {
+            g_original_wndproc = reinterpret_cast<WNDPROC>(
+                SetWindowLongPtrW(g_hwnd, GWLP_WNDPROC,
+                                  reinterpret_cast<LONG_PTR>(hooked_wndproc)));
+        }
 
         // Vtable hook: replace Present (slot 8) with our hook.
         auto** vtable = *reinterpret_cast<void***>(swap);
-
         DWORD old_protect;
         VirtualProtect(&vtable[8], sizeof(void*), PAGE_EXECUTE_READWRITE,
                         &old_protect);
         g_original_present = reinterpret_cast<PresentFn>(vtable[8]);
         vtable[8] = reinterpret_cast<void*>(&hooked_present);
         VirtualProtect(&vtable[8], sizeof(void*), old_protect, &old_protect);
+    }
+
+    void set_input_toggle(void(*fn)(bool)) {
+        g_input_toggle = fn;
+    }
+
+    void set_command_callback(void(*fn)(const char*)) {
+        g_command_fn = fn;
+    }
+
+    void push_player_list(const OverlayPlayer* players, unsigned int count) {
+        std::lock_guard lock(g_data_mu);
+        g_players.assign(players, players + count);
+    }
+
+    void push_npc_list(const OverlayNpc* npcs, unsigned int count) {
+        std::lock_guard lock(g_data_mu);
+        g_npcs.assign(npcs, npcs + count);
     }
 
     void toggle() {

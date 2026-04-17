@@ -19,6 +19,7 @@
 #include "Plugin.h"
 #include "Socket.h"
 #include "Zeus.h"
+#include "ZeusOverlay.h"
 
 namespace re_v1 = skyrim_relive::v1;
 
@@ -336,6 +337,21 @@ namespace relive::net {
                 }
                 plugin::update_player_list(
                     static_cast<decltype(entries)&&>(entries));
+                // Push to Zeus overlay.
+                std::vector<zeus_overlay::OverlayPlayer> op;
+                for (const auto& e : plugin::get_player_list()) {
+                    zeus_overlay::OverlayPlayer p{};
+                    p.player_id = e.player_id;
+                    strncpy(p.name, e.display_name.c_str(), sizeof(p.name) - 1);
+                    strncpy(p.character_name, e.character_name.c_str(),
+                            sizeof(p.character_name) - 1);
+                    p.level = e.level;
+                    p.hp = e.hp;
+                    p.hp_max = e.hp_max;
+                    op.push_back(p);
+                }
+                zeus_overlay::push_player_list(op.data(),
+                    static_cast<unsigned>(op.size()));
             } else if (type == re_v1::MessageType_ChatMessage) {
                 const auto* cm = flatbuffers::GetRoot<re_v1::ChatMessage>(body.data());
                 const auto sender = cm->sender_name() ? cm->sender_name()->str() : "???";

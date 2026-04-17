@@ -313,6 +313,25 @@ namespace {
                 SKSE::log::info(
                     "SkyrimReLive: data loaded; waiting for kPostLoadGame/kNewGame");
                 relive::commands::register_console_command();
+                relive::zeus_overlay::set_command_callback([](const char* cmd) {
+                    // Auto-admin: authenticate silently if not already,
+                    // then send the command.
+                    if (g_state.load(std::memory_order_acquire) ==
+                        relive::plugin::ConnState::Connected) {
+                        g_client.send_admin_auth("");
+                        g_client.send_admin_command(cmd);
+                    }
+                });
+                relive::zeus_overlay::set_input_toggle([](bool active) {
+                    auto* controls = RE::ControlMap::GetSingleton();
+                    if (!controls) return;
+                    // false = disable, true = enable. storeState = true so
+                    // the game remembers what was on and restores it.
+                    controls->ToggleControls(
+                        RE::ControlMap::UEFlag::kAll, !active, true);
+                    SKSE::log::info("zeus overlay: game controls {}",
+                                    active ? "disabled" : "re-enabled");
+                });
                 relive::zeus_overlay::install_hooks();
                 break;
             case SKSE::MessagingInterface::kPostLoadGame:
@@ -320,8 +339,16 @@ namespace {
                 relive::plugin::on_world_loaded();
                 // Pass the game's swap chain to the overlay for the Present
                 // hook. Renderer is alive by kPostLoadGame.
-                if (auto* rw = RE::BSGraphics::Renderer::GetCurrentRenderWindow()) {
-                    relive::zeus_overlay::set_swap_chain(rw->swapChain);
+                if (auto* renderer = RE::BSGraphics::Renderer::GetSingleton()) {
+                    auto* rw = renderer->GetCurrentRenderWindow();
+                    if (rw && rw->swapChain) {
+                        SKSE::log::info("zeus overlay: passing swap chain to overlay");
+                        relive::zeus_overlay::set_swap_chain(rw->swapChain);
+                    } else {
+                        SKSE::log::warn("zeus overlay: render window or swap chain is null");
+                    }
+                } else {
+                    SKSE::log::warn("zeus overlay: renderer singleton is null");
                 }
             }
                 break;
