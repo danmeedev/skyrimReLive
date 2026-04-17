@@ -339,49 +339,65 @@ namespace {
                 relive::plugin::on_world_loaded();
                 // Build the form library for the Zeus spawn browser.
                 // Deferred to a task so we don't block the load callback.
-                if (auto* task = SKSE::GetTaskInterface()) {
-                    task->AddTask([]() {
-                        auto* dh = RE::TESDataHandler::GetSingleton();
-                        if (!dh) return;
-                        std::vector<relive::zeus_overlay::FormEntry> forms;
-                        auto add = [&](const char* category, auto& arr) {
-                            for (const auto* form : arr) {
-                                if (!form) continue;
-                                const char* name = form->GetName();
-                                if (!name || !name[0]) continue;
-                                relive::zeus_overlay::FormEntry e{};
-                                e.form_id = form->GetFormID();
-                                strncpy(e.name, name, sizeof(e.name) - 1);
-                                strncpy(e.category, category,
-                                        sizeof(e.category) - 1);
-                                forms.push_back(e);
+                // Defer form scan — kPostLoadGame is too early on some saves.
+                // Use a detached thread with a short delay so the data
+                // handler is fully populated before we iterate it.
+                std::thread([]() {
+                    std::this_thread::sleep_for(std::chrono::seconds(3));
+                    if (auto* task = SKSE::GetTaskInterface()) {
+                        task->AddTask([]() {
+                            auto* dh = RE::TESDataHandler::GetSingleton();
+                            if (!dh) {
+                                SKSE::log::warn("form scan: data handler null");
+                                return;
                             }
-                        };
-                        add("NPC", dh->GetFormArray<RE::TESNPC>());
-                        add("Weapon", dh->GetFormArray<RE::TESObjectWEAP>());
-                        add("Armor", dh->GetFormArray<RE::TESObjectARMO>());
-                        add("Potion", dh->GetFormArray<RE::AlchemyItem>());
-                        add("Misc", dh->GetFormArray<RE::TESObjectMISC>());
-                        add("Ammo", dh->GetFormArray<RE::TESAmmo>());
-                        add("Book", dh->GetFormArray<RE::TESObjectBOOK>());
-                        add("Ingredient", dh->GetFormArray<RE::IngredientItem>());
-                        add("Key", dh->GetFormArray<RE::TESKey>());
-                        add("Scroll", dh->GetFormArray<RE::ScrollItem>());
-                        add("Static", dh->GetFormArray<RE::TESObjectSTAT>());
-                        add("Tree", dh->GetFormArray<RE::TESObjectTREE>());
-                        add("Door", dh->GetFormArray<RE::TESObjectDOOR>());
-                        add("Activator", dh->GetFormArray<RE::TESObjectACTI>());
-                        add("Light", dh->GetFormArray<RE::TESObjectLIGH>());
-                        add("Furniture", dh->GetFormArray<RE::TESFurniture>());
-                        add("Flora", dh->GetFormArray<RE::TESFlora>());
-                        add("MovableStatic", dh->GetFormArray<RE::BGSMovableStatic>());
-                        SKSE::log::info("zeus form browser: indexed {} forms",
-                                        forms.size());
-                        relive::zeus_overlay::push_form_library(
-                            forms.data(),
-                            static_cast<unsigned>(forms.size()));
-                    });
-                }
+                            std::vector<relive::zeus_overlay::FormEntry> forms;
+                            auto add = [&](const char* category, auto& arr) {
+                                for (const auto* form : arr) {
+                                    if (!form) continue;
+                                    const char* name = nullptr;
+                                    __try {
+                                        name = form->GetName();
+                                    } __except(1) {
+                                        continue;
+                                    }
+                                    if (!name || !name[0]) continue;
+                                    relive::zeus_overlay::FormEntry e{};
+                                    e.form_id = form->GetFormID();
+                                    strncpy(e.name, name, sizeof(e.name) - 1);
+                                    strncpy(e.category, category,
+                                            sizeof(e.category) - 1);
+                                    forms.push_back(e);
+                                }
+                                SKSE::log::info("form scan: {} = {} entries",
+                                                category, arr.size());
+                            };
+                            add("NPC", dh->GetFormArray<RE::TESNPC>());
+                            add("Weapon", dh->GetFormArray<RE::TESObjectWEAP>());
+                            add("Armor", dh->GetFormArray<RE::TESObjectARMO>());
+                            add("Potion", dh->GetFormArray<RE::AlchemyItem>());
+                            add("Misc", dh->GetFormArray<RE::TESObjectMISC>());
+                            add("Ammo", dh->GetFormArray<RE::TESAmmo>());
+                            add("Book", dh->GetFormArray<RE::TESObjectBOOK>());
+                            add("Ingredient", dh->GetFormArray<RE::IngredientItem>());
+                            add("Key", dh->GetFormArray<RE::TESKey>());
+                            add("Scroll", dh->GetFormArray<RE::ScrollItem>());
+                            add("Static", dh->GetFormArray<RE::TESObjectSTAT>());
+                            add("Tree", dh->GetFormArray<RE::TESObjectTREE>());
+                            add("Door", dh->GetFormArray<RE::TESObjectDOOR>());
+                            add("Activator", dh->GetFormArray<RE::TESObjectACTI>());
+                            add("Light", dh->GetFormArray<RE::TESObjectLIGH>());
+                            add("Furniture", dh->GetFormArray<RE::TESFurniture>());
+                            add("Flora", dh->GetFormArray<RE::TESFlora>());
+                            add("MovableStatic", dh->GetFormArray<RE::BGSMovableStatic>());
+                            SKSE::log::info("zeus form browser: indexed {} named forms",
+                                            forms.size());
+                            relive::zeus_overlay::push_form_library(
+                                forms.data(),
+                                static_cast<unsigned>(forms.size()));
+                        });
+                    }
+                }).detach();
                 // Pass the game's swap chain to the overlay for the Present
                 // hook. Renderer is alive by kPostLoadGame.
                 if (auto* renderer = RE::BSGraphics::Renderer::GetSingleton()) {
