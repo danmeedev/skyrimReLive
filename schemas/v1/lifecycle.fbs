@@ -55,6 +55,13 @@ table AdminCommandResult {
     message: string;   // human-readable output, printed to console
 }
 
+// Zeus Phase 0: server-to-all-clients command. Used for world state
+// changes that every client must apply locally (time, weather, etc.).
+table ServerCommand {
+    command: string;    // e.g. "time", "weather"
+    args: string;       // e.g. "14", "0x10e1f2"
+}
+
 // Zeus Phase 0: text chat. Client sends ChatMessage to server; server
 // broadcasts to all connected peers with the sender's info filled in.
 table ChatMessage {

@@ -15,9 +15,10 @@ use skyrim_relive_server::proto::v1::{
     DamageApplyArgs, Disconnect, DisconnectArgs, DisconnectCode, Hello, MessageType, PlayerInput,
     PlayerList as FbPlayerList, PlayerListArgs as FbPlayerListArgs,
     PlayerListEntry as FbPlayerListEntry, PlayerListEntryArgs as FbPlayerListEntryArgs,
-    PlayerState as FbPlayerState, PlayerStateArgs as FbPlayerStateArgs, SkillEntry as FbSkillEntry,
-    SkillEntryArgs as FbSkillEntryArgs, Transform as FbTransform, Vec3 as FbVec3, Welcome,
-    WelcomeArgs, WorldSnapshot, WorldSnapshotArgs,
+    PlayerState as FbPlayerState, PlayerStateArgs as FbPlayerStateArgs, ServerCommand,
+    ServerCommandArgs, SkillEntry as FbSkillEntry, SkillEntryArgs as FbSkillEntryArgs,
+    Transform as FbTransform, Vec3 as FbVec3, Welcome, WelcomeArgs, WorldSnapshot,
+    WorldSnapshotArgs,
 };
 use skyrim_relive_server::wire;
 use tokio::net::UdpSocket;
@@ -132,7 +133,8 @@ impl ServerState {
             | MessageType::DamageApply
             | MessageType::PlayerList
             | MessageType::AdminAuthResult
-            | MessageType::AdminCommandResult => {
+            | MessageType::AdminCommandResult
+            | MessageType::ServerCommand => {
                 warn!(%peer, ?mt, "client sent server-only message; ignoring");
             }
             _ => warn!(%peer, ?mt, "unhandled message type"),
@@ -437,6 +439,28 @@ impl ServerState {
         }
     }
 
+    async fn broadcast_server_command(&mut self, command: &str, args: &str) {
+        let mut fbb = FlatBufferBuilder::with_capacity(64);
+        let cmd_off = fbb.create_string(command);
+        let args_off = fbb.create_string(args);
+        let sc = ServerCommand::create(
+            &mut fbb,
+            &ServerCommandArgs {
+                command: Some(cmd_off),
+                args: Some(args_off),
+            },
+        );
+        fbb.finish(sc, None);
+        let packet = wire::encode(MessageType::ServerCommand, fbb.finished_data());
+        for (_, conn) in self
+            .world
+            .query::<(Entity, &Connection)>()
+            .iter(&self.world)
+        {
+            let _ = self.socket.send_to(&packet, conn.addr).await;
+        }
+    }
+
     async fn send_admin_result(&self, peer: SocketAddr, success: bool, msg: &str) {
         let mut fbb = FlatBufferBuilder::with_capacity(128);
         let msg_off = fbb.create_string(msg);
@@ -600,11 +624,60 @@ impl ServerState {
                 self.send_admin_result(peer, true, &format!("kicked player_id {target_id}"))
                     .await;
             }
+            "time" => {
+                if parts.len() < 2 {
+                    self.send_admin_result(peer, false, "usage: time <hour> (0-23)")
+                        .await;
+                    return;
+                }
+                let Ok(hour) = parts[1].parse::<f32>() else {
+                    self.send_admin_result(peer, false, "bad hour value").await;
+                    return;
+                };
+                if !(0.0..=24.0).contains(&hour) {
+                    self.send_admin_result(peer, false, "hour must be 0-24")
+                        .await;
+                    return;
+                }
+                self.broadcast_server_command("time", parts[1]).await;
+                self.send_admin_result(
+                    peer,
+                    true,
+                    &format!("time set to {hour:.0}:00 for all players"),
+                )
+                .await;
+            }
+            "weather" => {
+                if parts.len() < 2 {
+                    self.send_admin_result(
+                        peer,
+                        false,
+                        "usage: weather <formid> (hex, e.g. 10e1f2) or: weather clear|rain|snow|storm",
+                    )
+                    .await;
+                    return;
+                }
+                let arg = match parts[1] {
+                    "clear" => "0x81a",
+                    "rain" | "rainy" => "0x10a23e",
+                    "snow" | "snowy" => "0x10e1f2",
+                    "storm" | "thunder" => "0x10a241",
+                    "fog" | "foggy" => "0x10e1f0",
+                    other => other,
+                };
+                self.broadcast_server_command("weather", arg).await;
+                self.send_admin_result(
+                    peer,
+                    true,
+                    &format!("weather set to {arg} for all players"),
+                )
+                .await;
+            }
             "help" => {
                 self.send_admin_result(
                     peer,
                     true,
-                    "admin commands: pvp on|off, kick <player_id>, help",
+                    "admin commands: pvp on|off, kick <id>, time <hour>, weather <type|formid>, help",
                 )
                 .await;
             }
@@ -612,7 +685,10 @@ impl ServerState {
                 self.send_admin_result(
                     peer,
                     false,
-                    &format!("unknown admin command '{}'; try: pvp, kick, help", parts[0]),
+                    &format!(
+                        "unknown admin command '{}'; try: pvp, kick, time, weather, help",
+                        parts[0]
+                    ),
                 )
                 .await;
             }

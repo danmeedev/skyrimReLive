@@ -27,6 +27,7 @@ enum MessageType : ubyte {
     AdminAuthResult = 51, // S → C: auth success/failure
     AdminCommand  = 52,  // C → S: admin command string
     AdminCommandResult = 53, // S → C: command result
+    ServerCommand = 54,      // S → C: world state command broadcast to all
 }
 
 // Shared type: a skill name + level pair. String name (not enum) keeps us

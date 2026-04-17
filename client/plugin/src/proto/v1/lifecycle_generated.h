@@ -45,6 +45,9 @@ struct AdminCommandBuilder;
 struct AdminCommandResult;
 struct AdminCommandResultBuilder;
 
+struct ServerCommand;
+struct ServerCommandBuilder;
+
 struct ChatMessage;
 struct ChatMessageBuilder;
 
@@ -629,6 +632,72 @@ inline ::flatbuffers::Offset<AdminCommandResult> CreateAdminCommandResultDirect(
       _fbb,
       success,
       message__);
+}
+
+struct ServerCommand FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef ServerCommandBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_COMMAND = 4,
+    VT_ARGS = 6
+  };
+  const ::flatbuffers::String *command() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_COMMAND);
+  }
+  const ::flatbuffers::String *args() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_ARGS);
+  }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_COMMAND) &&
+           verifier.VerifyString(command()) &&
+           VerifyOffset(verifier, VT_ARGS) &&
+           verifier.VerifyString(args()) &&
+           verifier.EndTable();
+  }
+};
+
+struct ServerCommandBuilder {
+  typedef ServerCommand Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_command(::flatbuffers::Offset<::flatbuffers::String> command) {
+    fbb_.AddOffset(ServerCommand::VT_COMMAND, command);
+  }
+  void add_args(::flatbuffers::Offset<::flatbuffers::String> args) {
+    fbb_.AddOffset(ServerCommand::VT_ARGS, args);
+  }
+  explicit ServerCommandBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<ServerCommand> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<ServerCommand>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<ServerCommand> CreateServerCommand(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> command = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> args = 0) {
+  ServerCommandBuilder builder_(_fbb);
+  builder_.add_args(args);
+  builder_.add_command(command);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<ServerCommand> CreateServerCommandDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    const char *command = nullptr,
+    const char *args = nullptr) {
+  auto command__ = command ? _fbb.CreateString(command) : 0;
+  auto args__ = args ? _fbb.CreateString(args) : 0;
+  return skyrim_relive::v1::CreateServerCommand(
+      _fbb,
+      command__,
+      args__);
 }
 
 struct ChatMessage FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {

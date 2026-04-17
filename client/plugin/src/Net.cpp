@@ -375,6 +375,39 @@ namespace relive::net {
                         }
                     });
                 }
+            } else if (type == re_v1::MessageType_ServerCommand) {
+                const auto* sc = flatbuffers::GetRoot<re_v1::ServerCommand>(body.data());
+                const auto cmd = sc->command() ? sc->command()->str() : "";
+                const auto args = sc->args() ? sc->args()->str() : "";
+                if (auto* task = SKSE::GetTaskInterface()) {
+                    task->AddTask([cmd, args]() {
+                        if (cmd == "time") {
+                            float hour = 12.0F;
+                            try { hour = std::stof(args); } catch (...) {}
+                            auto* cal = RE::Calendar::GetSingleton();
+                            if (cal && cal->gameHour) {
+                                cal->gameHour->value = hour;
+                            }
+                            if (auto* c = RE::ConsoleLog::GetSingleton()) {
+                                c->Print("[Server] Time set to %.0f:00", hour);
+                            }
+                        } else if (cmd == "weather") {
+                            RE::FormID formId = 0;
+                            try { formId = std::stoul(args, nullptr, 0); } catch (...) {}
+                            if (formId != 0) {
+                                auto* weather = RE::TESForm::LookupByID<RE::TESWeather>(formId);
+                                auto* sky = RE::Sky::GetSingleton();
+                                if (weather && sky) {
+                                    sky->ForceWeather(weather, true);
+                                }
+                            }
+                            if (auto* c = RE::ConsoleLog::GetSingleton()) {
+                                c->Print("[Server] Weather changed");
+                            }
+                        }
+                        SKSE::log::info("ServerCommand: cmd={} args={}", cmd, args);
+                    });
+                }
             } else if (type == re_v1::MessageType_DamageApply) {
                 const auto* d = flatbuffers::GetRoot<re_v1::DamageApply>(body.data());
                 combat::on_damage_apply(d->attacker_player_id(), d->damage(),

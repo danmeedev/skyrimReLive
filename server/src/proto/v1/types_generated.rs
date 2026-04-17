@@ -31,13 +31,13 @@ pub mod skyrim_relive {
             since = "2.0.0",
             note = "Use associated constants instead. This will no longer be generated in 2021."
         )]
-        pub const ENUM_MAX_MESSAGE_TYPE: u8 = 53;
+        pub const ENUM_MAX_MESSAGE_TYPE: u8 = 54;
         #[deprecated(
             since = "2.0.0",
             note = "Use associated constants instead. This will no longer be generated in 2021."
         )]
         #[allow(non_camel_case_types)]
-        pub const ENUM_VALUES_MESSAGE_TYPE: [MessageType; 15] = [
+        pub const ENUM_VALUES_MESSAGE_TYPE: [MessageType; 16] = [
             MessageType::Hello,
             MessageType::Welcome,
             MessageType::Heartbeat,
@@ -53,6 +53,7 @@ pub mod skyrim_relive {
             MessageType::AdminAuthResult,
             MessageType::AdminCommand,
             MessageType::AdminCommandResult,
+            MessageType::ServerCommand,
         ];
 
         #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -75,9 +76,10 @@ pub mod skyrim_relive {
             pub const AdminAuthResult: Self = Self(51);
             pub const AdminCommand: Self = Self(52);
             pub const AdminCommandResult: Self = Self(53);
+            pub const ServerCommand: Self = Self(54);
 
             pub const ENUM_MIN: u8 = 1;
-            pub const ENUM_MAX: u8 = 53;
+            pub const ENUM_MAX: u8 = 54;
             pub const ENUM_VALUES: &'static [Self] = &[
                 Self::Hello,
                 Self::Welcome,
@@ -94,6 +96,7 @@ pub mod skyrim_relive {
                 Self::AdminAuthResult,
                 Self::AdminCommand,
                 Self::AdminCommandResult,
+                Self::ServerCommand,
             ];
             /// Returns the variant's name or "" if unknown.
             pub fn variant_name(self) -> Option<&'static str> {
@@ -113,6 +116,7 @@ pub mod skyrim_relive {
                     Self::AdminAuthResult => Some("AdminAuthResult"),
                     Self::AdminCommand => Some("AdminCommand"),
                     Self::AdminCommandResult => Some("AdminCommandResult"),
+                    Self::ServerCommand => Some("ServerCommand"),
                     _ => None,
                 }
             }

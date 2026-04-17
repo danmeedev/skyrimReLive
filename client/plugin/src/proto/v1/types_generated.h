@@ -35,11 +35,12 @@ enum MessageType : uint8_t {
   MessageType_AdminAuthResult = 51,
   MessageType_AdminCommand = 52,
   MessageType_AdminCommandResult = 53,
+  MessageType_ServerCommand = 54,
   MessageType_MIN = MessageType_Hello,
-  MessageType_MAX = MessageType_AdminCommandResult
+  MessageType_MAX = MessageType_ServerCommand
 };
 
-inline const MessageType (&EnumValuesMessageType())[15] {
+inline const MessageType (&EnumValuesMessageType())[16] {
   static const MessageType values[] = {
     MessageType_Hello,
     MessageType_Welcome,
@@ -55,13 +56,14 @@ inline const MessageType (&EnumValuesMessageType())[15] {
     MessageType_AdminAuth,
     MessageType_AdminAuthResult,
     MessageType_AdminCommand,
-    MessageType_AdminCommandResult
+    MessageType_AdminCommandResult,
+    MessageType_ServerCommand
   };
   return values;
 }
 
 inline const char * const *EnumNamesMessageType() {
-  static const char * const names[54] = {
+  static const char * const names[55] = {
     "Hello",
     "Welcome",
     "Heartbeat",
@@ -115,13 +117,14 @@ inline const char * const *EnumNamesMessageType() {
     "AdminAuthResult",
     "AdminCommand",
     "AdminCommandResult",
+    "ServerCommand",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameMessageType(MessageType e) {
-  if (::flatbuffers::IsOutRange(e, MessageType_Hello, MessageType_AdminCommandResult)) return "";
+  if (::flatbuffers::IsOutRange(e, MessageType_Hello, MessageType_ServerCommand)) return "";
   const size_t index = static_cast<size_t>(e) - static_cast<size_t>(MessageType_Hello);
   return EnumNamesMessageType()[index];
 }

@@ -1330,6 +1330,152 @@ pub mod skyrim_relive {
                 ds.finish()
             }
         }
+        pub enum ServerCommandOffset {}
+        #[derive(Copy, Clone, PartialEq)]
+
+        pub struct ServerCommand<'a> {
+            pub _tab: ::flatbuffers::Table<'a>,
+        }
+
+        impl<'a> ::flatbuffers::Follow<'a> for ServerCommand<'a> {
+            type Inner = ServerCommand<'a>;
+            #[inline]
+            unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+                Self {
+                    _tab: unsafe { ::flatbuffers::Table::new(buf, loc) },
+                }
+            }
+        }
+
+        impl<'a> ServerCommand<'a> {
+            pub const VT_COMMAND: ::flatbuffers::VOffsetT = 4;
+            pub const VT_ARGS: ::flatbuffers::VOffsetT = 6;
+
+            #[inline]
+            pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+                ServerCommand { _tab: table }
+            }
+            #[allow(unused_mut)]
+            pub fn create<
+                'bldr: 'args,
+                'args: 'mut_bldr,
+                'mut_bldr,
+                A: ::flatbuffers::Allocator + 'bldr,
+            >(
+                _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+                args: &'args ServerCommandArgs<'args>,
+            ) -> ::flatbuffers::WIPOffset<ServerCommand<'bldr>> {
+                let mut builder = ServerCommandBuilder::new(_fbb);
+                if let Some(x) = args.args {
+                    builder.add_args(x);
+                }
+                if let Some(x) = args.command {
+                    builder.add_command(x);
+                }
+                builder.finish()
+            }
+
+            #[inline]
+            pub fn command(&self) -> Option<&'a str> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(
+                        ServerCommand::VT_COMMAND,
+                        None,
+                    )
+                }
+            }
+            #[inline]
+            pub fn args(&self) -> Option<&'a str> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<::flatbuffers::ForwardsUOffset<&str>>(ServerCommand::VT_ARGS, None)
+                }
+            }
+        }
+
+        impl ::flatbuffers::Verifiable for ServerCommand<'_> {
+            #[inline]
+            fn run_verifier(
+                v: &mut ::flatbuffers::Verifier,
+                pos: usize,
+            ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+                v.visit_table(pos)?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<&str>>(
+                        "command",
+                        Self::VT_COMMAND,
+                        false,
+                    )?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<&str>>(
+                        "args",
+                        Self::VT_ARGS,
+                        false,
+                    )?
+                    .finish();
+                Ok(())
+            }
+        }
+        pub struct ServerCommandArgs<'a> {
+            pub command: Option<::flatbuffers::WIPOffset<&'a str>>,
+            pub args: Option<::flatbuffers::WIPOffset<&'a str>>,
+        }
+        impl<'a> Default for ServerCommandArgs<'a> {
+            #[inline]
+            fn default() -> Self {
+                ServerCommandArgs {
+                    command: None,
+                    args: None,
+                }
+            }
+        }
+
+        pub struct ServerCommandBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+            fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+        }
+        impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> ServerCommandBuilder<'a, 'b, A> {
+            #[inline]
+            pub fn add_command(&mut self, command: ::flatbuffers::WIPOffset<&'b str>) {
+                self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(
+                    ServerCommand::VT_COMMAND,
+                    command,
+                );
+            }
+            #[inline]
+            pub fn add_args(&mut self, args: ::flatbuffers::WIPOffset<&'b str>) {
+                self.fbb_
+                    .push_slot_always::<::flatbuffers::WIPOffset<_>>(ServerCommand::VT_ARGS, args);
+            }
+            #[inline]
+            pub fn new(
+                _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            ) -> ServerCommandBuilder<'a, 'b, A> {
+                let start = _fbb.start_table();
+                ServerCommandBuilder {
+                    fbb_: _fbb,
+                    start_: start,
+                }
+            }
+            #[inline]
+            pub fn finish(self) -> ::flatbuffers::WIPOffset<ServerCommand<'a>> {
+                let o = self.fbb_.end_table(self.start_);
+                ::flatbuffers::WIPOffset::new(o.value())
+            }
+        }
+
+        impl ::core::fmt::Debug for ServerCommand<'_> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                let mut ds = f.debug_struct("ServerCommand");
+                ds.field("command", &self.command());
+                ds.field("args", &self.args());
+                ds.finish()
+            }
+        }
         pub enum ChatMessageOffset {}
         #[derive(Copy, Clone, PartialEq)]
 
