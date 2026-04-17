@@ -33,6 +33,7 @@ namespace relive::zeus_overlay {
         using CommandFn = void(*)(const char*);
         using OverlayPlayer = relive::zeus_overlay::OverlayPlayer;
         using OverlayNpc = relive::zeus_overlay::OverlayNpc;
+        using FormEntry = relive::zeus_overlay::FormEntry;
 
         std::atomic<bool> g_installed{false};
         std::atomic<bool> g_active{false};
@@ -43,6 +44,22 @@ namespace relive::zeus_overlay {
         std::mutex g_data_mu;
         std::vector<OverlayPlayer> g_players;
         std::vector<OverlayNpc> g_npcs;
+        std::vector<FormEntry> g_forms;
+
+        // Case-insensitive substring match.
+        bool icontains(const char* haystack, const char* needle) {
+            if (!needle[0]) return true;
+            for (const char* h = haystack; *h; ++h) {
+                const char* a = h;
+                const char* b = needle;
+                while (*a && *b && (tolower(static_cast<unsigned char>(*a)) ==
+                                    tolower(static_cast<unsigned char>(*b)))) {
+                    ++a; ++b;
+                }
+                if (!*b) return true;
+            }
+            return false;
+        }
 
         void send_cmd(const char* fmt_cmd) {
             if (g_command_fn) g_command_fn(fmt_cmd);
@@ -124,21 +141,68 @@ namespace relive::zeus_overlay {
                     }
                 }
 
-                // ---- Spawn ----
-                if (ImGui::CollapsingHeader("Spawn",
+                // ---- Spawn / Item Browser ----
+                if (ImGui::CollapsingHeader("Spawn / Browse",
                                             ImGuiTreeNodeFlags_DefaultOpen)) {
-                    static char s_formid[32] = "0x";
-                    ImGui::InputText("FormID", s_formid, sizeof(s_formid));
+                    static char s_search[128] = "";
+                    static int s_cat_filter = 0;
+                    const char* categories[] = {
+                        "All", "NPC", "Weapon", "Armor", "Potion",
+                        "Misc", "Ammo", "Book", "Ingredient", "Key", "Scroll"};
+                    ImGui::InputText("Search", s_search, sizeof(s_search));
                     ImGui::SameLine();
-                    if (ImGui::Button("Spawn")) {
+                    ImGui::SetNextItemWidth(100);
+                    ImGui::Combo("##cat", &s_cat_filter, categories, 11);
+
+                    {
+                        std::lock_guard lock(g_data_mu);
+                        const char* cat_str = s_cat_filter > 0 ? categories[s_cat_filter] : nullptr;
+                        int shown = 0;
+                        ImGui::BeginChild("form_list", ImVec2(0, 200), true);
+                        for (const auto& f : g_forms) {
+                            if (f.name[0] == '\0') continue;
+                            if (cat_str && strcmp(f.category, cat_str) != 0) continue;
+                            if (s_search[0] && !icontains(f.name, s_search)) continue;
+                            if (++shown > 200) {
+                                ImGui::TextDisabled("... too many results, refine search");
+                                break;
+                            }
+                            ImGui::PushID(static_cast<int>(f.form_id));
+                            char label[192];
+                            snprintf(label, sizeof(label), "[%s] %s (0x%x)",
+                                     f.category, f.name, f.form_id);
+                            if (ImGui::Selectable(label, false)) {
+                                char buf[64];
+                                snprintf(buf, sizeof(buf), "spawn 0x%x", f.form_id);
+                                send_cmd(buf);
+                            }
+                            if (ImGui::IsItemHovered()) {
+                                ImGui::BeginTooltip();
+                                ImGui::Text("Left-click: Spawn at your position");
+                                ImGui::Text("FormID: 0x%x", f.form_id);
+                                ImGui::EndTooltip();
+                            }
+                            ImGui::PopID();
+                        }
+                        if (shown == 0) {
+                            ImGui::TextDisabled(g_forms.empty()
+                                ? "Form library loading..."
+                                : "No results. Try a different search.");
+                        }
+                        ImGui::EndChild();
+                    }
+
+                    // Manual FormID fallback
+                    static char s_formid[32] = "0x";
+                    ImGui::InputText("Manual FormID", s_formid, sizeof(s_formid));
+                    ImGui::SameLine();
+                    if (ImGui::Button("Spawn##manual")) {
                         char buf[64];
                         snprintf(buf, sizeof(buf), "spawn %s", s_formid);
                         send_cmd(buf);
                     }
                     ImGui::SameLine();
-                    if (ImGui::Button("Give to self")) {
-                        // Give to player_id 0 (self) — need to know own id.
-                        // For now use a fixed give-to-self path.
+                    if (ImGui::Button("Give##manual")) {
                         char buf[64];
                         snprintf(buf, sizeof(buf), "give 1 %s 1", s_formid);
                         send_cmd(buf);
@@ -356,6 +420,11 @@ namespace relive::zeus_overlay {
     void push_npc_list(const OverlayNpc* npcs, unsigned int count) {
         std::lock_guard lock(g_data_mu);
         g_npcs.assign(npcs, npcs + count);
+    }
+
+    void push_form_library(const FormEntry* entries, unsigned int count) {
+        std::lock_guard lock(g_data_mu);
+        g_forms.assign(entries, entries + count);
     }
 
     void toggle() {

@@ -37,6 +37,13 @@ namespace relive::zeus_overlay {
     };
     void push_npc_list(const OverlayNpc* npcs, unsigned int count);
 
+    struct FormEntry {
+        unsigned int form_id;
+        char name[128];
+        char category[16]; // "NPC", "Weapon", "Armor", "Potion", "Misc", etc.
+    };
+    void push_form_library(const FormEntry* entries, unsigned int count);
+
     // Install WndProc hook for input. Call at kDataLoaded. Idempotent.
     void install_hooks();
 
