@@ -30,11 +30,12 @@ enum MessageType : uint8_t {
   MessageType_CombatEvent = 32,
   MessageType_DamageApply = 33,
   MessageType_PlayerList = 48,
+  MessageType_ChatMessage = 49,
   MessageType_MIN = MessageType_Hello,
-  MessageType_MAX = MessageType_PlayerList
+  MessageType_MAX = MessageType_ChatMessage
 };
 
-inline const MessageType (&EnumValuesMessageType())[10] {
+inline const MessageType (&EnumValuesMessageType())[11] {
   static const MessageType values[] = {
     MessageType_Hello,
     MessageType_Welcome,
@@ -45,13 +46,14 @@ inline const MessageType (&EnumValuesMessageType())[10] {
     MessageType_WorldSnapshot,
     MessageType_CombatEvent,
     MessageType_DamageApply,
-    MessageType_PlayerList
+    MessageType_PlayerList,
+    MessageType_ChatMessage
   };
   return values;
 }
 
 inline const char * const *EnumNamesMessageType() {
-  static const char * const names[49] = {
+  static const char * const names[50] = {
     "Hello",
     "Welcome",
     "Heartbeat",
@@ -100,13 +102,14 @@ inline const char * const *EnumNamesMessageType() {
     "",
     "",
     "PlayerList",
+    "ChatMessage",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameMessageType(MessageType e) {
-  if (::flatbuffers::IsOutRange(e, MessageType_Hello, MessageType_PlayerList)) return "";
+  if (::flatbuffers::IsOutRange(e, MessageType_Hello, MessageType_ChatMessage)) return "";
   const size_t index = static_cast<size_t>(e) - static_cast<size_t>(MessageType_Hello);
   return EnumNamesMessageType()[index];
 }

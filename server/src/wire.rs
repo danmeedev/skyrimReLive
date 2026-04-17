@@ -84,7 +84,8 @@ pub fn parse(packet: &[u8]) -> Result<(MessageType, &[u8]), DecodeError> {
         | MessageType::WorldSnapshot
         | MessageType::CombatEvent
         | MessageType::DamageApply
-        | MessageType::PlayerList => Ok((mt, &packet[HEADER_LEN..])),
+        | MessageType::PlayerList
+        | MessageType::ChatMessage => Ok((mt, &packet[HEADER_LEN..])),
         _ => Err(DecodeError::UnknownType(raw)),
     }
 }

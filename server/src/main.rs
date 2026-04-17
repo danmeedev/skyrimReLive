@@ -10,11 +10,11 @@ use skyrim_relive_server::components::{
 };
 use skyrim_relive_server::config::Config;
 use skyrim_relive_server::proto::v1::{
-    AttackClass, CombatEvent, DamageApply, DamageApplyArgs, Disconnect, DisconnectArgs,
-    DisconnectCode, Hello, MessageType, PlayerInput, PlayerList as FbPlayerList,
-    PlayerListArgs as FbPlayerListArgs, PlayerListEntry as FbPlayerListEntry,
-    PlayerListEntryArgs as FbPlayerListEntryArgs, PlayerState as FbPlayerState,
-    PlayerStateArgs as FbPlayerStateArgs, SkillEntry as FbSkillEntry,
+    AttackClass, ChatMessage, ChatMessageArgs, CombatEvent, DamageApply, DamageApplyArgs,
+    Disconnect, DisconnectArgs, DisconnectCode, Hello, MessageType, PlayerInput,
+    PlayerList as FbPlayerList, PlayerListArgs as FbPlayerListArgs,
+    PlayerListEntry as FbPlayerListEntry, PlayerListEntryArgs as FbPlayerListEntryArgs,
+    PlayerState as FbPlayerState, PlayerStateArgs as FbPlayerStateArgs, SkillEntry as FbSkillEntry,
     SkillEntryArgs as FbSkillEntryArgs, Transform as FbTransform, Vec3 as FbVec3, Welcome,
     WelcomeArgs, WorldSnapshot, WorldSnapshotArgs,
 };
@@ -122,6 +122,7 @@ impl ServerState {
             MessageType::LeaveNotify => self.handle_leave(peer),
             MessageType::PlayerInput => self.handle_player_input(peer, body),
             MessageType::CombatEvent => self.handle_combat_event(peer, body).await,
+            MessageType::ChatMessage => self.handle_chat_message(peer, body).await,
             MessageType::Welcome
             | MessageType::Disconnect
             | MessageType::WorldSnapshot
@@ -427,6 +428,61 @@ impl ServerState {
         let packet = wire::encode(MessageType::DamageApply, fbb.finished_data());
         if let Err(e) = self.socket.send_to(&packet, target_addr).await {
             warn!(peer = %target_addr, error = %e, "DamageApply send failed");
+        }
+    }
+
+    async fn handle_chat_message(&mut self, peer: SocketAddr, body: &[u8]) {
+        let Some(&sender_entity) = self.addr_to_entity.get(&peer) else {
+            warn!(%peer, "ChatMessage from unknown peer");
+            return;
+        };
+        let msg = match flatbuffers::root::<ChatMessage<'_>>(body) {
+            Ok(m) => m,
+            Err(e) => {
+                warn!(%peer, error = %e, "bad ChatMessage payload");
+                return;
+            }
+        };
+        let text = msg.text().unwrap_or("").to_owned();
+        if text.is_empty() {
+            return;
+        }
+        let (sender_pid, sender_name) = self
+            .world
+            .get::<Player>(sender_entity)
+            .map_or((0, String::new()), |p| (p.id, p.name.clone()));
+
+        info!(%peer, sender_pid, %sender_name, %text, "chat");
+
+        let now_ms = u64::try_from(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_millis())
+                .unwrap_or(0),
+        )
+        .unwrap_or(0);
+
+        let mut fbb = FlatBufferBuilder::with_capacity(128);
+        let name_off = fbb.create_string(&sender_name);
+        let text_off = fbb.create_string(&text);
+        let cm = ChatMessage::create(
+            &mut fbb,
+            &ChatMessageArgs {
+                player_id: sender_pid,
+                sender_name: Some(name_off),
+                text: Some(text_off),
+                server_time_ms: now_ms,
+            },
+        );
+        fbb.finish(cm, None);
+        let packet = wire::encode(MessageType::ChatMessage, fbb.finished_data());
+
+        for (_, conn) in self
+            .world
+            .query::<(Entity, &Connection)>()
+            .iter(&self.world)
+        {
+            let _ = self.socket.send_to(&packet, conn.addr).await;
         }
     }
 

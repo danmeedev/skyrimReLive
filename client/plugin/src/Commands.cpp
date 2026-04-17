@@ -49,6 +49,7 @@ namespace relive::commands {
                    "  rl cell set [hex]          pin target to current cell, or to hex form ID\n"
                    "  rl cell clear              target any cell\n"
                    "  rl players                 show connected players\n"
+                   "  rl chat <message>          send a chat message to all players\n"
                    "  rl demo start              spawn a synthetic orbiting ghost (solo test)\n"
                    "  rl demo stop               despawn the demo ghost\n"
                    "  rl help                    this message";
@@ -187,6 +188,20 @@ namespace relive::commands {
         if (args[0] == "disconnect")  return plugin::stop_connection();
         if (args[0] == "cell")        return do_cell(args);
         if (args[0] == "players")     return do_players();
+        if (args[0] == "chat") {
+            if (args.size() < 2) return "usage: rl chat <message>";
+            // Rejoin everything after "chat" as the message text.
+            auto sv = cmdline;
+            const auto pos = sv.find("chat");
+            if (pos != std::string_view::npos) {
+                sv = sv.substr(pos + 4);
+                while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.front())))
+                    sv.remove_prefix(1);
+            }
+            if (sv.empty()) return "usage: rl chat <message>";
+            plugin::send_chat(sv);
+            return "";
+        }
         if (args[0] == "demo") {
             if (args.size() < 2 || args[1] == "status") {
                 return plugin::demo_running() ? "demo running" : "demo idle";

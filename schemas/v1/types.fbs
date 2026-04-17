@@ -22,6 +22,7 @@ enum MessageType : ubyte {
 
     // Zeus / admin (48..)
     PlayerList    = 48,  // S → C: periodic player roster broadcast
+    ChatMessage   = 49,  // C → S and S → C: text chat relay
 }
 
 // Shared type: a skill name + level pair. String name (not enum) keeps us

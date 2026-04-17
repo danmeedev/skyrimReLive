@@ -818,5 +818,195 @@ pub mod skyrim_relive {
                 ds.finish()
             }
         }
+        pub enum ChatMessageOffset {}
+        #[derive(Copy, Clone, PartialEq)]
+
+        pub struct ChatMessage<'a> {
+            pub _tab: ::flatbuffers::Table<'a>,
+        }
+
+        impl<'a> ::flatbuffers::Follow<'a> for ChatMessage<'a> {
+            type Inner = ChatMessage<'a>;
+            #[inline]
+            unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+                Self {
+                    _tab: unsafe { ::flatbuffers::Table::new(buf, loc) },
+                }
+            }
+        }
+
+        impl<'a> ChatMessage<'a> {
+            pub const VT_PLAYER_ID: ::flatbuffers::VOffsetT = 4;
+            pub const VT_SENDER_NAME: ::flatbuffers::VOffsetT = 6;
+            pub const VT_TEXT: ::flatbuffers::VOffsetT = 8;
+            pub const VT_SERVER_TIME_MS: ::flatbuffers::VOffsetT = 10;
+
+            #[inline]
+            pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+                ChatMessage { _tab: table }
+            }
+            #[allow(unused_mut)]
+            pub fn create<
+                'bldr: 'args,
+                'args: 'mut_bldr,
+                'mut_bldr,
+                A: ::flatbuffers::Allocator + 'bldr,
+            >(
+                _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+                args: &'args ChatMessageArgs<'args>,
+            ) -> ::flatbuffers::WIPOffset<ChatMessage<'bldr>> {
+                let mut builder = ChatMessageBuilder::new(_fbb);
+                builder.add_server_time_ms(args.server_time_ms);
+                if let Some(x) = args.text {
+                    builder.add_text(x);
+                }
+                if let Some(x) = args.sender_name {
+                    builder.add_sender_name(x);
+                }
+                builder.add_player_id(args.player_id);
+                builder.finish()
+            }
+
+            #[inline]
+            pub fn player_id(&self) -> u32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u32>(ChatMessage::VT_PLAYER_ID, Some(0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn sender_name(&self) -> Option<&'a str> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(
+                        ChatMessage::VT_SENDER_NAME,
+                        None,
+                    )
+                }
+            }
+            #[inline]
+            pub fn text(&self) -> Option<&'a str> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<::flatbuffers::ForwardsUOffset<&str>>(ChatMessage::VT_TEXT, None)
+                }
+            }
+            #[inline]
+            pub fn server_time_ms(&self) -> u64 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u64>(ChatMessage::VT_SERVER_TIME_MS, Some(0))
+                        .unwrap()
+                }
+            }
+        }
+
+        impl ::flatbuffers::Verifiable for ChatMessage<'_> {
+            #[inline]
+            fn run_verifier(
+                v: &mut ::flatbuffers::Verifier,
+                pos: usize,
+            ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+                v.visit_table(pos)?
+                    .visit_field::<u32>("player_id", Self::VT_PLAYER_ID, false)?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<&str>>(
+                        "sender_name",
+                        Self::VT_SENDER_NAME,
+                        false,
+                    )?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<&str>>(
+                        "text",
+                        Self::VT_TEXT,
+                        false,
+                    )?
+                    .visit_field::<u64>("server_time_ms", Self::VT_SERVER_TIME_MS, false)?
+                    .finish();
+                Ok(())
+            }
+        }
+        pub struct ChatMessageArgs<'a> {
+            pub player_id: u32,
+            pub sender_name: Option<::flatbuffers::WIPOffset<&'a str>>,
+            pub text: Option<::flatbuffers::WIPOffset<&'a str>>,
+            pub server_time_ms: u64,
+        }
+        impl<'a> Default for ChatMessageArgs<'a> {
+            #[inline]
+            fn default() -> Self {
+                ChatMessageArgs {
+                    player_id: 0,
+                    sender_name: None,
+                    text: None,
+                    server_time_ms: 0,
+                }
+            }
+        }
+
+        pub struct ChatMessageBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+            fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+        }
+        impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> ChatMessageBuilder<'a, 'b, A> {
+            #[inline]
+            pub fn add_player_id(&mut self, player_id: u32) {
+                self.fbb_
+                    .push_slot::<u32>(ChatMessage::VT_PLAYER_ID, player_id, 0);
+            }
+            #[inline]
+            pub fn add_sender_name(&mut self, sender_name: ::flatbuffers::WIPOffset<&'b str>) {
+                self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(
+                    ChatMessage::VT_SENDER_NAME,
+                    sender_name,
+                );
+            }
+            #[inline]
+            pub fn add_text(&mut self, text: ::flatbuffers::WIPOffset<&'b str>) {
+                self.fbb_
+                    .push_slot_always::<::flatbuffers::WIPOffset<_>>(ChatMessage::VT_TEXT, text);
+            }
+            #[inline]
+            pub fn add_server_time_ms(&mut self, server_time_ms: u64) {
+                self.fbb_
+                    .push_slot::<u64>(ChatMessage::VT_SERVER_TIME_MS, server_time_ms, 0);
+            }
+            #[inline]
+            pub fn new(
+                _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            ) -> ChatMessageBuilder<'a, 'b, A> {
+                let start = _fbb.start_table();
+                ChatMessageBuilder {
+                    fbb_: _fbb,
+                    start_: start,
+                }
+            }
+            #[inline]
+            pub fn finish(self) -> ::flatbuffers::WIPOffset<ChatMessage<'a>> {
+                let o = self.fbb_.end_table(self.start_);
+                ::flatbuffers::WIPOffset::new(o.value())
+            }
+        }
+
+        impl ::core::fmt::Debug for ChatMessage<'_> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                let mut ds = f.debug_struct("ChatMessage");
+                ds.field("player_id", &self.player_id());
+                ds.field("sender_name", &self.sender_name());
+                ds.field("text", &self.text());
+                ds.field("server_time_ms", &self.server_time_ms());
+                ds.finish()
+            }
+        }
     } // pub mod v1
 } // pub mod skyrim_relive

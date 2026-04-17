@@ -11,6 +11,7 @@
 #include "world_generated.h"
 
 #include <RE/Skyrim.h>
+#include <SKSE/SKSE.h>
 #include <SKSE/Logger.h>
 
 #include "Combat.h"
@@ -334,6 +335,21 @@ namespace relive::net {
                 }
                 plugin::update_player_list(
                     static_cast<decltype(entries)&&>(entries));
+            } else if (type == re_v1::MessageType_ChatMessage) {
+                const auto* cm = flatbuffers::GetRoot<re_v1::ChatMessage>(body.data());
+                const auto sender = cm->sender_name() ? cm->sender_name()->str() : "???";
+                const auto text = cm->text() ? cm->text()->str() : "";
+                if (!text.empty()) {
+                    if (auto* task = SKSE::GetTaskInterface()) {
+                        const auto pid = cm->player_id();
+                        task->AddTask([sender, text, pid]() {
+                            if (auto* console = RE::ConsoleLog::GetSingleton()) {
+                                console->Print("[Chat] %s: %s", sender.c_str(), text.c_str());
+                            }
+                        });
+                    }
+                    SKSE::log::info("[chat] {}: {}", sender, text);
+                }
             } else if (type == re_v1::MessageType_DamageApply) {
                 const auto* d = flatbuffers::GetRoot<re_v1::DamageApply>(body.data());
                 combat::on_damage_apply(d->attacker_player_id(), d->damage(),
@@ -374,6 +390,21 @@ namespace relive::net {
 
         std::vector<std::uint8_t> packet;
         encode_packet(re_v1::MessageType_CombatEvent,
+                      std::span(fbb.GetBufferPointer(), fbb.GetSize()), packet);
+        sock::send_all(socket_, packet);
+    }
+
+    void Client::send_chat(std::string_view text) {
+        if (!running_.load(std::memory_order_acquire)) return;
+        flatbuffers::FlatBufferBuilder fbb(128);
+        const std::string text_s{text};
+        const auto text_off = fbb.CreateString(text_s);
+        re_v1::ChatMessageBuilder cb(fbb);
+        cb.add_text(text_off);
+        const auto off = cb.Finish();
+        fbb.Finish(off);
+        std::vector<std::uint8_t> packet;
+        encode_packet(re_v1::MessageType_ChatMessage,
                       std::span(fbb.GetBufferPointer(), fbb.GetSize()), packet);
         sock::send_all(socket_, packet);
     }

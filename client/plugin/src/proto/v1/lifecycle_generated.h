@@ -33,6 +33,9 @@ struct LeaveNotifyBuilder;
 struct Disconnect;
 struct DisconnectBuilder;
 
+struct ChatMessage;
+struct ChatMessageBuilder;
+
 struct Hello FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef HelloBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
@@ -382,6 +385,96 @@ inline ::flatbuffers::Offset<Disconnect> CreateDisconnectDirect(
       _fbb,
       code,
       reason__);
+}
+
+struct ChatMessage FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef ChatMessageBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_PLAYER_ID = 4,
+    VT_SENDER_NAME = 6,
+    VT_TEXT = 8,
+    VT_SERVER_TIME_MS = 10
+  };
+  uint32_t player_id() const {
+    return GetField<uint32_t>(VT_PLAYER_ID, 0);
+  }
+  const ::flatbuffers::String *sender_name() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_SENDER_NAME);
+  }
+  const ::flatbuffers::String *text() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_TEXT);
+  }
+  uint64_t server_time_ms() const {
+    return GetField<uint64_t>(VT_SERVER_TIME_MS, 0);
+  }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_PLAYER_ID, 4) &&
+           VerifyOffset(verifier, VT_SENDER_NAME) &&
+           verifier.VerifyString(sender_name()) &&
+           VerifyOffset(verifier, VT_TEXT) &&
+           verifier.VerifyString(text()) &&
+           VerifyField<uint64_t>(verifier, VT_SERVER_TIME_MS, 8) &&
+           verifier.EndTable();
+  }
+};
+
+struct ChatMessageBuilder {
+  typedef ChatMessage Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_player_id(uint32_t player_id) {
+    fbb_.AddElement<uint32_t>(ChatMessage::VT_PLAYER_ID, player_id, 0);
+  }
+  void add_sender_name(::flatbuffers::Offset<::flatbuffers::String> sender_name) {
+    fbb_.AddOffset(ChatMessage::VT_SENDER_NAME, sender_name);
+  }
+  void add_text(::flatbuffers::Offset<::flatbuffers::String> text) {
+    fbb_.AddOffset(ChatMessage::VT_TEXT, text);
+  }
+  void add_server_time_ms(uint64_t server_time_ms) {
+    fbb_.AddElement<uint64_t>(ChatMessage::VT_SERVER_TIME_MS, server_time_ms, 0);
+  }
+  explicit ChatMessageBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<ChatMessage> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<ChatMessage>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<ChatMessage> CreateChatMessage(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t player_id = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> sender_name = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> text = 0,
+    uint64_t server_time_ms = 0) {
+  ChatMessageBuilder builder_(_fbb);
+  builder_.add_server_time_ms(server_time_ms);
+  builder_.add_text(text);
+  builder_.add_sender_name(sender_name);
+  builder_.add_player_id(player_id);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<ChatMessage> CreateChatMessageDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t player_id = 0,
+    const char *sender_name = nullptr,
+    const char *text = nullptr,
+    uint64_t server_time_ms = 0) {
+  auto sender_name__ = sender_name ? _fbb.CreateString(sender_name) : 0;
+  auto text__ = text ? _fbb.CreateString(text) : 0;
+  return skyrim_relive::v1::CreateChatMessage(
+      _fbb,
+      player_id,
+      sender_name__,
+      text__,
+      server_time_ms);
 }
 
 }  // namespace v1

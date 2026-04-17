@@ -48,6 +48,8 @@ namespace relive::net {
                                float weapon_reach, float weapon_base_damage,
                                uint8_t attack_class = 0);
 
+        void send_chat(std::string_view text);
+
         [[nodiscard]] uint32_t player_id() const noexcept { return player_id_; }
         [[nodiscard]] uint64_t snapshots_received() const noexcept {
             return snapshots_received_.load(std::memory_order_relaxed);

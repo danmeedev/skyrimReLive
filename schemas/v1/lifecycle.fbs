@@ -32,3 +32,12 @@ table Disconnect {
     code: DisconnectCode;
     reason: string;  // human-readable for logs
 }
+
+// Zeus Phase 0: text chat. Client sends ChatMessage to server; server
+// broadcasts to all connected peers with the sender's info filled in.
+table ChatMessage {
+    player_id: uint32;      // 0 on C→S (server fills); sender id on S→C
+    sender_name: string;    // empty on C→S; server fills from Player.name
+    text: string;
+    server_time_ms: uint64; // 0 on C→S; server fills
+}

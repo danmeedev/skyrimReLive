@@ -198,6 +198,13 @@ namespace relive::plugin {
         g_player_list = std::move(list);
     }
 
+    void send_chat(std::string_view text) {
+        if (g_state.load(std::memory_order_acquire) != ConnState::Connected) {
+            return;
+        }
+        g_client.send_chat(text);
+    }
+
     void send_combat_event(std::uint32_t target_player_id,
                            std::uint8_t attack_type, float weapon_reach,
                            float weapon_base_damage,

@@ -31,13 +31,13 @@ pub mod skyrim_relive {
             since = "2.0.0",
             note = "Use associated constants instead. This will no longer be generated in 2021."
         )]
-        pub const ENUM_MAX_MESSAGE_TYPE: u8 = 48;
+        pub const ENUM_MAX_MESSAGE_TYPE: u8 = 49;
         #[deprecated(
             since = "2.0.0",
             note = "Use associated constants instead. This will no longer be generated in 2021."
         )]
         #[allow(non_camel_case_types)]
-        pub const ENUM_VALUES_MESSAGE_TYPE: [MessageType; 10] = [
+        pub const ENUM_VALUES_MESSAGE_TYPE: [MessageType; 11] = [
             MessageType::Hello,
             MessageType::Welcome,
             MessageType::Heartbeat,
@@ -48,6 +48,7 @@ pub mod skyrim_relive {
             MessageType::CombatEvent,
             MessageType::DamageApply,
             MessageType::PlayerList,
+            MessageType::ChatMessage,
         ];
 
         #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -65,9 +66,10 @@ pub mod skyrim_relive {
             pub const CombatEvent: Self = Self(32);
             pub const DamageApply: Self = Self(33);
             pub const PlayerList: Self = Self(48);
+            pub const ChatMessage: Self = Self(49);
 
             pub const ENUM_MIN: u8 = 1;
-            pub const ENUM_MAX: u8 = 48;
+            pub const ENUM_MAX: u8 = 49;
             pub const ENUM_VALUES: &'static [Self] = &[
                 Self::Hello,
                 Self::Welcome,
@@ -79,6 +81,7 @@ pub mod skyrim_relive {
                 Self::CombatEvent,
                 Self::DamageApply,
                 Self::PlayerList,
+                Self::ChatMessage,
             ];
             /// Returns the variant's name or "" if unknown.
             pub fn variant_name(self) -> Option<&'static str> {
@@ -93,6 +96,7 @@ pub mod skyrim_relive {
                     Self::CombatEvent => Some("CombatEvent"),
                     Self::DamageApply => Some("DamageApply"),
                     Self::PlayerList => Some("PlayerList"),
+                    Self::ChatMessage => Some("ChatMessage"),
                     _ => None,
                 }
             }
