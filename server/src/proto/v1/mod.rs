@@ -9,8 +9,9 @@ mod types_generated;
 mod world_generated;
 
 pub use lifecycle_generated::skyrim_relive::v_1::{
-    ChatMessage, ChatMessageArgs, Disconnect, DisconnectArgs, Heartbeat, HeartbeatArgs, Hello,
-    HelloArgs, LeaveNotify, LeaveNotifyArgs, Welcome, WelcomeArgs,
+    AdminAuth, AdminAuthResult, AdminAuthResultArgs, AdminCommand, AdminCommandResult,
+    AdminCommandResultArgs, ChatMessage, ChatMessageArgs, Disconnect, DisconnectArgs, Heartbeat,
+    HeartbeatArgs, Hello, HelloArgs, LeaveNotify, LeaveNotifyArgs, Welcome, WelcomeArgs,
 };
 pub use types_generated::skyrim_relive::v_1::{
     DisconnectCode, MessageType, SkillEntry, SkillEntryArgs,

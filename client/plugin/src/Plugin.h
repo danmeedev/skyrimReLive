@@ -78,6 +78,8 @@ namespace relive::plugin {
 
     // Zeus Phase 0: send a chat message through the active Net::Client.
     void send_chat(std::string_view text);
+    void send_admin_auth(std::string_view password);
+    void send_admin_command(std::string_view command);
 
     // Phase 2.3b/2.5: forward a CombatEvent through the active Net::Client.
     // No-op when not connected. Called from the TESHitEvent sink.

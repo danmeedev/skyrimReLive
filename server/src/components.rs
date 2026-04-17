@@ -28,6 +28,8 @@ pub struct Connection {
     /// When this connection's owner last landed a `CombatEvent`. Used for
     /// rate-limiting attacks (anti-spam), not for damage cooldown logic.
     pub last_attack_at: Option<Instant>,
+    /// Zeus: admin-authenticated via `AdminAuth` password check.
+    pub is_admin: bool,
 }
 
 #[derive(Component, Debug, Default, Clone, Copy)]

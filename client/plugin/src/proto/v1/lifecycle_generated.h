@@ -33,6 +33,18 @@ struct LeaveNotifyBuilder;
 struct Disconnect;
 struct DisconnectBuilder;
 
+struct AdminAuth;
+struct AdminAuthBuilder;
+
+struct AdminAuthResult;
+struct AdminAuthResultBuilder;
+
+struct AdminCommand;
+struct AdminCommandBuilder;
+
+struct AdminCommandResult;
+struct AdminCommandResultBuilder;
+
 struct ChatMessage;
 struct ChatMessageBuilder;
 
@@ -385,6 +397,238 @@ inline ::flatbuffers::Offset<Disconnect> CreateDisconnectDirect(
       _fbb,
       code,
       reason__);
+}
+
+struct AdminAuth FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef AdminAuthBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_PASSWORD = 4
+  };
+  const ::flatbuffers::String *password() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_PASSWORD);
+  }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_PASSWORD) &&
+           verifier.VerifyString(password()) &&
+           verifier.EndTable();
+  }
+};
+
+struct AdminAuthBuilder {
+  typedef AdminAuth Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_password(::flatbuffers::Offset<::flatbuffers::String> password) {
+    fbb_.AddOffset(AdminAuth::VT_PASSWORD, password);
+  }
+  explicit AdminAuthBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<AdminAuth> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<AdminAuth>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<AdminAuth> CreateAdminAuth(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> password = 0) {
+  AdminAuthBuilder builder_(_fbb);
+  builder_.add_password(password);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<AdminAuth> CreateAdminAuthDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    const char *password = nullptr) {
+  auto password__ = password ? _fbb.CreateString(password) : 0;
+  return skyrim_relive::v1::CreateAdminAuth(
+      _fbb,
+      password__);
+}
+
+struct AdminAuthResult FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef AdminAuthResultBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_SUCCESS = 4,
+    VT_REASON = 6
+  };
+  bool success() const {
+    return GetField<uint8_t>(VT_SUCCESS, 0) != 0;
+  }
+  const ::flatbuffers::String *reason() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_REASON);
+  }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint8_t>(verifier, VT_SUCCESS, 1) &&
+           VerifyOffset(verifier, VT_REASON) &&
+           verifier.VerifyString(reason()) &&
+           verifier.EndTable();
+  }
+};
+
+struct AdminAuthResultBuilder {
+  typedef AdminAuthResult Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_success(bool success) {
+    fbb_.AddElement<uint8_t>(AdminAuthResult::VT_SUCCESS, static_cast<uint8_t>(success), 0);
+  }
+  void add_reason(::flatbuffers::Offset<::flatbuffers::String> reason) {
+    fbb_.AddOffset(AdminAuthResult::VT_REASON, reason);
+  }
+  explicit AdminAuthResultBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<AdminAuthResult> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<AdminAuthResult>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<AdminAuthResult> CreateAdminAuthResult(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    bool success = false,
+    ::flatbuffers::Offset<::flatbuffers::String> reason = 0) {
+  AdminAuthResultBuilder builder_(_fbb);
+  builder_.add_reason(reason);
+  builder_.add_success(success);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<AdminAuthResult> CreateAdminAuthResultDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    bool success = false,
+    const char *reason = nullptr) {
+  auto reason__ = reason ? _fbb.CreateString(reason) : 0;
+  return skyrim_relive::v1::CreateAdminAuthResult(
+      _fbb,
+      success,
+      reason__);
+}
+
+struct AdminCommand FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef AdminCommandBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_COMMAND = 4
+  };
+  const ::flatbuffers::String *command() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_COMMAND);
+  }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_COMMAND) &&
+           verifier.VerifyString(command()) &&
+           verifier.EndTable();
+  }
+};
+
+struct AdminCommandBuilder {
+  typedef AdminCommand Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_command(::flatbuffers::Offset<::flatbuffers::String> command) {
+    fbb_.AddOffset(AdminCommand::VT_COMMAND, command);
+  }
+  explicit AdminCommandBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<AdminCommand> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<AdminCommand>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<AdminCommand> CreateAdminCommand(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> command = 0) {
+  AdminCommandBuilder builder_(_fbb);
+  builder_.add_command(command);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<AdminCommand> CreateAdminCommandDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    const char *command = nullptr) {
+  auto command__ = command ? _fbb.CreateString(command) : 0;
+  return skyrim_relive::v1::CreateAdminCommand(
+      _fbb,
+      command__);
+}
+
+struct AdminCommandResult FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef AdminCommandResultBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_SUCCESS = 4,
+    VT_MESSAGE = 6
+  };
+  bool success() const {
+    return GetField<uint8_t>(VT_SUCCESS, 0) != 0;
+  }
+  const ::flatbuffers::String *message() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_MESSAGE);
+  }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint8_t>(verifier, VT_SUCCESS, 1) &&
+           VerifyOffset(verifier, VT_MESSAGE) &&
+           verifier.VerifyString(message()) &&
+           verifier.EndTable();
+  }
+};
+
+struct AdminCommandResultBuilder {
+  typedef AdminCommandResult Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_success(bool success) {
+    fbb_.AddElement<uint8_t>(AdminCommandResult::VT_SUCCESS, static_cast<uint8_t>(success), 0);
+  }
+  void add_message(::flatbuffers::Offset<::flatbuffers::String> message) {
+    fbb_.AddOffset(AdminCommandResult::VT_MESSAGE, message);
+  }
+  explicit AdminCommandResultBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<AdminCommandResult> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<AdminCommandResult>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<AdminCommandResult> CreateAdminCommandResult(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    bool success = false,
+    ::flatbuffers::Offset<::flatbuffers::String> message = 0) {
+  AdminCommandResultBuilder builder_(_fbb);
+  builder_.add_message(message);
+  builder_.add_success(success);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<AdminCommandResult> CreateAdminCommandResultDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    bool success = false,
+    const char *message = nullptr) {
+  auto message__ = message ? _fbb.CreateString(message) : 0;
+  return skyrim_relive::v1::CreateAdminCommandResult(
+      _fbb,
+      success,
+      message__);
 }
 
 struct ChatMessage FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {

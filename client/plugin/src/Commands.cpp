@@ -50,6 +50,8 @@ namespace relive::commands {
                    "  rl cell clear              target any cell\n"
                    "  rl players                 show connected players\n"
                    "  rl chat <message>          send a chat message to all players\n"
+                   "  rl admin <password>        authenticate as server admin (Zeus)\n"
+                   "  rl cmd <command>           send admin command (pvp on|off, kick <id>, help)\n"
                    "  rl demo start              spawn a synthetic orbiting ghost (solo test)\n"
                    "  rl demo stop               despawn the demo ghost\n"
                    "  rl help                    this message";
@@ -200,6 +202,24 @@ namespace relive::commands {
             }
             if (sv.empty()) return "usage: rl chat <message>";
             plugin::send_chat(sv);
+            return "";
+        }
+        if (args[0] == "admin") {
+            if (args.size() < 2) return "usage: rl admin <password>";
+            plugin::send_admin_auth(args[1]);
+            return "auth request sent";
+        }
+        if (args[0] == "cmd") {
+            if (args.size() < 2) return "usage: rl cmd <command> (try: rl cmd help)";
+            auto sv = cmdline;
+            const auto pos = sv.find("cmd");
+            if (pos != std::string_view::npos) {
+                sv = sv.substr(pos + 3);
+                while (!sv.empty() && std::isspace(static_cast<unsigned char>(sv.front())))
+                    sv.remove_prefix(1);
+            }
+            if (sv.empty()) return "usage: rl cmd <command>";
+            plugin::send_admin_command(sv);
             return "";
         }
         if (args[0] == "demo") {

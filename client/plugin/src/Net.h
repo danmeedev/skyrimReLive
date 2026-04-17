@@ -49,6 +49,8 @@ namespace relive::net {
                                uint8_t attack_class = 0);
 
         void send_chat(std::string_view text);
+        void send_admin_auth(std::string_view password);
+        void send_admin_command(std::string_view command);
 
         [[nodiscard]] uint32_t player_id() const noexcept { return player_id_; }
         [[nodiscard]] uint64_t snapshots_received() const noexcept {

@@ -350,6 +350,31 @@ namespace relive::net {
                     }
                     SKSE::log::info("[chat] {}: {}", sender, text);
                 }
+            } else if (type == re_v1::MessageType_AdminAuthResult) {
+                const auto* r = flatbuffers::GetRoot<re_v1::AdminAuthResult>(body.data());
+                const bool ok = r->success();
+                const auto reason = r->reason() ? r->reason()->str() : "";
+                if (auto* task = SKSE::GetTaskInterface()) {
+                    task->AddTask([ok, reason]() {
+                        if (auto* console = RE::ConsoleLog::GetSingleton()) {
+                            console->Print("[SkyrimReLive] admin: %s",
+                                           reason.c_str());
+                        }
+                    });
+                }
+                SKSE::log::info("AdminAuthResult: success={} reason={}", ok, reason);
+            } else if (type == re_v1::MessageType_AdminCommandResult) {
+                const auto* r = flatbuffers::GetRoot<re_v1::AdminCommandResult>(body.data());
+                const bool ok = r->success();
+                const auto msg = r->message() ? r->message()->str() : "";
+                if (auto* task = SKSE::GetTaskInterface()) {
+                    task->AddTask([ok, msg]() {
+                        if (auto* console = RE::ConsoleLog::GetSingleton()) {
+                            console->Print("[Admin] %s%s",
+                                           ok ? "" : "ERROR: ", msg.c_str());
+                        }
+                    });
+                }
             } else if (type == re_v1::MessageType_DamageApply) {
                 const auto* d = flatbuffers::GetRoot<re_v1::DamageApply>(body.data());
                 combat::on_damage_apply(d->attacker_player_id(), d->damage(),
@@ -390,6 +415,34 @@ namespace relive::net {
 
         std::vector<std::uint8_t> packet;
         encode_packet(re_v1::MessageType_CombatEvent,
+                      std::span(fbb.GetBufferPointer(), fbb.GetSize()), packet);
+        sock::send_all(socket_, packet);
+    }
+
+    void Client::send_admin_auth(std::string_view password) {
+        if (!running_.load(std::memory_order_acquire)) return;
+        flatbuffers::FlatBufferBuilder fbb(64);
+        const std::string pw{password};
+        const auto pw_off = fbb.CreateString(pw);
+        re_v1::AdminAuthBuilder ab(fbb);
+        ab.add_password(pw_off);
+        fbb.Finish(ab.Finish());
+        std::vector<std::uint8_t> packet;
+        encode_packet(re_v1::MessageType_AdminAuth,
+                      std::span(fbb.GetBufferPointer(), fbb.GetSize()), packet);
+        sock::send_all(socket_, packet);
+    }
+
+    void Client::send_admin_command(std::string_view command) {
+        if (!running_.load(std::memory_order_acquire)) return;
+        flatbuffers::FlatBufferBuilder fbb(128);
+        const std::string cmd{command};
+        const auto cmd_off = fbb.CreateString(cmd);
+        re_v1::AdminCommandBuilder cb(fbb);
+        cb.add_command(cmd_off);
+        fbb.Finish(cb.Finish());
+        std::vector<std::uint8_t> packet;
+        encode_packet(re_v1::MessageType_AdminCommand,
                       std::span(fbb.GetBufferPointer(), fbb.GetSize()), packet);
         sock::send_all(socket_, packet);
     }

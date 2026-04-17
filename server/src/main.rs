@@ -10,8 +10,9 @@ use skyrim_relive_server::components::{
 };
 use skyrim_relive_server::config::Config;
 use skyrim_relive_server::proto::v1::{
-    AttackClass, ChatMessage, ChatMessageArgs, CombatEvent, DamageApply, DamageApplyArgs,
-    Disconnect, DisconnectArgs, DisconnectCode, Hello, MessageType, PlayerInput,
+    AdminAuth, AdminAuthResult, AdminAuthResultArgs, AdminCommand, AdminCommandResult,
+    AdminCommandResultArgs, AttackClass, ChatMessage, ChatMessageArgs, CombatEvent, DamageApply,
+    DamageApplyArgs, Disconnect, DisconnectArgs, DisconnectCode, Hello, MessageType, PlayerInput,
     PlayerList as FbPlayerList, PlayerListArgs as FbPlayerListArgs,
     PlayerListEntry as FbPlayerListEntry, PlayerListEntryArgs as FbPlayerListEntryArgs,
     PlayerState as FbPlayerState, PlayerStateArgs as FbPlayerStateArgs, SkillEntry as FbSkillEntry,
@@ -123,11 +124,15 @@ impl ServerState {
             MessageType::PlayerInput => self.handle_player_input(peer, body),
             MessageType::CombatEvent => self.handle_combat_event(peer, body).await,
             MessageType::ChatMessage => self.handle_chat_message(peer, body).await,
+            MessageType::AdminAuth => self.handle_admin_auth(peer, body).await,
+            MessageType::AdminCommand => self.handle_admin_command(peer, body).await,
             MessageType::Welcome
             | MessageType::Disconnect
             | MessageType::WorldSnapshot
             | MessageType::DamageApply
-            | MessageType::PlayerList => {
+            | MessageType::PlayerList
+            | MessageType::AdminAuthResult
+            | MessageType::AdminCommandResult => {
                 warn!(%peer, ?mt, "client sent server-only message; ignoring");
             }
             _ => warn!(%peer, ?mt, "unhandled message type"),
@@ -174,6 +179,7 @@ impl ServerState {
                     addr: peer,
                     last_heard: Instant::now(),
                     last_attack_at: None,
+                    is_admin: false,
                 },
                 Transform::default(),
                 Velocity::default(),
@@ -428,6 +434,201 @@ impl ServerState {
         let packet = wire::encode(MessageType::DamageApply, fbb.finished_data());
         if let Err(e) = self.socket.send_to(&packet, target_addr).await {
             warn!(peer = %target_addr, error = %e, "DamageApply send failed");
+        }
+    }
+
+    async fn send_admin_result(&self, peer: SocketAddr, success: bool, msg: &str) {
+        let mut fbb = FlatBufferBuilder::with_capacity(128);
+        let msg_off = fbb.create_string(msg);
+        let r = AdminCommandResult::create(
+            &mut fbb,
+            &AdminCommandResultArgs {
+                success,
+                message: Some(msg_off),
+            },
+        );
+        fbb.finish(r, None);
+        let packet = wire::encode(MessageType::AdminCommandResult, fbb.finished_data());
+        let _ = self.socket.send_to(&packet, peer).await;
+    }
+
+    async fn handle_admin_auth(&mut self, peer: SocketAddr, body: &[u8]) {
+        let Some(&entity) = self.addr_to_entity.get(&peer) else {
+            warn!(%peer, "AdminAuth from unknown peer");
+            return;
+        };
+        let auth = match flatbuffers::root::<AdminAuth<'_>>(body) {
+            Ok(a) => a,
+            Err(e) => {
+                warn!(%peer, error = %e, "bad AdminAuth payload");
+                return;
+            }
+        };
+        let password = auth.password().unwrap_or("");
+        if self.config.admin_password.is_empty() {
+            let mut fbb = FlatBufferBuilder::with_capacity(64);
+            let reason = fbb.create_string("admin disabled on this server");
+            let r = AdminAuthResult::create(
+                &mut fbb,
+                &AdminAuthResultArgs {
+                    success: false,
+                    reason: Some(reason),
+                },
+            );
+            fbb.finish(r, None);
+            let packet = wire::encode(MessageType::AdminAuthResult, fbb.finished_data());
+            let _ = self.socket.send_to(&packet, peer).await;
+            return;
+        }
+        let success = password == self.config.admin_password;
+        if success {
+            if let Some(mut conn) = self.world.get_mut::<Connection>(entity) {
+                conn.is_admin = true;
+            }
+        }
+        let pid = self.world.get::<Player>(entity).map_or(0, |p| p.id);
+        info!(%peer, pid, success, "admin auth attempt");
+        let mut fbb = FlatBufferBuilder::with_capacity(64);
+        let reason_str = if success {
+            "admin access granted"
+        } else {
+            "wrong password"
+        };
+        let reason = fbb.create_string(reason_str);
+        let r = AdminAuthResult::create(
+            &mut fbb,
+            &AdminAuthResultArgs {
+                success,
+                reason: Some(reason),
+            },
+        );
+        fbb.finish(r, None);
+        let packet = wire::encode(MessageType::AdminAuthResult, fbb.finished_data());
+        let _ = self.socket.send_to(&packet, peer).await;
+    }
+
+    #[allow(clippy::too_many_lines)]
+    async fn handle_admin_command(&mut self, peer: SocketAddr, body: &[u8]) {
+        let Some(&entity) = self.addr_to_entity.get(&peer) else {
+            return;
+        };
+        let is_admin = self
+            .world
+            .get::<Connection>(entity)
+            .is_some_and(|c| c.is_admin);
+        if !is_admin {
+            self.send_admin_result(
+                peer,
+                false,
+                "not authenticated; use `rl admin <password>` first",
+            )
+            .await;
+            return;
+        }
+        let cmd = match flatbuffers::root::<AdminCommand<'_>>(body) {
+            Ok(c) => c,
+            Err(e) => {
+                warn!(%peer, error = %e, "bad AdminCommand payload");
+                return;
+            }
+        };
+        let command = cmd.command().unwrap_or("").to_owned();
+        let parts: Vec<&str> = command.split_whitespace().collect();
+        if parts.is_empty() {
+            self.send_admin_result(peer, false, "empty command").await;
+            return;
+        }
+        let admin_pid = self.world.get::<Player>(entity).map_or(0, |p| p.id);
+        info!(%peer, admin_pid, %command, "admin command");
+
+        match parts[0] {
+            "pvp" => {
+                if parts.len() < 2 {
+                    self.send_admin_result(peer, false, "usage: pvp on|off")
+                        .await;
+                    return;
+                }
+                match parts[1] {
+                    "on" | "true" | "1" => {
+                        self.config.pvp_enabled = true;
+                        self.send_admin_result(peer, true, "PvP enabled").await;
+                    }
+                    "off" | "false" | "0" => {
+                        self.config.pvp_enabled = false;
+                        self.send_admin_result(peer, true, "PvP disabled").await;
+                    }
+                    _ => {
+                        self.send_admin_result(peer, false, "usage: pvp on|off")
+                            .await;
+                    }
+                }
+            }
+            "kick" => {
+                if parts.len() < 2 {
+                    self.send_admin_result(peer, false, "usage: kick <player_id>")
+                        .await;
+                    return;
+                }
+                let Ok(target_id) = parts[1].parse::<u32>() else {
+                    self.send_admin_result(peer, false, "bad player_id").await;
+                    return;
+                };
+                let mut found = false;
+                let mut target_addr = None;
+                for (_e, p, c) in self
+                    .world
+                    .query::<(Entity, &Player, &Connection)>()
+                    .iter(&self.world)
+                {
+                    if p.id == target_id {
+                        target_addr = Some(c.addr);
+                        found = true;
+                        break;
+                    }
+                }
+                if !found {
+                    self.send_admin_result(
+                        peer,
+                        false,
+                        &format!("player_id {target_id} not found"),
+                    )
+                    .await;
+                    return;
+                }
+                let Some(addr) = target_addr else { return };
+                send_disconnect(&self.socket, addr, DisconnectCode::Ok, "kicked by admin").await;
+                // Find and despawn the entity
+                let to_remove: Vec<(Entity, u32)> = self
+                    .world
+                    .query::<(Entity, &Player, &Connection)>()
+                    .iter(&self.world)
+                    .filter(|(_, p, _)| p.id == target_id)
+                    .map(|(e, p, _)| (e, p.id))
+                    .collect();
+                for (e, pid) in to_remove {
+                    self.addr_to_entity.remove(&addr);
+                    self.world.despawn(e);
+                    info!(pid, "player kicked by admin");
+                }
+                self.send_admin_result(peer, true, &format!("kicked player_id {target_id}"))
+                    .await;
+            }
+            "help" => {
+                self.send_admin_result(
+                    peer,
+                    true,
+                    "admin commands: pvp on|off, kick <player_id>, help",
+                )
+                .await;
+            }
+            _ => {
+                self.send_admin_result(
+                    peer,
+                    false,
+                    &format!("unknown admin command '{}'; try: pvp, kick, help", parts[0]),
+                )
+                .await;
+            }
         }
     }
 

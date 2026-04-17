@@ -27,6 +27,8 @@ pub struct Config {
     pub spell_damage_default: f32,
     /// Seconds between `PlayerList` broadcasts. 0 = disabled.
     pub player_list_poll_s: u64,
+    /// Admin password for Zeus mode. Empty string = admin disabled.
+    pub admin_password: String,
 }
 
 impl Default for Config {
@@ -40,6 +42,7 @@ impl Default for Config {
             pvp_enabled: false,
             spell_damage_default: 25.0,
             player_list_poll_s: 60,
+            admin_password: String::new(),
         }
     }
 }

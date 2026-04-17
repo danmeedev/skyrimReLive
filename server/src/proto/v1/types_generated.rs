@@ -31,13 +31,13 @@ pub mod skyrim_relive {
             since = "2.0.0",
             note = "Use associated constants instead. This will no longer be generated in 2021."
         )]
-        pub const ENUM_MAX_MESSAGE_TYPE: u8 = 49;
+        pub const ENUM_MAX_MESSAGE_TYPE: u8 = 53;
         #[deprecated(
             since = "2.0.0",
             note = "Use associated constants instead. This will no longer be generated in 2021."
         )]
         #[allow(non_camel_case_types)]
-        pub const ENUM_VALUES_MESSAGE_TYPE: [MessageType; 11] = [
+        pub const ENUM_VALUES_MESSAGE_TYPE: [MessageType; 15] = [
             MessageType::Hello,
             MessageType::Welcome,
             MessageType::Heartbeat,
@@ -49,6 +49,10 @@ pub mod skyrim_relive {
             MessageType::DamageApply,
             MessageType::PlayerList,
             MessageType::ChatMessage,
+            MessageType::AdminAuth,
+            MessageType::AdminAuthResult,
+            MessageType::AdminCommand,
+            MessageType::AdminCommandResult,
         ];
 
         #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
@@ -67,9 +71,13 @@ pub mod skyrim_relive {
             pub const DamageApply: Self = Self(33);
             pub const PlayerList: Self = Self(48);
             pub const ChatMessage: Self = Self(49);
+            pub const AdminAuth: Self = Self(50);
+            pub const AdminAuthResult: Self = Self(51);
+            pub const AdminCommand: Self = Self(52);
+            pub const AdminCommandResult: Self = Self(53);
 
             pub const ENUM_MIN: u8 = 1;
-            pub const ENUM_MAX: u8 = 49;
+            pub const ENUM_MAX: u8 = 53;
             pub const ENUM_VALUES: &'static [Self] = &[
                 Self::Hello,
                 Self::Welcome,
@@ -82,6 +90,10 @@ pub mod skyrim_relive {
                 Self::DamageApply,
                 Self::PlayerList,
                 Self::ChatMessage,
+                Self::AdminAuth,
+                Self::AdminAuthResult,
+                Self::AdminCommand,
+                Self::AdminCommandResult,
             ];
             /// Returns the variant's name or "" if unknown.
             pub fn variant_name(self) -> Option<&'static str> {
@@ -97,6 +109,10 @@ pub mod skyrim_relive {
                     Self::DamageApply => Some("DamageApply"),
                     Self::PlayerList => Some("PlayerList"),
                     Self::ChatMessage => Some("ChatMessage"),
+                    Self::AdminAuth => Some("AdminAuth"),
+                    Self::AdminAuthResult => Some("AdminAuthResult"),
+                    Self::AdminCommand => Some("AdminCommand"),
+                    Self::AdminCommandResult => Some("AdminCommandResult"),
                     _ => None,
                 }
             }

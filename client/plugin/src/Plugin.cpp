@@ -199,10 +199,18 @@ namespace relive::plugin {
     }
 
     void send_chat(std::string_view text) {
-        if (g_state.load(std::memory_order_acquire) != ConnState::Connected) {
-            return;
-        }
+        if (g_state.load(std::memory_order_acquire) != ConnState::Connected) return;
         g_client.send_chat(text);
+    }
+
+    void send_admin_auth(std::string_view password) {
+        if (g_state.load(std::memory_order_acquire) != ConnState::Connected) return;
+        g_client.send_admin_auth(password);
+    }
+
+    void send_admin_command(std::string_view command) {
+        if (g_state.load(std::memory_order_acquire) != ConnState::Connected) return;
+        g_client.send_admin_command(command);
     }
 
     void send_combat_event(std::uint32_t target_player_id,

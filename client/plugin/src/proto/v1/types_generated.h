@@ -31,11 +31,15 @@ enum MessageType : uint8_t {
   MessageType_DamageApply = 33,
   MessageType_PlayerList = 48,
   MessageType_ChatMessage = 49,
+  MessageType_AdminAuth = 50,
+  MessageType_AdminAuthResult = 51,
+  MessageType_AdminCommand = 52,
+  MessageType_AdminCommandResult = 53,
   MessageType_MIN = MessageType_Hello,
-  MessageType_MAX = MessageType_ChatMessage
+  MessageType_MAX = MessageType_AdminCommandResult
 };
 
-inline const MessageType (&EnumValuesMessageType())[11] {
+inline const MessageType (&EnumValuesMessageType())[15] {
   static const MessageType values[] = {
     MessageType_Hello,
     MessageType_Welcome,
@@ -47,13 +51,17 @@ inline const MessageType (&EnumValuesMessageType())[11] {
     MessageType_CombatEvent,
     MessageType_DamageApply,
     MessageType_PlayerList,
-    MessageType_ChatMessage
+    MessageType_ChatMessage,
+    MessageType_AdminAuth,
+    MessageType_AdminAuthResult,
+    MessageType_AdminCommand,
+    MessageType_AdminCommandResult
   };
   return values;
 }
 
 inline const char * const *EnumNamesMessageType() {
-  static const char * const names[50] = {
+  static const char * const names[54] = {
     "Hello",
     "Welcome",
     "Heartbeat",
@@ -103,13 +111,17 @@ inline const char * const *EnumNamesMessageType() {
     "",
     "PlayerList",
     "ChatMessage",
+    "AdminAuth",
+    "AdminAuthResult",
+    "AdminCommand",
+    "AdminCommandResult",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameMessageType(MessageType e) {
-  if (::flatbuffers::IsOutRange(e, MessageType_Hello, MessageType_ChatMessage)) return "";
+  if (::flatbuffers::IsOutRange(e, MessageType_Hello, MessageType_AdminCommandResult)) return "";
   const size_t index = static_cast<size_t>(e) - static_cast<size_t>(MessageType_Hello);
   return EnumNamesMessageType()[index];
 }

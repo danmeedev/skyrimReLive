@@ -33,6 +33,28 @@ table Disconnect {
     reason: string;  // human-readable for logs
 }
 
+// Zeus Phase 0: admin authentication. Client sends password; server
+// checks against config and grants is_admin on the connection.
+table AdminAuth {
+    password: string;
+}
+
+table AdminAuthResult {
+    success: bool;
+    reason: string;
+}
+
+// Zeus Phase 0: generic admin command. Server parses the command string
+// and dispatches. Requires is_admin on the connection.
+table AdminCommand {
+    command: string;    // e.g. "kick 2", "pvp on", "time 14"
+}
+
+table AdminCommandResult {
+    success: bool;
+    message: string;   // human-readable output, printed to console
+}
+
 // Zeus Phase 0: text chat. Client sends ChatMessage to server; server
 // broadcasts to all connected peers with the sender's info filled in.
 table ChatMessage {
