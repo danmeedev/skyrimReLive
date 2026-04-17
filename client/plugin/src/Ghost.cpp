@@ -351,24 +351,27 @@ namespace relive::ghost {
             g.actor->SetGraphVariableBool("IsEquipping", latest.is_equipping);
             g.actor->SetGraphVariableBool("IsUnequipping", latest.is_unequipping);
             g.actor->SetGraphVariableInt("iState", latest.weapon_state);
-            // Belt-and-suspenders: stomp the ActorState bits the locomotion
-            // graph samples. InitiateDoNothingPackage stops the AI from
-            // fighting us, but we still need to tell the state machine what
-            // gait to use. Speed > ~1 means "moving"; we pick walk vs run
-            // from is_running, and force the movingForward bit so the graph
-            // leaves the idle branch.
+            // The engine writes ActorState1/2 as single 32-bit bitmask
+            // stores (compiler-optimized). Individual bitfield writes get
+            // torn by the engine's next full-word store. Build the whole
+            // word locally, then write it back in one shot.
             auto* st = g.actor->AsActorState();
             if (st) {
-                st->actorState1.movingForward = moving ? 1 : 0;
-                st->actorState1.movingBack    = 0;
-                st->actorState1.movingLeft    = 0;
-                st->actorState1.movingRight   = 0;
-                st->actorState1.walking  = (moving && !latest.is_running) ? 1 : 0;
-                st->actorState1.running  = (moving && latest.is_running) ? 1 : 0;
-                st->actorState1.sprinting = latest.is_sprinting ? 1 : 0;
-                st->actorState1.sneaking = latest.is_sneaking ? 1 : 0;
-                st->actorState2.forceRun = latest.is_running ? 1 : 0;
-                st->actorState2.forceSneak = latest.is_sneaking ? 1 : 0;
+                auto s1 = st->actorState1;
+                s1.movingForward = moving ? 1 : 0;
+                s1.movingBack    = 0;
+                s1.movingLeft    = 0;
+                s1.movingRight   = 0;
+                s1.walking  = (moving && !latest.is_running) ? 1 : 0;
+                s1.running  = (moving && latest.is_running) ? 1 : 0;
+                s1.sprinting = latest.is_sprinting ? 1 : 0;
+                s1.sneaking = latest.is_sneaking ? 1 : 0;
+                st->actorState1 = s1;
+
+                auto s2 = st->actorState2;
+                s2.forceRun = latest.is_running ? 1 : 0;
+                s2.forceSneak = latest.is_sneaking ? 1 : 0;
+                st->actorState2 = s2;
             }
             ++it;
         }
