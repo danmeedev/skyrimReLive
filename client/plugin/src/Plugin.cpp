@@ -272,19 +272,26 @@ namespace relive::plugin {
         cell::instance().set_target(cfg.target_cell_form_id);
         combat::register_sink();
 
-        // Gather character data on the main thread where game state is safe
-        // to read. The connect thread only touches the pre-gathered snapshot.
-        auto cd = gather_character_data();
-
         if (!cfg.auto_connect) {
             SKSE::log::info("SkyrimReLive: auto_connect=false; use `rl connect` in console");
             Toast("[SkyrimReLive] ready — type `rl connect` to join");
             return;
         }
-        std::thread([cfg, cd = static_cast<net::CharacterData&&>(cd)]() {
-            start_connection(cfg.server_host, cfg.server_port,
-                             cfg.player_name, cd);
-        }).detach();
+        // Defer character data gathering by one frame. kPostLoadGame fires
+        // before the engine finishes placing the player — calling GetLevel,
+        // GetActorValue, or even Is3DLoaded can crash on early saves.
+        // SKSE::TaskInterface runs on the next main-thread pump, by which
+        // point the player is fully initialized.
+        if (auto* task = SKSE::GetTaskInterface()) {
+            task->AddTask([cfg]() {
+                SKSE::log::info("deferred gather: reading character data");
+                auto cd = gather_character_data();
+                std::thread([cfg, cd]() {
+                    start_connection(cfg.server_host, cfg.server_port,
+                                     cfg.player_name, cd);
+                }).detach();
+            });
+        }
     }
 
 }
