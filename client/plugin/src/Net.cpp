@@ -18,6 +18,7 @@
 #include "Ghost.h"
 #include "Plugin.h"
 #include "Socket.h"
+#include "Zeus.h"
 
 namespace re_v1 = skyrim_relive::v1;
 
@@ -392,7 +393,6 @@ namespace relive::net {
                                 c->Print("[Server] Time set to %.0f:00", hour);
                             }
                         } else if (cmd == "give") {
-                            // args: "<form_id> <count>"
                             std::uint32_t formId = 0;
                             std::uint32_t count = 1;
                             std::istringstream iss(args);
@@ -400,19 +400,12 @@ namespace relive::net {
                             iss >> formStr >> count;
                             try { formId = std::stoul(formStr, nullptr, 0); } catch (...) {}
                             if (formId != 0) {
-                                auto* item = RE::TESForm::LookupByID(formId);
-                                auto* bound = item ? item->As<RE::TESBoundObject>() : nullptr;
-                                auto* player = RE::PlayerCharacter::GetSingleton();
-                                if (bound && player) {
-                                    player->AddObjectToContainer(
-                                        bound, nullptr, static_cast<std::int32_t>(count), nullptr);
-                                    if (auto* c = RE::ConsoleLog::GetSingleton()) {
-                                        c->Print("[Server] Received %u item(s)", count);
-                                    }
+                                zeus::execute_give(formId, count);
+                                if (auto* c = RE::ConsoleLog::GetSingleton()) {
+                                    c->Print("[Server] Received %u item(s)", count);
                                 }
                             }
                         } else if (cmd == "spawn") {
-                            // args: "<base_form_id> <x> <y> <z>"
                             std::uint32_t formId = 0;
                             float sx = 0, sy = 0, sz = 0;
                             std::istringstream iss(args);
@@ -420,17 +413,43 @@ namespace relive::net {
                             iss >> formStr >> sx >> sy >> sz;
                             try { formId = std::stoul(formStr, nullptr, 0); } catch (...) {}
                             if (formId != 0) {
-                                auto* base = RE::TESForm::LookupByID<RE::TESBoundObject>(formId);
-                                auto* player = RE::PlayerCharacter::GetSingleton();
-                                if (base && player && player->parentCell) {
-                                    auto ref = player->PlaceObjectAtMe(base, false);
-                                    if (ref) {
-                                        ref->SetPosition({sx, sy, sz});
-                                        if (auto* c = RE::ConsoleLog::GetSingleton()) {
-                                            c->Print("[Server] NPC spawned (0x%x)", formId);
-                                        }
+                                auto actor = zeus::execute_spawn(formId, sx, sy, sz);
+                                if (auto* c = RE::ConsoleLog::GetSingleton()) {
+                                    if (actor) {
+                                        auto npcs = zeus::list_npcs();
+                                        auto zid = npcs.empty() ? 0 : npcs.back().zeus_id;
+                                        c->Print("[Server] NPC spawned (zeus_id=%u)", zid);
+                                    } else {
+                                        c->Print("[Server] Object placed (0x%x)", formId);
                                     }
                                 }
+                            }
+                        } else if (cmd == "npcs") {
+                            auto npcs = zeus::list_npcs();
+                            if (auto* c = RE::ConsoleLog::GetSingleton()) {
+                                if (npcs.empty()) {
+                                    c->Print("[Zeus] No spawned NPCs");
+                                } else {
+                                    c->Print("[Zeus] %u spawned NPC(s):", static_cast<unsigned>(npcs.size()));
+                                    for (const auto& n : npcs) {
+                                        c->Print("  zeus_id=%u base=0x%x", n.zeus_id, n.base_form_id);
+                                    }
+                                }
+                            }
+                        } else if (cmd == "npc") {
+                            // args: "<zeus_id> <order> [order_args...]"
+                            std::uint32_t zid = 0;
+                            std::string order;
+                            std::string order_args;
+                            std::istringstream iss(args);
+                            iss >> zid >> order;
+                            std::getline(iss, order_args);
+                            while (!order_args.empty() &&
+                                   std::isspace(static_cast<unsigned char>(order_args.front())))
+                                order_args.erase(order_args.begin());
+                            auto result = zeus::execute_npc_order(zid, order, order_args);
+                            if (auto* c = RE::ConsoleLog::GetSingleton()) {
+                                c->Print("[Zeus NPC %u] %s", zid, result.c_str());
                             }
                         } else if (cmd == "weather") {
                             RE::FormID formId = 0;

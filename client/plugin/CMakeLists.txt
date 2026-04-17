@@ -59,6 +59,8 @@ add_commonlibsse_plugin(${PROJECT_NAME}
         src/Cell.h
         src/Combat.cpp
         src/Combat.h
+        src/Zeus.cpp
+        src/Zeus.h
 )
 
 # Socket.cpp is the only TU that includes winsock2.h; CommonLib's REX/W32

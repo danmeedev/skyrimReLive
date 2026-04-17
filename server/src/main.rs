@@ -753,11 +753,37 @@ impl ServerState {
                 )
                 .await;
             }
+            "npc" => {
+                // npc <zeus_id> <order> [args...]
+                // Relay to ALL clients as a ServerCommand — each client
+                // has its own zeus registry and executes locally.
+                if parts.len() < 3 {
+                    self.send_admin_result(
+                        peer,
+                        false,
+                        "usage: npc <zeus_id> <order> [args]\norders: follow, wait, moveto <x y z>, aggro <0-3>, confidence <0-4>, combat, passive, delete",
+                    )
+                    .await;
+                    return;
+                }
+                let remainder = parts[1..].join(" ");
+                self.broadcast_server_command("npc", &remainder).await;
+                self.send_admin_result(peer, true, &format!("npc order sent: {remainder}"))
+                    .await;
+            }
+            "npcs" => {
+                // List NPCs — this is client-local, so just tell the admin
+                // to check their own console. Broadcast a "npcs" command
+                // that the admin's client handles.
+                self.send_server_command_to(admin_pid, "npcs", "").await;
+                self.send_admin_result(peer, true, "listing spawned NPCs...")
+                    .await;
+            }
             "help" => {
                 self.send_admin_result(
                     peer,
                     true,
-                    "admin commands: pvp on|off, kick <id>, time <hour>, weather <type>, give <pid> <item> [n], spawn <base>, help",
+                    "admin commands:\n  pvp on|off\n  kick <id>\n  time <hour>\n  weather <type|formid>\n  give <pid> <item> [n]\n  spawn <base>\n  npc <zeus_id> <order> [args]\n  npcs\n  help",
                 )
                 .await;
             }
@@ -765,10 +791,7 @@ impl ServerState {
                 self.send_admin_result(
                     peer,
                     false,
-                    &format!(
-                        "unknown admin command '{}'; try: pvp, kick, time, weather, give, spawn, help",
-                        parts[0]
-                    ),
+                    &format!("unknown admin command '{}'; try `rl cmd help`", parts[0]),
                 )
                 .await;
             }
