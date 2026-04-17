@@ -61,12 +61,15 @@ add_commonlibsse_plugin(${PROJECT_NAME}
         src/Combat.h
         src/Zeus.cpp
         src/Zeus.h
+        src/ZeusOverlay.cpp
+        src/ZeusOverlay.h
 )
 
-# Socket.cpp is the only TU that includes winsock2.h; CommonLib's REX/W32
-# rejects pre-included Windows API surface, so this file must NOT pick up
+# Socket.cpp includes winsock2.h; ZeusOverlay.cpp includes d3d11.h + imgui.
+# Both conflict with CommonLib's REX/W32 surface, so they must NOT pick up
 # the project PCH (which transitively pulls in CommonLib).
-set_source_files_properties(src/Socket.cpp PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+set_source_files_properties(src/Socket.cpp src/ZeusOverlay.cpp
+    PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23)
 
@@ -98,8 +101,13 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     src/proto/v1
 )
 
+find_package(imgui CONFIG REQUIRED)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
     ws2_32
+    d3d11
+    dxgi
     flatbuffers::flatbuffers
     tomlplusplus::tomlplusplus
+    imgui::imgui
 )

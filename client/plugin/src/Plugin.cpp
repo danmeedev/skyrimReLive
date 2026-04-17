@@ -18,6 +18,7 @@
 #include "Ghost.h"
 #include "Net.h"
 #include "Plugin.h"
+#include "ZeusOverlay.h"
 
 namespace {
     relive::net::Client g_client;
@@ -312,10 +313,17 @@ namespace {
                 SKSE::log::info(
                     "SkyrimReLive: data loaded; waiting for kPostLoadGame/kNewGame");
                 relive::commands::register_console_command();
+                relive::zeus_overlay::install_hooks();
                 break;
             case SKSE::MessagingInterface::kPostLoadGame:
-            case SKSE::MessagingInterface::kNewGame:
+            case SKSE::MessagingInterface::kNewGame: {
                 relive::plugin::on_world_loaded();
+                // Pass the game's swap chain to the overlay for the Present
+                // hook. Renderer is alive by kPostLoadGame.
+                if (auto* rw = RE::BSGraphics::Renderer::GetCurrentRenderWindow()) {
+                    relive::zeus_overlay::set_swap_chain(rw->swapChain);
+                }
+            }
                 break;
             default:
                 break;
