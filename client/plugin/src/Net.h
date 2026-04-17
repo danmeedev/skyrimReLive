@@ -7,6 +7,13 @@
 
 namespace relive::net {
 
+    struct CharacterData {
+        std::string character_name;
+        std::uint16_t level = 1;
+        struct Skill { std::string name; float value; };
+        std::vector<Skill> top_skills;
+    };
+
     // Phase 1 client. Owns one UDP socket and one background thread that:
     //   - sends Hello and waits for Welcome on start()
     //   - polls the local PlayerCharacter at 60 Hz, ships PlayerInput
@@ -28,7 +35,9 @@ namespace relive::net {
 
         // Connect synchronously, then spin up the background tick loop.
         // Returns false if Hello/Welcome handshake fails; logs the reason.
-        bool start(std::string_view host, uint16_t port, std::string_view player_name);
+        // char_data is gathered on the main thread before this call.
+        bool start(std::string_view host, uint16_t port,
+                   std::string_view player_name, const CharacterData& char_data);
         void stop();
 
         // Phase 2.3b: ship a CombatEvent for a hit the local player just
@@ -38,6 +47,10 @@ namespace relive::net {
         void send_combat_event(uint32_t target_player_id, uint8_t attack_type,
                                float weapon_reach, float weapon_base_damage,
                                uint8_t attack_class = 0);
+
+        void send_chat(std::string_view text);
+        void send_admin_auth(std::string_view password);
+        void send_admin_command(std::string_view command);
 
         [[nodiscard]] uint32_t player_id() const noexcept { return player_id_; }
         [[nodiscard]] uint64_t snapshots_received() const noexcept {
@@ -56,7 +69,7 @@ namespace relive::net {
 
     private:
         void run();
-        bool send_hello(std::string_view name);
+        bool send_hello(std::string_view name, const CharacterData& cd);
         bool wait_for_welcome();
         void send_player_input();
         void drain_incoming();

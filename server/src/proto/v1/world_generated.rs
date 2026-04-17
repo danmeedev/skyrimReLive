@@ -16,11 +16,16 @@
 // @generated
 extern crate alloc;
 
+use crate::proto::v1::types_generated::skyrim_relive::v_1::*;
+
 #[allow(unused_imports, dead_code)]
 pub mod skyrim_relive {
 
+    use crate::proto::v1::types_generated::skyrim_relive::v_1::*;
     #[allow(unused_imports, dead_code)]
     pub mod v_1 {
+
+        use crate::proto::v1::types_generated::skyrim_relive::v_1::*;
 
         #[deprecated(
             since = "2.0.0",
@@ -1345,6 +1350,479 @@ pub mod skyrim_relive {
             fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 let mut ds = f.debug_struct("WorldSnapshot");
                 ds.field("server_tick", &self.server_tick());
+                ds.field("server_time_ms", &self.server_time_ms());
+                ds.field("players", &self.players());
+                ds.finish()
+            }
+        }
+        pub enum PlayerListEntryOffset {}
+        #[derive(Copy, Clone, PartialEq)]
+
+        pub struct PlayerListEntry<'a> {
+            pub _tab: ::flatbuffers::Table<'a>,
+        }
+
+        impl<'a> ::flatbuffers::Follow<'a> for PlayerListEntry<'a> {
+            type Inner = PlayerListEntry<'a>;
+            #[inline]
+            unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+                Self {
+                    _tab: unsafe { ::flatbuffers::Table::new(buf, loc) },
+                }
+            }
+        }
+
+        impl<'a> PlayerListEntry<'a> {
+            pub const VT_PLAYER_ID: ::flatbuffers::VOffsetT = 4;
+            pub const VT_DISPLAY_NAME: ::flatbuffers::VOffsetT = 6;
+            pub const VT_CHARACTER_NAME: ::flatbuffers::VOffsetT = 8;
+            pub const VT_CHARACTER_LEVEL: ::flatbuffers::VOffsetT = 10;
+            pub const VT_TOP_SKILLS: ::flatbuffers::VOffsetT = 12;
+            pub const VT_POS: ::flatbuffers::VOffsetT = 14;
+            pub const VT_CELL_FORM_ID: ::flatbuffers::VOffsetT = 16;
+            pub const VT_HP: ::flatbuffers::VOffsetT = 18;
+            pub const VT_HP_MAX: ::flatbuffers::VOffsetT = 20;
+
+            #[inline]
+            pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+                PlayerListEntry { _tab: table }
+            }
+            #[allow(unused_mut)]
+            pub fn create<
+                'bldr: 'args,
+                'args: 'mut_bldr,
+                'mut_bldr,
+                A: ::flatbuffers::Allocator + 'bldr,
+            >(
+                _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+                args: &'args PlayerListEntryArgs<'args>,
+            ) -> ::flatbuffers::WIPOffset<PlayerListEntry<'bldr>> {
+                let mut builder = PlayerListEntryBuilder::new(_fbb);
+                builder.add_hp_max(args.hp_max);
+                builder.add_hp(args.hp);
+                builder.add_cell_form_id(args.cell_form_id);
+                if let Some(x) = args.pos {
+                    builder.add_pos(x);
+                }
+                if let Some(x) = args.top_skills {
+                    builder.add_top_skills(x);
+                }
+                if let Some(x) = args.character_name {
+                    builder.add_character_name(x);
+                }
+                if let Some(x) = args.display_name {
+                    builder.add_display_name(x);
+                }
+                builder.add_player_id(args.player_id);
+                builder.add_character_level(args.character_level);
+                builder.finish()
+            }
+
+            #[inline]
+            pub fn player_id(&self) -> u32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u32>(PlayerListEntry::VT_PLAYER_ID, Some(0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn display_name(&self) -> Option<&'a str> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(
+                        PlayerListEntry::VT_DISPLAY_NAME,
+                        None,
+                    )
+                }
+            }
+            #[inline]
+            pub fn character_name(&self) -> Option<&'a str> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(
+                        PlayerListEntry::VT_CHARACTER_NAME,
+                        None,
+                    )
+                }
+            }
+            #[inline]
+            pub fn character_level(&self) -> u16 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u16>(PlayerListEntry::VT_CHARACTER_LEVEL, Some(0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn top_skills(
+                &self,
+            ) -> Option<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<SkillEntry<'a>>>>
+            {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab.get::<::flatbuffers::ForwardsUOffset<
+                        ::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<SkillEntry>>,
+                    >>(PlayerListEntry::VT_TOP_SKILLS, None)
+                }
+            }
+            #[inline]
+            pub fn pos(&self) -> Option<&'a Vec3> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe { self._tab.get::<Vec3>(PlayerListEntry::VT_POS, None) }
+            }
+            #[inline]
+            pub fn cell_form_id(&self) -> u32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u32>(PlayerListEntry::VT_CELL_FORM_ID, Some(0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn hp(&self) -> f32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<f32>(PlayerListEntry::VT_HP, Some(0.0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn hp_max(&self) -> f32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<f32>(PlayerListEntry::VT_HP_MAX, Some(0.0))
+                        .unwrap()
+                }
+            }
+        }
+
+        impl ::flatbuffers::Verifiable for PlayerListEntry<'_> {
+            #[inline]
+            fn run_verifier(
+                v: &mut ::flatbuffers::Verifier,
+                pos: usize,
+            ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+                v.visit_table(pos)?
+                    .visit_field::<u32>("player_id", Self::VT_PLAYER_ID, false)?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<&str>>(
+                        "display_name",
+                        Self::VT_DISPLAY_NAME,
+                        false,
+                    )?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<&str>>(
+                        "character_name",
+                        Self::VT_CHARACTER_NAME,
+                        false,
+                    )?
+                    .visit_field::<u16>("character_level", Self::VT_CHARACTER_LEVEL, false)?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<
+                        ::flatbuffers::Vector<'_, ::flatbuffers::ForwardsUOffset<SkillEntry>>,
+                    >>("top_skills", Self::VT_TOP_SKILLS, false)?
+                    .visit_field::<Vec3>("pos", Self::VT_POS, false)?
+                    .visit_field::<u32>("cell_form_id", Self::VT_CELL_FORM_ID, false)?
+                    .visit_field::<f32>("hp", Self::VT_HP, false)?
+                    .visit_field::<f32>("hp_max", Self::VT_HP_MAX, false)?
+                    .finish();
+                Ok(())
+            }
+        }
+        pub struct PlayerListEntryArgs<'a> {
+            pub player_id: u32,
+            pub display_name: Option<::flatbuffers::WIPOffset<&'a str>>,
+            pub character_name: Option<::flatbuffers::WIPOffset<&'a str>>,
+            pub character_level: u16,
+            pub top_skills: Option<
+                ::flatbuffers::WIPOffset<
+                    ::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<SkillEntry<'a>>>,
+                >,
+            >,
+            pub pos: Option<&'a Vec3>,
+            pub cell_form_id: u32,
+            pub hp: f32,
+            pub hp_max: f32,
+        }
+        impl<'a> Default for PlayerListEntryArgs<'a> {
+            #[inline]
+            fn default() -> Self {
+                PlayerListEntryArgs {
+                    player_id: 0,
+                    display_name: None,
+                    character_name: None,
+                    character_level: 0,
+                    top_skills: None,
+                    pos: None,
+                    cell_form_id: 0,
+                    hp: 0.0,
+                    hp_max: 0.0,
+                }
+            }
+        }
+
+        pub struct PlayerListEntryBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+            fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+        }
+        impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> PlayerListEntryBuilder<'a, 'b, A> {
+            #[inline]
+            pub fn add_player_id(&mut self, player_id: u32) {
+                self.fbb_
+                    .push_slot::<u32>(PlayerListEntry::VT_PLAYER_ID, player_id, 0);
+            }
+            #[inline]
+            pub fn add_display_name(&mut self, display_name: ::flatbuffers::WIPOffset<&'b str>) {
+                self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(
+                    PlayerListEntry::VT_DISPLAY_NAME,
+                    display_name,
+                );
+            }
+            #[inline]
+            pub fn add_character_name(
+                &mut self,
+                character_name: ::flatbuffers::WIPOffset<&'b str>,
+            ) {
+                self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(
+                    PlayerListEntry::VT_CHARACTER_NAME,
+                    character_name,
+                );
+            }
+            #[inline]
+            pub fn add_character_level(&mut self, character_level: u16) {
+                self.fbb_
+                    .push_slot::<u16>(PlayerListEntry::VT_CHARACTER_LEVEL, character_level, 0);
+            }
+            #[inline]
+            pub fn add_top_skills(
+                &mut self,
+                top_skills: ::flatbuffers::WIPOffset<
+                    ::flatbuffers::Vector<'b, ::flatbuffers::ForwardsUOffset<SkillEntry<'b>>>,
+                >,
+            ) {
+                self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(
+                    PlayerListEntry::VT_TOP_SKILLS,
+                    top_skills,
+                );
+            }
+            #[inline]
+            pub fn add_pos(&mut self, pos: &Vec3) {
+                self.fbb_
+                    .push_slot_always::<&Vec3>(PlayerListEntry::VT_POS, pos);
+            }
+            #[inline]
+            pub fn add_cell_form_id(&mut self, cell_form_id: u32) {
+                self.fbb_
+                    .push_slot::<u32>(PlayerListEntry::VT_CELL_FORM_ID, cell_form_id, 0);
+            }
+            #[inline]
+            pub fn add_hp(&mut self, hp: f32) {
+                self.fbb_.push_slot::<f32>(PlayerListEntry::VT_HP, hp, 0.0);
+            }
+            #[inline]
+            pub fn add_hp_max(&mut self, hp_max: f32) {
+                self.fbb_
+                    .push_slot::<f32>(PlayerListEntry::VT_HP_MAX, hp_max, 0.0);
+            }
+            #[inline]
+            pub fn new(
+                _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            ) -> PlayerListEntryBuilder<'a, 'b, A> {
+                let start = _fbb.start_table();
+                PlayerListEntryBuilder {
+                    fbb_: _fbb,
+                    start_: start,
+                }
+            }
+            #[inline]
+            pub fn finish(self) -> ::flatbuffers::WIPOffset<PlayerListEntry<'a>> {
+                let o = self.fbb_.end_table(self.start_);
+                ::flatbuffers::WIPOffset::new(o.value())
+            }
+        }
+
+        impl ::core::fmt::Debug for PlayerListEntry<'_> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                let mut ds = f.debug_struct("PlayerListEntry");
+                ds.field("player_id", &self.player_id());
+                ds.field("display_name", &self.display_name());
+                ds.field("character_name", &self.character_name());
+                ds.field("character_level", &self.character_level());
+                ds.field("top_skills", &self.top_skills());
+                ds.field("pos", &self.pos());
+                ds.field("cell_form_id", &self.cell_form_id());
+                ds.field("hp", &self.hp());
+                ds.field("hp_max", &self.hp_max());
+                ds.finish()
+            }
+        }
+        pub enum PlayerListOffset {}
+        #[derive(Copy, Clone, PartialEq)]
+
+        pub struct PlayerList<'a> {
+            pub _tab: ::flatbuffers::Table<'a>,
+        }
+
+        impl<'a> ::flatbuffers::Follow<'a> for PlayerList<'a> {
+            type Inner = PlayerList<'a>;
+            #[inline]
+            unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+                Self {
+                    _tab: unsafe { ::flatbuffers::Table::new(buf, loc) },
+                }
+            }
+        }
+
+        impl<'a> PlayerList<'a> {
+            pub const VT_SERVER_TIME_MS: ::flatbuffers::VOffsetT = 4;
+            pub const VT_PLAYERS: ::flatbuffers::VOffsetT = 6;
+
+            #[inline]
+            pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+                PlayerList { _tab: table }
+            }
+            #[allow(unused_mut)]
+            pub fn create<
+                'bldr: 'args,
+                'args: 'mut_bldr,
+                'mut_bldr,
+                A: ::flatbuffers::Allocator + 'bldr,
+            >(
+                _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+                args: &'args PlayerListArgs<'args>,
+            ) -> ::flatbuffers::WIPOffset<PlayerList<'bldr>> {
+                let mut builder = PlayerListBuilder::new(_fbb);
+                builder.add_server_time_ms(args.server_time_ms);
+                if let Some(x) = args.players {
+                    builder.add_players(x);
+                }
+                builder.finish()
+            }
+
+            #[inline]
+            pub fn server_time_ms(&self) -> u64 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u64>(PlayerList::VT_SERVER_TIME_MS, Some(0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn players(
+                &self,
+            ) -> Option<
+                ::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<PlayerListEntry<'a>>>,
+            > {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab.get::<::flatbuffers::ForwardsUOffset<
+                        ::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<PlayerListEntry>>,
+                    >>(PlayerList::VT_PLAYERS, None)
+                }
+            }
+        }
+
+        impl ::flatbuffers::Verifiable for PlayerList<'_> {
+            #[inline]
+            fn run_verifier(
+                v: &mut ::flatbuffers::Verifier,
+                pos: usize,
+            ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+                v.visit_table(pos)?
+                    .visit_field::<u64>("server_time_ms", Self::VT_SERVER_TIME_MS, false)?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<
+                        ::flatbuffers::Vector<'_, ::flatbuffers::ForwardsUOffset<PlayerListEntry>>,
+                    >>("players", Self::VT_PLAYERS, false)?
+                    .finish();
+                Ok(())
+            }
+        }
+        pub struct PlayerListArgs<'a> {
+            pub server_time_ms: u64,
+            pub players: Option<
+                ::flatbuffers::WIPOffset<
+                    ::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<PlayerListEntry<'a>>>,
+                >,
+            >,
+        }
+        impl<'a> Default for PlayerListArgs<'a> {
+            #[inline]
+            fn default() -> Self {
+                PlayerListArgs {
+                    server_time_ms: 0,
+                    players: None,
+                }
+            }
+        }
+
+        pub struct PlayerListBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+            fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+        }
+        impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> PlayerListBuilder<'a, 'b, A> {
+            #[inline]
+            pub fn add_server_time_ms(&mut self, server_time_ms: u64) {
+                self.fbb_
+                    .push_slot::<u64>(PlayerList::VT_SERVER_TIME_MS, server_time_ms, 0);
+            }
+            #[inline]
+            pub fn add_players(
+                &mut self,
+                players: ::flatbuffers::WIPOffset<
+                    ::flatbuffers::Vector<'b, ::flatbuffers::ForwardsUOffset<PlayerListEntry<'b>>>,
+                >,
+            ) {
+                self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(
+                    PlayerList::VT_PLAYERS,
+                    players,
+                );
+            }
+            #[inline]
+            pub fn new(
+                _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            ) -> PlayerListBuilder<'a, 'b, A> {
+                let start = _fbb.start_table();
+                PlayerListBuilder {
+                    fbb_: _fbb,
+                    start_: start,
+                }
+            }
+            #[inline]
+            pub fn finish(self) -> ::flatbuffers::WIPOffset<PlayerList<'a>> {
+                let o = self.fbb_.end_table(self.start_);
+                ::flatbuffers::WIPOffset::new(o.value())
+            }
+        }
+
+        impl ::core::fmt::Debug for PlayerList<'_> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                let mut ds = f.debug_struct("PlayerList");
                 ds.field("server_time_ms", &self.server_time_ms());
                 ds.field("players", &self.players());
                 ds.finish()

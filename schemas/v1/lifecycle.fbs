@@ -5,8 +5,12 @@ include "types.fbs";
 namespace skyrim_relive.v1;
 
 table Hello {
-    name: string;                  // player display name
-    client_protocol_version: ubyte; // = 1 in this version; redundant with header byte but explicit
+    name: string;                  // player display name (from config)
+    client_protocol_version: ubyte; // = 2 in this version; redundant with header byte but explicit
+    // Zeus Phase 0: character data from the loaded save.
+    character_name: string;         // from player->GetName() (save-specific)
+    character_level: uint16 = 1;
+    top_skills: [SkillEntry];       // top 3 (or N) skills by level, descending
 }
 
 table Welcome {
@@ -27,4 +31,42 @@ table LeaveNotify {
 table Disconnect {
     code: DisconnectCode;
     reason: string;  // human-readable for logs
+}
+
+// Zeus Phase 0: admin authentication. Client sends password; server
+// checks against config and grants is_admin on the connection.
+table AdminAuth {
+    password: string;
+}
+
+table AdminAuthResult {
+    success: bool;
+    reason: string;
+}
+
+// Zeus Phase 0: generic admin command. Server parses the command string
+// and dispatches. Requires is_admin on the connection.
+table AdminCommand {
+    command: string;    // e.g. "kick 2", "pvp on", "time 14"
+}
+
+table AdminCommandResult {
+    success: bool;
+    message: string;   // human-readable output, printed to console
+}
+
+// Zeus Phase 0: server-to-all-clients command. Used for world state
+// changes that every client must apply locally (time, weather, etc.).
+table ServerCommand {
+    command: string;    // e.g. "time", "weather"
+    args: string;       // e.g. "14", "0x10e1f2"
+}
+
+// Zeus Phase 0: text chat. Client sends ChatMessage to server; server
+// broadcasts to all connected peers with the sender's info filled in.
+table ChatMessage {
+    player_id: uint32;      // 0 on C→S (server fills); sender id on S→C
+    sender_name: string;    // empty on C→S; server fills from Player.name
+    text: string;
+    server_time_ms: uint64; // 0 on C→S; server fills
 }

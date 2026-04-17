@@ -13,6 +13,8 @@ static_assert(FLATBUFFERS_VERSION_MAJOR == 25 &&
               FLATBUFFERS_VERSION_REVISION == 19,
              "Non-compatible flatbuffers version included");
 
+#include "types_generated.h"
+
 namespace skyrim_relive {
 namespace v1 {
 
@@ -28,6 +30,12 @@ struct PlayerInputBuilder;
 
 struct WorldSnapshot;
 struct WorldSnapshotBuilder;
+
+struct PlayerListEntry;
+struct PlayerListEntryBuilder;
+
+struct PlayerList;
+struct PlayerListBuilder;
 
 struct CombatEvent;
 struct CombatEventBuilder;
@@ -517,6 +525,224 @@ inline ::flatbuffers::Offset<WorldSnapshot> CreateWorldSnapshotDirect(
   return skyrim_relive::v1::CreateWorldSnapshot(
       _fbb,
       server_tick,
+      server_time_ms,
+      players__);
+}
+
+struct PlayerListEntry FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef PlayerListEntryBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_PLAYER_ID = 4,
+    VT_DISPLAY_NAME = 6,
+    VT_CHARACTER_NAME = 8,
+    VT_CHARACTER_LEVEL = 10,
+    VT_TOP_SKILLS = 12,
+    VT_POS = 14,
+    VT_CELL_FORM_ID = 16,
+    VT_HP = 18,
+    VT_HP_MAX = 20
+  };
+  uint32_t player_id() const {
+    return GetField<uint32_t>(VT_PLAYER_ID, 0);
+  }
+  const ::flatbuffers::String *display_name() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_DISPLAY_NAME);
+  }
+  const ::flatbuffers::String *character_name() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_CHARACTER_NAME);
+  }
+  uint16_t character_level() const {
+    return GetField<uint16_t>(VT_CHARACTER_LEVEL, 0);
+  }
+  const ::flatbuffers::Vector<::flatbuffers::Offset<skyrim_relive::v1::SkillEntry>> *top_skills() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<skyrim_relive::v1::SkillEntry>> *>(VT_TOP_SKILLS);
+  }
+  const skyrim_relive::v1::Vec3 *pos() const {
+    return GetStruct<const skyrim_relive::v1::Vec3 *>(VT_POS);
+  }
+  uint32_t cell_form_id() const {
+    return GetField<uint32_t>(VT_CELL_FORM_ID, 0);
+  }
+  float hp() const {
+    return GetField<float>(VT_HP, 0.0f);
+  }
+  float hp_max() const {
+    return GetField<float>(VT_HP_MAX, 0.0f);
+  }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_PLAYER_ID, 4) &&
+           VerifyOffset(verifier, VT_DISPLAY_NAME) &&
+           verifier.VerifyString(display_name()) &&
+           VerifyOffset(verifier, VT_CHARACTER_NAME) &&
+           verifier.VerifyString(character_name()) &&
+           VerifyField<uint16_t>(verifier, VT_CHARACTER_LEVEL, 2) &&
+           VerifyOffset(verifier, VT_TOP_SKILLS) &&
+           verifier.VerifyVector(top_skills()) &&
+           verifier.VerifyVectorOfTables(top_skills()) &&
+           VerifyField<skyrim_relive::v1::Vec3>(verifier, VT_POS, 4) &&
+           VerifyField<uint32_t>(verifier, VT_CELL_FORM_ID, 4) &&
+           VerifyField<float>(verifier, VT_HP, 4) &&
+           VerifyField<float>(verifier, VT_HP_MAX, 4) &&
+           verifier.EndTable();
+  }
+};
+
+struct PlayerListEntryBuilder {
+  typedef PlayerListEntry Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_player_id(uint32_t player_id) {
+    fbb_.AddElement<uint32_t>(PlayerListEntry::VT_PLAYER_ID, player_id, 0);
+  }
+  void add_display_name(::flatbuffers::Offset<::flatbuffers::String> display_name) {
+    fbb_.AddOffset(PlayerListEntry::VT_DISPLAY_NAME, display_name);
+  }
+  void add_character_name(::flatbuffers::Offset<::flatbuffers::String> character_name) {
+    fbb_.AddOffset(PlayerListEntry::VT_CHARACTER_NAME, character_name);
+  }
+  void add_character_level(uint16_t character_level) {
+    fbb_.AddElement<uint16_t>(PlayerListEntry::VT_CHARACTER_LEVEL, character_level, 0);
+  }
+  void add_top_skills(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<skyrim_relive::v1::SkillEntry>>> top_skills) {
+    fbb_.AddOffset(PlayerListEntry::VT_TOP_SKILLS, top_skills);
+  }
+  void add_pos(const skyrim_relive::v1::Vec3 *pos) {
+    fbb_.AddStruct(PlayerListEntry::VT_POS, pos);
+  }
+  void add_cell_form_id(uint32_t cell_form_id) {
+    fbb_.AddElement<uint32_t>(PlayerListEntry::VT_CELL_FORM_ID, cell_form_id, 0);
+  }
+  void add_hp(float hp) {
+    fbb_.AddElement<float>(PlayerListEntry::VT_HP, hp, 0.0f);
+  }
+  void add_hp_max(float hp_max) {
+    fbb_.AddElement<float>(PlayerListEntry::VT_HP_MAX, hp_max, 0.0f);
+  }
+  explicit PlayerListEntryBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<PlayerListEntry> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<PlayerListEntry>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<PlayerListEntry> CreatePlayerListEntry(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t player_id = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> display_name = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> character_name = 0,
+    uint16_t character_level = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<skyrim_relive::v1::SkillEntry>>> top_skills = 0,
+    const skyrim_relive::v1::Vec3 *pos = nullptr,
+    uint32_t cell_form_id = 0,
+    float hp = 0.0f,
+    float hp_max = 0.0f) {
+  PlayerListEntryBuilder builder_(_fbb);
+  builder_.add_hp_max(hp_max);
+  builder_.add_hp(hp);
+  builder_.add_cell_form_id(cell_form_id);
+  builder_.add_pos(pos);
+  builder_.add_top_skills(top_skills);
+  builder_.add_character_name(character_name);
+  builder_.add_display_name(display_name);
+  builder_.add_player_id(player_id);
+  builder_.add_character_level(character_level);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<PlayerListEntry> CreatePlayerListEntryDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t player_id = 0,
+    const char *display_name = nullptr,
+    const char *character_name = nullptr,
+    uint16_t character_level = 0,
+    const std::vector<::flatbuffers::Offset<skyrim_relive::v1::SkillEntry>> *top_skills = nullptr,
+    const skyrim_relive::v1::Vec3 *pos = nullptr,
+    uint32_t cell_form_id = 0,
+    float hp = 0.0f,
+    float hp_max = 0.0f) {
+  auto display_name__ = display_name ? _fbb.CreateString(display_name) : 0;
+  auto character_name__ = character_name ? _fbb.CreateString(character_name) : 0;
+  auto top_skills__ = top_skills ? _fbb.CreateVector<::flatbuffers::Offset<skyrim_relive::v1::SkillEntry>>(*top_skills) : 0;
+  return skyrim_relive::v1::CreatePlayerListEntry(
+      _fbb,
+      player_id,
+      display_name__,
+      character_name__,
+      character_level,
+      top_skills__,
+      pos,
+      cell_form_id,
+      hp,
+      hp_max);
+}
+
+struct PlayerList FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef PlayerListBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_SERVER_TIME_MS = 4,
+    VT_PLAYERS = 6
+  };
+  uint64_t server_time_ms() const {
+    return GetField<uint64_t>(VT_SERVER_TIME_MS, 0);
+  }
+  const ::flatbuffers::Vector<::flatbuffers::Offset<skyrim_relive::v1::PlayerListEntry>> *players() const {
+    return GetPointer<const ::flatbuffers::Vector<::flatbuffers::Offset<skyrim_relive::v1::PlayerListEntry>> *>(VT_PLAYERS);
+  }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint64_t>(verifier, VT_SERVER_TIME_MS, 8) &&
+           VerifyOffset(verifier, VT_PLAYERS) &&
+           verifier.VerifyVector(players()) &&
+           verifier.VerifyVectorOfTables(players()) &&
+           verifier.EndTable();
+  }
+};
+
+struct PlayerListBuilder {
+  typedef PlayerList Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_server_time_ms(uint64_t server_time_ms) {
+    fbb_.AddElement<uint64_t>(PlayerList::VT_SERVER_TIME_MS, server_time_ms, 0);
+  }
+  void add_players(::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<skyrim_relive::v1::PlayerListEntry>>> players) {
+    fbb_.AddOffset(PlayerList::VT_PLAYERS, players);
+  }
+  explicit PlayerListBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<PlayerList> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<PlayerList>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<PlayerList> CreatePlayerList(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t server_time_ms = 0,
+    ::flatbuffers::Offset<::flatbuffers::Vector<::flatbuffers::Offset<skyrim_relive::v1::PlayerListEntry>>> players = 0) {
+  PlayerListBuilder builder_(_fbb);
+  builder_.add_server_time_ms(server_time_ms);
+  builder_.add_players(players);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<PlayerList> CreatePlayerListDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t server_time_ms = 0,
+    const std::vector<::flatbuffers::Offset<skyrim_relive::v1::PlayerListEntry>> *players = nullptr) {
+  auto players__ = players ? _fbb.CreateVector<::flatbuffers::Offset<skyrim_relive::v1::PlayerListEntry>>(*players) : 0;
+  return skyrim_relive::v1::CreatePlayerList(
+      _fbb,
       server_time_ms,
       players__);
 }

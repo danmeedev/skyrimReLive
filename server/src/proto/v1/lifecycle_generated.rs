@@ -47,6 +47,9 @@ pub mod skyrim_relive {
         impl<'a> Hello<'a> {
             pub const VT_NAME: ::flatbuffers::VOffsetT = 4;
             pub const VT_CLIENT_PROTOCOL_VERSION: ::flatbuffers::VOffsetT = 6;
+            pub const VT_CHARACTER_NAME: ::flatbuffers::VOffsetT = 8;
+            pub const VT_CHARACTER_LEVEL: ::flatbuffers::VOffsetT = 10;
+            pub const VT_TOP_SKILLS: ::flatbuffers::VOffsetT = 12;
 
             #[inline]
             pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
@@ -63,9 +66,16 @@ pub mod skyrim_relive {
                 args: &'args HelloArgs<'args>,
             ) -> ::flatbuffers::WIPOffset<Hello<'bldr>> {
                 let mut builder = HelloBuilder::new(_fbb);
+                if let Some(x) = args.top_skills {
+                    builder.add_top_skills(x);
+                }
+                if let Some(x) = args.character_name {
+                    builder.add_character_name(x);
+                }
                 if let Some(x) = args.name {
                     builder.add_name(x);
                 }
+                builder.add_character_level(args.character_level);
                 builder.add_client_protocol_version(args.client_protocol_version);
                 builder.finish()
             }
@@ -91,6 +101,41 @@ pub mod skyrim_relive {
                         .unwrap()
                 }
             }
+            #[inline]
+            pub fn character_name(&self) -> Option<&'a str> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<::flatbuffers::ForwardsUOffset<&str>>(Hello::VT_CHARACTER_NAME, None)
+                }
+            }
+            #[inline]
+            pub fn character_level(&self) -> u16 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u16>(Hello::VT_CHARACTER_LEVEL, Some(1))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn top_skills(
+                &self,
+            ) -> Option<::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<SkillEntry<'a>>>>
+            {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab.get::<::flatbuffers::ForwardsUOffset<
+                        ::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<SkillEntry>>,
+                    >>(Hello::VT_TOP_SKILLS, None)
+                }
+            }
         }
 
         impl ::flatbuffers::Verifiable for Hello<'_> {
@@ -110,6 +155,15 @@ pub mod skyrim_relive {
                         Self::VT_CLIENT_PROTOCOL_VERSION,
                         false,
                     )?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<&str>>(
+                        "character_name",
+                        Self::VT_CHARACTER_NAME,
+                        false,
+                    )?
+                    .visit_field::<u16>("character_level", Self::VT_CHARACTER_LEVEL, false)?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<
+                        ::flatbuffers::Vector<'_, ::flatbuffers::ForwardsUOffset<SkillEntry>>,
+                    >>("top_skills", Self::VT_TOP_SKILLS, false)?
                     .finish();
                 Ok(())
             }
@@ -117,6 +171,13 @@ pub mod skyrim_relive {
         pub struct HelloArgs<'a> {
             pub name: Option<::flatbuffers::WIPOffset<&'a str>>,
             pub client_protocol_version: u8,
+            pub character_name: Option<::flatbuffers::WIPOffset<&'a str>>,
+            pub character_level: u16,
+            pub top_skills: Option<
+                ::flatbuffers::WIPOffset<
+                    ::flatbuffers::Vector<'a, ::flatbuffers::ForwardsUOffset<SkillEntry<'a>>>,
+                >,
+            >,
         }
         impl<'a> Default for HelloArgs<'a> {
             #[inline]
@@ -124,6 +185,9 @@ pub mod skyrim_relive {
                 HelloArgs {
                     name: None,
                     client_protocol_version: 0,
+                    character_name: None,
+                    character_level: 1,
+                    top_skills: None,
                 }
             }
         }
@@ -144,6 +208,33 @@ pub mod skyrim_relive {
                     Hello::VT_CLIENT_PROTOCOL_VERSION,
                     client_protocol_version,
                     0,
+                );
+            }
+            #[inline]
+            pub fn add_character_name(
+                &mut self,
+                character_name: ::flatbuffers::WIPOffset<&'b str>,
+            ) {
+                self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(
+                    Hello::VT_CHARACTER_NAME,
+                    character_name,
+                );
+            }
+            #[inline]
+            pub fn add_character_level(&mut self, character_level: u16) {
+                self.fbb_
+                    .push_slot::<u16>(Hello::VT_CHARACTER_LEVEL, character_level, 1);
+            }
+            #[inline]
+            pub fn add_top_skills(
+                &mut self,
+                top_skills: ::flatbuffers::WIPOffset<
+                    ::flatbuffers::Vector<'b, ::flatbuffers::ForwardsUOffset<SkillEntry<'b>>>,
+                >,
+            ) {
+                self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(
+                    Hello::VT_TOP_SKILLS,
+                    top_skills,
                 );
             }
             #[inline]
@@ -168,6 +259,9 @@ pub mod skyrim_relive {
                 let mut ds = f.debug_struct("Hello");
                 ds.field("name", &self.name());
                 ds.field("client_protocol_version", &self.client_protocol_version());
+                ds.field("character_name", &self.character_name());
+                ds.field("character_level", &self.character_level());
+                ds.field("top_skills", &self.top_skills());
                 ds.finish()
             }
         }
@@ -721,6 +815,854 @@ pub mod skyrim_relive {
                 let mut ds = f.debug_struct("Disconnect");
                 ds.field("code", &self.code());
                 ds.field("reason", &self.reason());
+                ds.finish()
+            }
+        }
+        pub enum AdminAuthOffset {}
+        #[derive(Copy, Clone, PartialEq)]
+
+        pub struct AdminAuth<'a> {
+            pub _tab: ::flatbuffers::Table<'a>,
+        }
+
+        impl<'a> ::flatbuffers::Follow<'a> for AdminAuth<'a> {
+            type Inner = AdminAuth<'a>;
+            #[inline]
+            unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+                Self {
+                    _tab: unsafe { ::flatbuffers::Table::new(buf, loc) },
+                }
+            }
+        }
+
+        impl<'a> AdminAuth<'a> {
+            pub const VT_PASSWORD: ::flatbuffers::VOffsetT = 4;
+
+            #[inline]
+            pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+                AdminAuth { _tab: table }
+            }
+            #[allow(unused_mut)]
+            pub fn create<
+                'bldr: 'args,
+                'args: 'mut_bldr,
+                'mut_bldr,
+                A: ::flatbuffers::Allocator + 'bldr,
+            >(
+                _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+                args: &'args AdminAuthArgs<'args>,
+            ) -> ::flatbuffers::WIPOffset<AdminAuth<'bldr>> {
+                let mut builder = AdminAuthBuilder::new(_fbb);
+                if let Some(x) = args.password {
+                    builder.add_password(x);
+                }
+                builder.finish()
+            }
+
+            #[inline]
+            pub fn password(&self) -> Option<&'a str> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<::flatbuffers::ForwardsUOffset<&str>>(AdminAuth::VT_PASSWORD, None)
+                }
+            }
+        }
+
+        impl ::flatbuffers::Verifiable for AdminAuth<'_> {
+            #[inline]
+            fn run_verifier(
+                v: &mut ::flatbuffers::Verifier,
+                pos: usize,
+            ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+                v.visit_table(pos)?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<&str>>(
+                        "password",
+                        Self::VT_PASSWORD,
+                        false,
+                    )?
+                    .finish();
+                Ok(())
+            }
+        }
+        pub struct AdminAuthArgs<'a> {
+            pub password: Option<::flatbuffers::WIPOffset<&'a str>>,
+        }
+        impl<'a> Default for AdminAuthArgs<'a> {
+            #[inline]
+            fn default() -> Self {
+                AdminAuthArgs { password: None }
+            }
+        }
+
+        pub struct AdminAuthBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+            fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+        }
+        impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> AdminAuthBuilder<'a, 'b, A> {
+            #[inline]
+            pub fn add_password(&mut self, password: ::flatbuffers::WIPOffset<&'b str>) {
+                self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(
+                    AdminAuth::VT_PASSWORD,
+                    password,
+                );
+            }
+            #[inline]
+            pub fn new(
+                _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            ) -> AdminAuthBuilder<'a, 'b, A> {
+                let start = _fbb.start_table();
+                AdminAuthBuilder {
+                    fbb_: _fbb,
+                    start_: start,
+                }
+            }
+            #[inline]
+            pub fn finish(self) -> ::flatbuffers::WIPOffset<AdminAuth<'a>> {
+                let o = self.fbb_.end_table(self.start_);
+                ::flatbuffers::WIPOffset::new(o.value())
+            }
+        }
+
+        impl ::core::fmt::Debug for AdminAuth<'_> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                let mut ds = f.debug_struct("AdminAuth");
+                ds.field("password", &self.password());
+                ds.finish()
+            }
+        }
+        pub enum AdminAuthResultOffset {}
+        #[derive(Copy, Clone, PartialEq)]
+
+        pub struct AdminAuthResult<'a> {
+            pub _tab: ::flatbuffers::Table<'a>,
+        }
+
+        impl<'a> ::flatbuffers::Follow<'a> for AdminAuthResult<'a> {
+            type Inner = AdminAuthResult<'a>;
+            #[inline]
+            unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+                Self {
+                    _tab: unsafe { ::flatbuffers::Table::new(buf, loc) },
+                }
+            }
+        }
+
+        impl<'a> AdminAuthResult<'a> {
+            pub const VT_SUCCESS: ::flatbuffers::VOffsetT = 4;
+            pub const VT_REASON: ::flatbuffers::VOffsetT = 6;
+
+            #[inline]
+            pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+                AdminAuthResult { _tab: table }
+            }
+            #[allow(unused_mut)]
+            pub fn create<
+                'bldr: 'args,
+                'args: 'mut_bldr,
+                'mut_bldr,
+                A: ::flatbuffers::Allocator + 'bldr,
+            >(
+                _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+                args: &'args AdminAuthResultArgs<'args>,
+            ) -> ::flatbuffers::WIPOffset<AdminAuthResult<'bldr>> {
+                let mut builder = AdminAuthResultBuilder::new(_fbb);
+                if let Some(x) = args.reason {
+                    builder.add_reason(x);
+                }
+                builder.add_success(args.success);
+                builder.finish()
+            }
+
+            #[inline]
+            pub fn success(&self) -> bool {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<bool>(AdminAuthResult::VT_SUCCESS, Some(false))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn reason(&self) -> Option<&'a str> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(
+                        AdminAuthResult::VT_REASON,
+                        None,
+                    )
+                }
+            }
+        }
+
+        impl ::flatbuffers::Verifiable for AdminAuthResult<'_> {
+            #[inline]
+            fn run_verifier(
+                v: &mut ::flatbuffers::Verifier,
+                pos: usize,
+            ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+                v.visit_table(pos)?
+                    .visit_field::<bool>("success", Self::VT_SUCCESS, false)?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<&str>>(
+                        "reason",
+                        Self::VT_REASON,
+                        false,
+                    )?
+                    .finish();
+                Ok(())
+            }
+        }
+        pub struct AdminAuthResultArgs<'a> {
+            pub success: bool,
+            pub reason: Option<::flatbuffers::WIPOffset<&'a str>>,
+        }
+        impl<'a> Default for AdminAuthResultArgs<'a> {
+            #[inline]
+            fn default() -> Self {
+                AdminAuthResultArgs {
+                    success: false,
+                    reason: None,
+                }
+            }
+        }
+
+        pub struct AdminAuthResultBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+            fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+        }
+        impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> AdminAuthResultBuilder<'a, 'b, A> {
+            #[inline]
+            pub fn add_success(&mut self, success: bool) {
+                self.fbb_
+                    .push_slot::<bool>(AdminAuthResult::VT_SUCCESS, success, false);
+            }
+            #[inline]
+            pub fn add_reason(&mut self, reason: ::flatbuffers::WIPOffset<&'b str>) {
+                self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(
+                    AdminAuthResult::VT_REASON,
+                    reason,
+                );
+            }
+            #[inline]
+            pub fn new(
+                _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            ) -> AdminAuthResultBuilder<'a, 'b, A> {
+                let start = _fbb.start_table();
+                AdminAuthResultBuilder {
+                    fbb_: _fbb,
+                    start_: start,
+                }
+            }
+            #[inline]
+            pub fn finish(self) -> ::flatbuffers::WIPOffset<AdminAuthResult<'a>> {
+                let o = self.fbb_.end_table(self.start_);
+                ::flatbuffers::WIPOffset::new(o.value())
+            }
+        }
+
+        impl ::core::fmt::Debug for AdminAuthResult<'_> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                let mut ds = f.debug_struct("AdminAuthResult");
+                ds.field("success", &self.success());
+                ds.field("reason", &self.reason());
+                ds.finish()
+            }
+        }
+        pub enum AdminCommandOffset {}
+        #[derive(Copy, Clone, PartialEq)]
+
+        pub struct AdminCommand<'a> {
+            pub _tab: ::flatbuffers::Table<'a>,
+        }
+
+        impl<'a> ::flatbuffers::Follow<'a> for AdminCommand<'a> {
+            type Inner = AdminCommand<'a>;
+            #[inline]
+            unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+                Self {
+                    _tab: unsafe { ::flatbuffers::Table::new(buf, loc) },
+                }
+            }
+        }
+
+        impl<'a> AdminCommand<'a> {
+            pub const VT_COMMAND: ::flatbuffers::VOffsetT = 4;
+
+            #[inline]
+            pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+                AdminCommand { _tab: table }
+            }
+            #[allow(unused_mut)]
+            pub fn create<
+                'bldr: 'args,
+                'args: 'mut_bldr,
+                'mut_bldr,
+                A: ::flatbuffers::Allocator + 'bldr,
+            >(
+                _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+                args: &'args AdminCommandArgs<'args>,
+            ) -> ::flatbuffers::WIPOffset<AdminCommand<'bldr>> {
+                let mut builder = AdminCommandBuilder::new(_fbb);
+                if let Some(x) = args.command {
+                    builder.add_command(x);
+                }
+                builder.finish()
+            }
+
+            #[inline]
+            pub fn command(&self) -> Option<&'a str> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<::flatbuffers::ForwardsUOffset<&str>>(AdminCommand::VT_COMMAND, None)
+                }
+            }
+        }
+
+        impl ::flatbuffers::Verifiable for AdminCommand<'_> {
+            #[inline]
+            fn run_verifier(
+                v: &mut ::flatbuffers::Verifier,
+                pos: usize,
+            ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+                v.visit_table(pos)?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<&str>>(
+                        "command",
+                        Self::VT_COMMAND,
+                        false,
+                    )?
+                    .finish();
+                Ok(())
+            }
+        }
+        pub struct AdminCommandArgs<'a> {
+            pub command: Option<::flatbuffers::WIPOffset<&'a str>>,
+        }
+        impl<'a> Default for AdminCommandArgs<'a> {
+            #[inline]
+            fn default() -> Self {
+                AdminCommandArgs { command: None }
+            }
+        }
+
+        pub struct AdminCommandBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+            fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+        }
+        impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> AdminCommandBuilder<'a, 'b, A> {
+            #[inline]
+            pub fn add_command(&mut self, command: ::flatbuffers::WIPOffset<&'b str>) {
+                self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(
+                    AdminCommand::VT_COMMAND,
+                    command,
+                );
+            }
+            #[inline]
+            pub fn new(
+                _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            ) -> AdminCommandBuilder<'a, 'b, A> {
+                let start = _fbb.start_table();
+                AdminCommandBuilder {
+                    fbb_: _fbb,
+                    start_: start,
+                }
+            }
+            #[inline]
+            pub fn finish(self) -> ::flatbuffers::WIPOffset<AdminCommand<'a>> {
+                let o = self.fbb_.end_table(self.start_);
+                ::flatbuffers::WIPOffset::new(o.value())
+            }
+        }
+
+        impl ::core::fmt::Debug for AdminCommand<'_> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                let mut ds = f.debug_struct("AdminCommand");
+                ds.field("command", &self.command());
+                ds.finish()
+            }
+        }
+        pub enum AdminCommandResultOffset {}
+        #[derive(Copy, Clone, PartialEq)]
+
+        pub struct AdminCommandResult<'a> {
+            pub _tab: ::flatbuffers::Table<'a>,
+        }
+
+        impl<'a> ::flatbuffers::Follow<'a> for AdminCommandResult<'a> {
+            type Inner = AdminCommandResult<'a>;
+            #[inline]
+            unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+                Self {
+                    _tab: unsafe { ::flatbuffers::Table::new(buf, loc) },
+                }
+            }
+        }
+
+        impl<'a> AdminCommandResult<'a> {
+            pub const VT_SUCCESS: ::flatbuffers::VOffsetT = 4;
+            pub const VT_MESSAGE: ::flatbuffers::VOffsetT = 6;
+
+            #[inline]
+            pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+                AdminCommandResult { _tab: table }
+            }
+            #[allow(unused_mut)]
+            pub fn create<
+                'bldr: 'args,
+                'args: 'mut_bldr,
+                'mut_bldr,
+                A: ::flatbuffers::Allocator + 'bldr,
+            >(
+                _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+                args: &'args AdminCommandResultArgs<'args>,
+            ) -> ::flatbuffers::WIPOffset<AdminCommandResult<'bldr>> {
+                let mut builder = AdminCommandResultBuilder::new(_fbb);
+                if let Some(x) = args.message {
+                    builder.add_message(x);
+                }
+                builder.add_success(args.success);
+                builder.finish()
+            }
+
+            #[inline]
+            pub fn success(&self) -> bool {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<bool>(AdminCommandResult::VT_SUCCESS, Some(false))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn message(&self) -> Option<&'a str> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(
+                        AdminCommandResult::VT_MESSAGE,
+                        None,
+                    )
+                }
+            }
+        }
+
+        impl ::flatbuffers::Verifiable for AdminCommandResult<'_> {
+            #[inline]
+            fn run_verifier(
+                v: &mut ::flatbuffers::Verifier,
+                pos: usize,
+            ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+                v.visit_table(pos)?
+                    .visit_field::<bool>("success", Self::VT_SUCCESS, false)?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<&str>>(
+                        "message",
+                        Self::VT_MESSAGE,
+                        false,
+                    )?
+                    .finish();
+                Ok(())
+            }
+        }
+        pub struct AdminCommandResultArgs<'a> {
+            pub success: bool,
+            pub message: Option<::flatbuffers::WIPOffset<&'a str>>,
+        }
+        impl<'a> Default for AdminCommandResultArgs<'a> {
+            #[inline]
+            fn default() -> Self {
+                AdminCommandResultArgs {
+                    success: false,
+                    message: None,
+                }
+            }
+        }
+
+        pub struct AdminCommandResultBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+            fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+        }
+        impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> AdminCommandResultBuilder<'a, 'b, A> {
+            #[inline]
+            pub fn add_success(&mut self, success: bool) {
+                self.fbb_
+                    .push_slot::<bool>(AdminCommandResult::VT_SUCCESS, success, false);
+            }
+            #[inline]
+            pub fn add_message(&mut self, message: ::flatbuffers::WIPOffset<&'b str>) {
+                self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(
+                    AdminCommandResult::VT_MESSAGE,
+                    message,
+                );
+            }
+            #[inline]
+            pub fn new(
+                _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            ) -> AdminCommandResultBuilder<'a, 'b, A> {
+                let start = _fbb.start_table();
+                AdminCommandResultBuilder {
+                    fbb_: _fbb,
+                    start_: start,
+                }
+            }
+            #[inline]
+            pub fn finish(self) -> ::flatbuffers::WIPOffset<AdminCommandResult<'a>> {
+                let o = self.fbb_.end_table(self.start_);
+                ::flatbuffers::WIPOffset::new(o.value())
+            }
+        }
+
+        impl ::core::fmt::Debug for AdminCommandResult<'_> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                let mut ds = f.debug_struct("AdminCommandResult");
+                ds.field("success", &self.success());
+                ds.field("message", &self.message());
+                ds.finish()
+            }
+        }
+        pub enum ServerCommandOffset {}
+        #[derive(Copy, Clone, PartialEq)]
+
+        pub struct ServerCommand<'a> {
+            pub _tab: ::flatbuffers::Table<'a>,
+        }
+
+        impl<'a> ::flatbuffers::Follow<'a> for ServerCommand<'a> {
+            type Inner = ServerCommand<'a>;
+            #[inline]
+            unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+                Self {
+                    _tab: unsafe { ::flatbuffers::Table::new(buf, loc) },
+                }
+            }
+        }
+
+        impl<'a> ServerCommand<'a> {
+            pub const VT_COMMAND: ::flatbuffers::VOffsetT = 4;
+            pub const VT_ARGS: ::flatbuffers::VOffsetT = 6;
+
+            #[inline]
+            pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+                ServerCommand { _tab: table }
+            }
+            #[allow(unused_mut)]
+            pub fn create<
+                'bldr: 'args,
+                'args: 'mut_bldr,
+                'mut_bldr,
+                A: ::flatbuffers::Allocator + 'bldr,
+            >(
+                _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+                args: &'args ServerCommandArgs<'args>,
+            ) -> ::flatbuffers::WIPOffset<ServerCommand<'bldr>> {
+                let mut builder = ServerCommandBuilder::new(_fbb);
+                if let Some(x) = args.args {
+                    builder.add_args(x);
+                }
+                if let Some(x) = args.command {
+                    builder.add_command(x);
+                }
+                builder.finish()
+            }
+
+            #[inline]
+            pub fn command(&self) -> Option<&'a str> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(
+                        ServerCommand::VT_COMMAND,
+                        None,
+                    )
+                }
+            }
+            #[inline]
+            pub fn args(&self) -> Option<&'a str> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<::flatbuffers::ForwardsUOffset<&str>>(ServerCommand::VT_ARGS, None)
+                }
+            }
+        }
+
+        impl ::flatbuffers::Verifiable for ServerCommand<'_> {
+            #[inline]
+            fn run_verifier(
+                v: &mut ::flatbuffers::Verifier,
+                pos: usize,
+            ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+                v.visit_table(pos)?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<&str>>(
+                        "command",
+                        Self::VT_COMMAND,
+                        false,
+                    )?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<&str>>(
+                        "args",
+                        Self::VT_ARGS,
+                        false,
+                    )?
+                    .finish();
+                Ok(())
+            }
+        }
+        pub struct ServerCommandArgs<'a> {
+            pub command: Option<::flatbuffers::WIPOffset<&'a str>>,
+            pub args: Option<::flatbuffers::WIPOffset<&'a str>>,
+        }
+        impl<'a> Default for ServerCommandArgs<'a> {
+            #[inline]
+            fn default() -> Self {
+                ServerCommandArgs {
+                    command: None,
+                    args: None,
+                }
+            }
+        }
+
+        pub struct ServerCommandBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+            fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+        }
+        impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> ServerCommandBuilder<'a, 'b, A> {
+            #[inline]
+            pub fn add_command(&mut self, command: ::flatbuffers::WIPOffset<&'b str>) {
+                self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(
+                    ServerCommand::VT_COMMAND,
+                    command,
+                );
+            }
+            #[inline]
+            pub fn add_args(&mut self, args: ::flatbuffers::WIPOffset<&'b str>) {
+                self.fbb_
+                    .push_slot_always::<::flatbuffers::WIPOffset<_>>(ServerCommand::VT_ARGS, args);
+            }
+            #[inline]
+            pub fn new(
+                _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            ) -> ServerCommandBuilder<'a, 'b, A> {
+                let start = _fbb.start_table();
+                ServerCommandBuilder {
+                    fbb_: _fbb,
+                    start_: start,
+                }
+            }
+            #[inline]
+            pub fn finish(self) -> ::flatbuffers::WIPOffset<ServerCommand<'a>> {
+                let o = self.fbb_.end_table(self.start_);
+                ::flatbuffers::WIPOffset::new(o.value())
+            }
+        }
+
+        impl ::core::fmt::Debug for ServerCommand<'_> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                let mut ds = f.debug_struct("ServerCommand");
+                ds.field("command", &self.command());
+                ds.field("args", &self.args());
+                ds.finish()
+            }
+        }
+        pub enum ChatMessageOffset {}
+        #[derive(Copy, Clone, PartialEq)]
+
+        pub struct ChatMessage<'a> {
+            pub _tab: ::flatbuffers::Table<'a>,
+        }
+
+        impl<'a> ::flatbuffers::Follow<'a> for ChatMessage<'a> {
+            type Inner = ChatMessage<'a>;
+            #[inline]
+            unsafe fn follow(buf: &'a [u8], loc: usize) -> Self::Inner {
+                Self {
+                    _tab: unsafe { ::flatbuffers::Table::new(buf, loc) },
+                }
+            }
+        }
+
+        impl<'a> ChatMessage<'a> {
+            pub const VT_PLAYER_ID: ::flatbuffers::VOffsetT = 4;
+            pub const VT_SENDER_NAME: ::flatbuffers::VOffsetT = 6;
+            pub const VT_TEXT: ::flatbuffers::VOffsetT = 8;
+            pub const VT_SERVER_TIME_MS: ::flatbuffers::VOffsetT = 10;
+
+            #[inline]
+            pub unsafe fn init_from_table(table: ::flatbuffers::Table<'a>) -> Self {
+                ChatMessage { _tab: table }
+            }
+            #[allow(unused_mut)]
+            pub fn create<
+                'bldr: 'args,
+                'args: 'mut_bldr,
+                'mut_bldr,
+                A: ::flatbuffers::Allocator + 'bldr,
+            >(
+                _fbb: &'mut_bldr mut ::flatbuffers::FlatBufferBuilder<'bldr, A>,
+                args: &'args ChatMessageArgs<'args>,
+            ) -> ::flatbuffers::WIPOffset<ChatMessage<'bldr>> {
+                let mut builder = ChatMessageBuilder::new(_fbb);
+                builder.add_server_time_ms(args.server_time_ms);
+                if let Some(x) = args.text {
+                    builder.add_text(x);
+                }
+                if let Some(x) = args.sender_name {
+                    builder.add_sender_name(x);
+                }
+                builder.add_player_id(args.player_id);
+                builder.finish()
+            }
+
+            #[inline]
+            pub fn player_id(&self) -> u32 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u32>(ChatMessage::VT_PLAYER_ID, Some(0))
+                        .unwrap()
+                }
+            }
+            #[inline]
+            pub fn sender_name(&self) -> Option<&'a str> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab.get::<::flatbuffers::ForwardsUOffset<&str>>(
+                        ChatMessage::VT_SENDER_NAME,
+                        None,
+                    )
+                }
+            }
+            #[inline]
+            pub fn text(&self) -> Option<&'a str> {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<::flatbuffers::ForwardsUOffset<&str>>(ChatMessage::VT_TEXT, None)
+                }
+            }
+            #[inline]
+            pub fn server_time_ms(&self) -> u64 {
+                // Safety:
+                // Created from valid Table for this object
+                // which contains a valid value in this slot
+                unsafe {
+                    self._tab
+                        .get::<u64>(ChatMessage::VT_SERVER_TIME_MS, Some(0))
+                        .unwrap()
+                }
+            }
+        }
+
+        impl ::flatbuffers::Verifiable for ChatMessage<'_> {
+            #[inline]
+            fn run_verifier(
+                v: &mut ::flatbuffers::Verifier,
+                pos: usize,
+            ) -> Result<(), ::flatbuffers::InvalidFlatbuffer> {
+                v.visit_table(pos)?
+                    .visit_field::<u32>("player_id", Self::VT_PLAYER_ID, false)?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<&str>>(
+                        "sender_name",
+                        Self::VT_SENDER_NAME,
+                        false,
+                    )?
+                    .visit_field::<::flatbuffers::ForwardsUOffset<&str>>(
+                        "text",
+                        Self::VT_TEXT,
+                        false,
+                    )?
+                    .visit_field::<u64>("server_time_ms", Self::VT_SERVER_TIME_MS, false)?
+                    .finish();
+                Ok(())
+            }
+        }
+        pub struct ChatMessageArgs<'a> {
+            pub player_id: u32,
+            pub sender_name: Option<::flatbuffers::WIPOffset<&'a str>>,
+            pub text: Option<::flatbuffers::WIPOffset<&'a str>>,
+            pub server_time_ms: u64,
+        }
+        impl<'a> Default for ChatMessageArgs<'a> {
+            #[inline]
+            fn default() -> Self {
+                ChatMessageArgs {
+                    player_id: 0,
+                    sender_name: None,
+                    text: None,
+                    server_time_ms: 0,
+                }
+            }
+        }
+
+        pub struct ChatMessageBuilder<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> {
+            fbb_: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            start_: ::flatbuffers::WIPOffset<::flatbuffers::TableUnfinishedWIPOffset>,
+        }
+        impl<'a: 'b, 'b, A: ::flatbuffers::Allocator + 'a> ChatMessageBuilder<'a, 'b, A> {
+            #[inline]
+            pub fn add_player_id(&mut self, player_id: u32) {
+                self.fbb_
+                    .push_slot::<u32>(ChatMessage::VT_PLAYER_ID, player_id, 0);
+            }
+            #[inline]
+            pub fn add_sender_name(&mut self, sender_name: ::flatbuffers::WIPOffset<&'b str>) {
+                self.fbb_.push_slot_always::<::flatbuffers::WIPOffset<_>>(
+                    ChatMessage::VT_SENDER_NAME,
+                    sender_name,
+                );
+            }
+            #[inline]
+            pub fn add_text(&mut self, text: ::flatbuffers::WIPOffset<&'b str>) {
+                self.fbb_
+                    .push_slot_always::<::flatbuffers::WIPOffset<_>>(ChatMessage::VT_TEXT, text);
+            }
+            #[inline]
+            pub fn add_server_time_ms(&mut self, server_time_ms: u64) {
+                self.fbb_
+                    .push_slot::<u64>(ChatMessage::VT_SERVER_TIME_MS, server_time_ms, 0);
+            }
+            #[inline]
+            pub fn new(
+                _fbb: &'b mut ::flatbuffers::FlatBufferBuilder<'a, A>,
+            ) -> ChatMessageBuilder<'a, 'b, A> {
+                let start = _fbb.start_table();
+                ChatMessageBuilder {
+                    fbb_: _fbb,
+                    start_: start,
+                }
+            }
+            #[inline]
+            pub fn finish(self) -> ::flatbuffers::WIPOffset<ChatMessage<'a>> {
+                let o = self.fbb_.end_table(self.start_);
+                ::flatbuffers::WIPOffset::new(o.value())
+            }
+        }
+
+        impl ::core::fmt::Debug for ChatMessage<'_> {
+            fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
+                let mut ds = f.debug_struct("ChatMessage");
+                ds.field("player_id", &self.player_id());
+                ds.field("sender_name", &self.sender_name());
+                ds.field("text", &self.text());
+                ds.field("server_time_ms", &self.server_time_ms());
                 ds.finish()
             }
         }

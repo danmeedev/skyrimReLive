@@ -7,6 +7,9 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
+
+#include "Net.h"
 
 namespace relive::plugin {
 
@@ -33,7 +36,8 @@ namespace relive::plugin {
     // human-readable status string (for command output). Idempotent: if
     // already connected, returns "already connected as <id>".
     std::string start_connection(std::string host, std::uint16_t port,
-                                 std::string name);
+                                 std::string name,
+                                 const net::CharacterData& char_data = {});
 
     // Disconnects if connected; no-op otherwise. Returns a status string.
     std::string stop_connection();
@@ -53,6 +57,29 @@ namespace relive::plugin {
     std::string demo_start();
     std::string demo_stop();
     [[nodiscard]] bool demo_running() noexcept;
+
+    // Gather character data from the loaded save. Must be called on the
+    // main thread with parentCell non-null.
+    [[nodiscard]] net::CharacterData gather_character_data();
+
+    // Zeus Phase 0: player roster received from the server.
+    struct PlayerEntry {
+        std::uint32_t player_id;
+        std::string display_name;
+        std::string character_name;
+        std::uint16_t level;
+        std::vector<std::pair<std::string, float>> top_skills;
+        float x, y, z;
+        std::uint32_t cell_form_id;
+        float hp, hp_max;
+    };
+    [[nodiscard]] std::vector<PlayerEntry> get_player_list() noexcept;
+    void update_player_list(std::vector<PlayerEntry> list);
+
+    // Zeus Phase 0: send a chat message through the active Net::Client.
+    void send_chat(std::string_view text);
+    void send_admin_auth(std::string_view password);
+    void send_admin_command(std::string_view command);
 
     // Phase 2.3b/2.5: forward a CombatEvent through the active Net::Client.
     // No-op when not connected. Called from the TESHitEvent sink.

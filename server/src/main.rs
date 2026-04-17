@@ -6,14 +6,19 @@ use anyhow::Result;
 use bevy_ecs::prelude::*;
 use flatbuffers::FlatBufferBuilder;
 use skyrim_relive_server::components::{
-    AnimState, Cell, Connection, Health, Player, Transform, Velocity,
+    AnimState, Cell, CharacterInfo, Connection, Health, Player, Transform, Velocity,
 };
 use skyrim_relive_server::config::Config;
 use skyrim_relive_server::proto::v1::{
-    AttackClass, CombatEvent, DamageApply, DamageApplyArgs, Disconnect, DisconnectArgs,
-    DisconnectCode, Hello, MessageType, PlayerInput, PlayerState as FbPlayerState,
-    PlayerStateArgs as FbPlayerStateArgs, Transform as FbTransform, Vec3 as FbVec3, Welcome,
-    WelcomeArgs, WorldSnapshot, WorldSnapshotArgs,
+    AdminAuth, AdminAuthResult, AdminAuthResultArgs, AdminCommand, AdminCommandResult,
+    AdminCommandResultArgs, AttackClass, ChatMessage, ChatMessageArgs, CombatEvent, DamageApply,
+    DamageApplyArgs, Disconnect, DisconnectArgs, DisconnectCode, Hello, MessageType, PlayerInput,
+    PlayerList as FbPlayerList, PlayerListArgs as FbPlayerListArgs,
+    PlayerListEntry as FbPlayerListEntry, PlayerListEntryArgs as FbPlayerListEntryArgs,
+    PlayerState as FbPlayerState, PlayerStateArgs as FbPlayerStateArgs, ServerCommand,
+    ServerCommandArgs, SkillEntry as FbSkillEntry, SkillEntryArgs as FbSkillEntryArgs,
+    Transform as FbTransform, Vec3 as FbVec3, Welcome, WelcomeArgs, WorldSnapshot,
+    WorldSnapshotArgs,
 };
 use skyrim_relive_server::wire;
 use tokio::net::UdpSocket;
@@ -59,10 +64,18 @@ impl ServerState {
             Duration::from_micros(1_000_000 / u64::from(self.config.snapshot_rate_hz));
         let gc_period = Duration::from_millis(self.config.gc_interval_ms);
 
+        let player_list_period = if self.config.player_list_poll_s > 0 {
+            Duration::from_secs(self.config.player_list_poll_s)
+        } else {
+            Duration::from_secs(3600)
+        };
+        let player_list_enabled = self.config.player_list_poll_s > 0;
+
         let mut sim_tick = interval(sim_period);
         let mut snap_tick = interval(snap_period);
         let mut gc_tick = interval(gc_period);
-        for t in [&mut sim_tick, &mut snap_tick, &mut gc_tick] {
+        let mut pl_tick = interval(player_list_period);
+        for t in [&mut sim_tick, &mut snap_tick, &mut gc_tick, &mut pl_tick] {
             t.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         }
 
@@ -71,10 +84,6 @@ impl ServerState {
                 recv = self.socket.recv_from(&mut buf) => {
                     match recv {
                         Ok((len, peer)) => self.handle_packet(peer, &buf[..len]).await,
-                        // ECONNRESET on UDP is the kernel telling us our last
-                        // send_to elicited an ICMP "port unreachable" — i.e.
-                        // the client we tried to Disconnect already exited.
-                        // Expected after a timeout, not a real error.
                         Err(e) if e.raw_os_error() == Some(10054) => {}
                         Err(e) => warn!(error = %e, "recv_from failed"),
                     }
@@ -82,6 +91,9 @@ impl ServerState {
                 _ = sim_tick.tick() => self.advance_sim(),
                 _ = snap_tick.tick() => self.broadcast_snapshot().await,
                 _ = gc_tick.tick() => self.expire_stale().await,
+                _ = pl_tick.tick(), if player_list_enabled => {
+                    self.broadcast_player_list().await;
+                }
             }
         }
     }
@@ -112,10 +124,17 @@ impl ServerState {
             MessageType::LeaveNotify => self.handle_leave(peer),
             MessageType::PlayerInput => self.handle_player_input(peer, body),
             MessageType::CombatEvent => self.handle_combat_event(peer, body).await,
+            MessageType::ChatMessage => self.handle_chat_message(peer, body).await,
+            MessageType::AdminAuth => self.handle_admin_auth(peer, body).await,
+            MessageType::AdminCommand => self.handle_admin_command(peer, body).await,
             MessageType::Welcome
             | MessageType::Disconnect
             | MessageType::WorldSnapshot
-            | MessageType::DamageApply => {
+            | MessageType::DamageApply
+            | MessageType::PlayerList
+            | MessageType::AdminAuthResult
+            | MessageType::AdminCommandResult
+            | MessageType::ServerCommand => {
                 warn!(%peer, ?mt, "client sent server-only message; ignoring");
             }
             _ => warn!(%peer, ?mt, "unhandled message type"),
@@ -131,6 +150,16 @@ impl ServerState {
             }
         };
         let name = hello.name().unwrap_or("(anonymous)").to_owned();
+        let char_name = hello.character_name().unwrap_or("(unknown)").to_owned();
+        let char_level = hello.character_level();
+        let top_skills: Vec<(String, f32)> = hello
+            .top_skills()
+            .map(|v| {
+                v.iter()
+                    .map(|s| (s.name().unwrap_or("?").to_owned(), s.level()))
+                    .collect()
+            })
+            .unwrap_or_default();
 
         // Reconnect from the same addr → drop the old entity first so we
         // don't end up with ghost duplicates.
@@ -152,12 +181,18 @@ impl ServerState {
                     addr: peer,
                     last_heard: Instant::now(),
                     last_attack_at: None,
+                    is_admin: false,
                 },
                 Transform::default(),
                 Velocity::default(),
                 AnimState::default(),
                 Health::default(),
                 Cell::default(),
+                CharacterInfo {
+                    character_name: char_name.clone(),
+                    level: char_level,
+                    top_skills,
+                },
             ))
             .id();
         self.addr_to_entity.insert(peer, entity);
@@ -165,6 +200,8 @@ impl ServerState {
         info!(
             %peer,
             %name,
+            %char_name,
+            char_level,
             player_id = pid,
             entity = ?entity,
             connected = self.addr_to_entity.len(),
@@ -402,6 +439,317 @@ impl ServerState {
         }
     }
 
+    async fn broadcast_server_command(&mut self, command: &str, args: &str) {
+        let mut fbb = FlatBufferBuilder::with_capacity(64);
+        let cmd_off = fbb.create_string(command);
+        let args_off = fbb.create_string(args);
+        let sc = ServerCommand::create(
+            &mut fbb,
+            &ServerCommandArgs {
+                command: Some(cmd_off),
+                args: Some(args_off),
+            },
+        );
+        fbb.finish(sc, None);
+        let packet = wire::encode(MessageType::ServerCommand, fbb.finished_data());
+        for (_, conn) in self
+            .world
+            .query::<(Entity, &Connection)>()
+            .iter(&self.world)
+        {
+            let _ = self.socket.send_to(&packet, conn.addr).await;
+        }
+    }
+
+    async fn send_admin_result(&self, peer: SocketAddr, success: bool, msg: &str) {
+        let mut fbb = FlatBufferBuilder::with_capacity(128);
+        let msg_off = fbb.create_string(msg);
+        let r = AdminCommandResult::create(
+            &mut fbb,
+            &AdminCommandResultArgs {
+                success,
+                message: Some(msg_off),
+            },
+        );
+        fbb.finish(r, None);
+        let packet = wire::encode(MessageType::AdminCommandResult, fbb.finished_data());
+        let _ = self.socket.send_to(&packet, peer).await;
+    }
+
+    async fn handle_admin_auth(&mut self, peer: SocketAddr, body: &[u8]) {
+        let Some(&entity) = self.addr_to_entity.get(&peer) else {
+            warn!(%peer, "AdminAuth from unknown peer");
+            return;
+        };
+        let auth = match flatbuffers::root::<AdminAuth<'_>>(body) {
+            Ok(a) => a,
+            Err(e) => {
+                warn!(%peer, error = %e, "bad AdminAuth payload");
+                return;
+            }
+        };
+        let password = auth.password().unwrap_or("");
+        // Empty admin_password = no password required (friend-trust default).
+        let success =
+            self.config.admin_password.is_empty() || password == self.config.admin_password;
+        if success {
+            if let Some(mut conn) = self.world.get_mut::<Connection>(entity) {
+                conn.is_admin = true;
+            }
+        }
+        let pid = self.world.get::<Player>(entity).map_or(0, |p| p.id);
+        info!(%peer, pid, success, "admin auth attempt");
+        let mut fbb = FlatBufferBuilder::with_capacity(64);
+        let reason_str = if success {
+            "admin access granted"
+        } else {
+            "wrong password"
+        };
+        let reason = fbb.create_string(reason_str);
+        let r = AdminAuthResult::create(
+            &mut fbb,
+            &AdminAuthResultArgs {
+                success,
+                reason: Some(reason),
+            },
+        );
+        fbb.finish(r, None);
+        let packet = wire::encode(MessageType::AdminAuthResult, fbb.finished_data());
+        let _ = self.socket.send_to(&packet, peer).await;
+    }
+
+    #[allow(clippy::too_many_lines)]
+    async fn handle_admin_command(&mut self, peer: SocketAddr, body: &[u8]) {
+        let Some(&entity) = self.addr_to_entity.get(&peer) else {
+            return;
+        };
+        let is_admin = self
+            .world
+            .get::<Connection>(entity)
+            .is_some_and(|c| c.is_admin);
+        if !is_admin {
+            self.send_admin_result(
+                peer,
+                false,
+                "not authenticated; use `rl admin <password>` first",
+            )
+            .await;
+            return;
+        }
+        let cmd = match flatbuffers::root::<AdminCommand<'_>>(body) {
+            Ok(c) => c,
+            Err(e) => {
+                warn!(%peer, error = %e, "bad AdminCommand payload");
+                return;
+            }
+        };
+        let command = cmd.command().unwrap_or("").to_owned();
+        let parts: Vec<&str> = command.split_whitespace().collect();
+        if parts.is_empty() {
+            self.send_admin_result(peer, false, "empty command").await;
+            return;
+        }
+        let admin_pid = self.world.get::<Player>(entity).map_or(0, |p| p.id);
+        info!(%peer, admin_pid, %command, "admin command");
+
+        match parts[0] {
+            "pvp" => {
+                if parts.len() < 2 {
+                    self.send_admin_result(peer, false, "usage: pvp on|off")
+                        .await;
+                    return;
+                }
+                match parts[1] {
+                    "on" | "true" | "1" => {
+                        self.config.pvp_enabled = true;
+                        self.send_admin_result(peer, true, "PvP enabled").await;
+                    }
+                    "off" | "false" | "0" => {
+                        self.config.pvp_enabled = false;
+                        self.send_admin_result(peer, true, "PvP disabled").await;
+                    }
+                    _ => {
+                        self.send_admin_result(peer, false, "usage: pvp on|off")
+                            .await;
+                    }
+                }
+            }
+            "kick" => {
+                if parts.len() < 2 {
+                    self.send_admin_result(peer, false, "usage: kick <player_id>")
+                        .await;
+                    return;
+                }
+                let Ok(target_id) = parts[1].parse::<u32>() else {
+                    self.send_admin_result(peer, false, "bad player_id").await;
+                    return;
+                };
+                let mut found = false;
+                let mut target_addr = None;
+                for (_e, p, c) in self
+                    .world
+                    .query::<(Entity, &Player, &Connection)>()
+                    .iter(&self.world)
+                {
+                    if p.id == target_id {
+                        target_addr = Some(c.addr);
+                        found = true;
+                        break;
+                    }
+                }
+                if !found {
+                    self.send_admin_result(
+                        peer,
+                        false,
+                        &format!("player_id {target_id} not found"),
+                    )
+                    .await;
+                    return;
+                }
+                let Some(addr) = target_addr else { return };
+                send_disconnect(&self.socket, addr, DisconnectCode::Ok, "kicked by admin").await;
+                // Find and despawn the entity
+                let to_remove: Vec<(Entity, u32)> = self
+                    .world
+                    .query::<(Entity, &Player, &Connection)>()
+                    .iter(&self.world)
+                    .filter(|(_, p, _)| p.id == target_id)
+                    .map(|(e, p, _)| (e, p.id))
+                    .collect();
+                for (e, pid) in to_remove {
+                    self.addr_to_entity.remove(&addr);
+                    self.world.despawn(e);
+                    info!(pid, "player kicked by admin");
+                }
+                self.send_admin_result(peer, true, &format!("kicked player_id {target_id}"))
+                    .await;
+            }
+            "time" => {
+                if parts.len() < 2 {
+                    self.send_admin_result(peer, false, "usage: time <hour> (0-23)")
+                        .await;
+                    return;
+                }
+                let Ok(hour) = parts[1].parse::<f32>() else {
+                    self.send_admin_result(peer, false, "bad hour value").await;
+                    return;
+                };
+                if !(0.0..=24.0).contains(&hour) {
+                    self.send_admin_result(peer, false, "hour must be 0-24")
+                        .await;
+                    return;
+                }
+                self.broadcast_server_command("time", parts[1]).await;
+                self.send_admin_result(
+                    peer,
+                    true,
+                    &format!("time set to {hour:.0}:00 for all players"),
+                )
+                .await;
+            }
+            "weather" => {
+                if parts.len() < 2 {
+                    self.send_admin_result(
+                        peer,
+                        false,
+                        "usage: weather <formid> (hex, e.g. 10e1f2) or: weather clear|rain|snow|storm",
+                    )
+                    .await;
+                    return;
+                }
+                let arg = match parts[1] {
+                    "clear" => "0x81a",
+                    "rain" | "rainy" => "0x10a23e",
+                    "snow" | "snowy" => "0x10e1f2",
+                    "storm" | "thunder" => "0x10a241",
+                    "fog" | "foggy" => "0x10e1f0",
+                    other => other,
+                };
+                self.broadcast_server_command("weather", arg).await;
+                self.send_admin_result(
+                    peer,
+                    true,
+                    &format!("weather set to {arg} for all players"),
+                )
+                .await;
+            }
+            "help" => {
+                self.send_admin_result(
+                    peer,
+                    true,
+                    "admin commands: pvp on|off, kick <id>, time <hour>, weather <type|formid>, help",
+                )
+                .await;
+            }
+            _ => {
+                self.send_admin_result(
+                    peer,
+                    false,
+                    &format!(
+                        "unknown admin command '{}'; try: pvp, kick, time, weather, help",
+                        parts[0]
+                    ),
+                )
+                .await;
+            }
+        }
+    }
+
+    async fn handle_chat_message(&mut self, peer: SocketAddr, body: &[u8]) {
+        let Some(&sender_entity) = self.addr_to_entity.get(&peer) else {
+            warn!(%peer, "ChatMessage from unknown peer");
+            return;
+        };
+        let msg = match flatbuffers::root::<ChatMessage<'_>>(body) {
+            Ok(m) => m,
+            Err(e) => {
+                warn!(%peer, error = %e, "bad ChatMessage payload");
+                return;
+            }
+        };
+        let text = msg.text().unwrap_or("").to_owned();
+        if text.is_empty() {
+            return;
+        }
+        let (sender_pid, sender_name) = self
+            .world
+            .get::<Player>(sender_entity)
+            .map_or((0, String::new()), |p| (p.id, p.name.clone()));
+
+        info!(%peer, sender_pid, %sender_name, %text, "chat");
+
+        let now_ms = u64::try_from(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_millis())
+                .unwrap_or(0),
+        )
+        .unwrap_or(0);
+
+        let mut fbb = FlatBufferBuilder::with_capacity(128);
+        let name_off = fbb.create_string(&sender_name);
+        let text_off = fbb.create_string(&text);
+        let cm = ChatMessage::create(
+            &mut fbb,
+            &ChatMessageArgs {
+                player_id: sender_pid,
+                sender_name: Some(name_off),
+                text: Some(text_off),
+                server_time_ms: now_ms,
+            },
+        );
+        fbb.finish(cm, None);
+        let packet = wire::encode(MessageType::ChatMessage, fbb.finished_data());
+
+        for (_, conn) in self
+            .world
+            .query::<(Entity, &Connection)>()
+            .iter(&self.world)
+        {
+            let _ = self.socket.send_to(&packet, conn.addr).await;
+        }
+    }
+
     fn handle_heartbeat(&mut self, peer: SocketAddr) {
         if !self.touch_connection(peer) {
             warn!(%peer, "Heartbeat from unknown peer (no Hello?)");
@@ -537,6 +885,84 @@ impl ServerState {
             if let Err(e) = self.socket.send_to(&packet, *self_addr).await {
                 warn!(peer = %self_addr, error = %e, "WorldSnapshot send failed");
             }
+        }
+    }
+
+    async fn broadcast_player_list(&mut self) {
+        let now_ms = u64::try_from(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .map(|d| d.as_millis())
+                .unwrap_or(0),
+        )
+        .unwrap_or(0);
+
+        let mut fbb = FlatBufferBuilder::with_capacity(512);
+
+        let entries: Vec<_> = self
+            .world
+            .query::<(
+                &Player,
+                &CharacterInfo,
+                &Transform,
+                &Cell,
+                &Health,
+                &Connection,
+            )>()
+            .iter(&self.world)
+            .map(|(p, ci, t, cell, hp, _)| {
+                let display_name = fbb.create_string(&p.name);
+                let char_name = fbb.create_string(&ci.character_name);
+                let skills: Vec<_> = ci
+                    .top_skills
+                    .iter()
+                    .map(|(name, level)| {
+                        let n = fbb.create_string(name);
+                        FbSkillEntry::create(
+                            &mut fbb,
+                            &FbSkillEntryArgs {
+                                name: Some(n),
+                                level: *level,
+                            },
+                        )
+                    })
+                    .collect();
+                let skills_vec = fbb.create_vector(&skills);
+                let pos = FbVec3::new(t.pos[0], t.pos[1], t.pos[2]);
+                FbPlayerListEntry::create(
+                    &mut fbb,
+                    &FbPlayerListEntryArgs {
+                        player_id: p.id,
+                        display_name: Some(display_name),
+                        character_name: Some(char_name),
+                        character_level: ci.level,
+                        top_skills: Some(skills_vec),
+                        pos: Some(&pos),
+                        cell_form_id: cell.form_id,
+                        hp: hp.current,
+                        hp_max: hp.max,
+                    },
+                )
+            })
+            .collect();
+
+        let players_vec = fbb.create_vector(&entries);
+        let pl = FbPlayerList::create(
+            &mut fbb,
+            &FbPlayerListArgs {
+                server_time_ms: now_ms,
+                players: Some(players_vec),
+            },
+        );
+        fbb.finish(pl, None);
+        let packet = wire::encode(MessageType::PlayerList, fbb.finished_data());
+
+        for (_, conn) in self
+            .world
+            .query::<(Entity, &Connection)>()
+            .iter(&self.world)
+        {
+            let _ = self.socket.send_to(&packet, conn.addr).await;
         }
     }
 

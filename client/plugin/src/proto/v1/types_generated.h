@@ -16,6 +16,9 @@ static_assert(FLATBUFFERS_VERSION_MAJOR == 25 &&
 namespace skyrim_relive {
 namespace v1 {
 
+struct SkillEntry;
+struct SkillEntryBuilder;
+
 enum MessageType : uint8_t {
   MessageType_Hello = 1,
   MessageType_Welcome = 2,
@@ -26,11 +29,18 @@ enum MessageType : uint8_t {
   MessageType_WorldSnapshot = 17,
   MessageType_CombatEvent = 32,
   MessageType_DamageApply = 33,
+  MessageType_PlayerList = 48,
+  MessageType_ChatMessage = 49,
+  MessageType_AdminAuth = 50,
+  MessageType_AdminAuthResult = 51,
+  MessageType_AdminCommand = 52,
+  MessageType_AdminCommandResult = 53,
+  MessageType_ServerCommand = 54,
   MessageType_MIN = MessageType_Hello,
-  MessageType_MAX = MessageType_DamageApply
+  MessageType_MAX = MessageType_ServerCommand
 };
 
-inline const MessageType (&EnumValuesMessageType())[9] {
+inline const MessageType (&EnumValuesMessageType())[16] {
   static const MessageType values[] = {
     MessageType_Hello,
     MessageType_Welcome,
@@ -40,13 +50,20 @@ inline const MessageType (&EnumValuesMessageType())[9] {
     MessageType_PlayerInput,
     MessageType_WorldSnapshot,
     MessageType_CombatEvent,
-    MessageType_DamageApply
+    MessageType_DamageApply,
+    MessageType_PlayerList,
+    MessageType_ChatMessage,
+    MessageType_AdminAuth,
+    MessageType_AdminAuthResult,
+    MessageType_AdminCommand,
+    MessageType_AdminCommandResult,
+    MessageType_ServerCommand
   };
   return values;
 }
 
 inline const char * const *EnumNamesMessageType() {
-  static const char * const names[34] = {
+  static const char * const names[55] = {
     "Hello",
     "Welcome",
     "Heartbeat",
@@ -80,13 +97,34 @@ inline const char * const *EnumNamesMessageType() {
     "",
     "CombatEvent",
     "DamageApply",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "PlayerList",
+    "ChatMessage",
+    "AdminAuth",
+    "AdminAuthResult",
+    "AdminCommand",
+    "AdminCommandResult",
+    "ServerCommand",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNameMessageType(MessageType e) {
-  if (::flatbuffers::IsOutRange(e, MessageType_Hello, MessageType_DamageApply)) return "";
+  if (::flatbuffers::IsOutRange(e, MessageType_Hello, MessageType_ServerCommand)) return "";
   const size_t index = static_cast<size_t>(e) - static_cast<size_t>(MessageType_Hello);
   return EnumNamesMessageType()[index];
 }
@@ -134,6 +172,70 @@ inline const char *EnumNameDisconnectCode(DisconnectCode e) {
   if (::flatbuffers::IsOutRange(e, DisconnectCode_Ok, DisconnectCode_DuplicateName)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesDisconnectCode()[index];
+}
+
+struct SkillEntry FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef SkillEntryBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_NAME = 4,
+    VT_LEVEL = 6
+  };
+  const ::flatbuffers::String *name() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_NAME);
+  }
+  float level() const {
+    return GetField<float>(VT_LEVEL, 0.0f);
+  }
+  template <bool B = false>
+  bool Verify(::flatbuffers::VerifierTemplate<B> &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_NAME) &&
+           verifier.VerifyString(name()) &&
+           VerifyField<float>(verifier, VT_LEVEL, 4) &&
+           verifier.EndTable();
+  }
+};
+
+struct SkillEntryBuilder {
+  typedef SkillEntry Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_name(::flatbuffers::Offset<::flatbuffers::String> name) {
+    fbb_.AddOffset(SkillEntry::VT_NAME, name);
+  }
+  void add_level(float level) {
+    fbb_.AddElement<float>(SkillEntry::VT_LEVEL, level, 0.0f);
+  }
+  explicit SkillEntryBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<SkillEntry> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<SkillEntry>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<SkillEntry> CreateSkillEntry(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> name = 0,
+    float level = 0.0f) {
+  SkillEntryBuilder builder_(_fbb);
+  builder_.add_level(level);
+  builder_.add_name(name);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<SkillEntry> CreateSkillEntryDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    const char *name = nullptr,
+    float level = 0.0f) {
+  auto name__ = name ? _fbb.CreateString(name) : 0;
+  return skyrim_relive::v1::CreateSkillEntry(
+      _fbb,
+      name__,
+      level);
 }
 
 }  // namespace v1

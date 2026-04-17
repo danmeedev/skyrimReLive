@@ -83,7 +83,14 @@ pub fn parse(packet: &[u8]) -> Result<(MessageType, &[u8]), DecodeError> {
         | MessageType::PlayerInput
         | MessageType::WorldSnapshot
         | MessageType::CombatEvent
-        | MessageType::DamageApply => Ok((mt, &packet[HEADER_LEN..])),
+        | MessageType::DamageApply
+        | MessageType::PlayerList
+        | MessageType::ChatMessage
+        | MessageType::AdminAuth
+        | MessageType::AdminAuthResult
+        | MessageType::AdminCommand
+        | MessageType::AdminCommandResult
+        | MessageType::ServerCommand => Ok((mt, &packet[HEADER_LEN..])),
         _ => Err(DecodeError::UnknownType(raw)),
     }
 }

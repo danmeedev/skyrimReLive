@@ -3,6 +3,8 @@
 // version is 2 since the Phase 2 break that converted PlayerState from
 // struct to table.)
 
+include "types.fbs";
+
 namespace skyrim_relive.v1;
 
 // Position. World coordinates (Skyrim's exterior cell frame).
@@ -69,6 +71,27 @@ table WorldSnapshot {
     server_tick: uint64;
     server_time_ms: uint64;
     players: [PlayerState];
+}
+
+// Zeus Phase 0 — periodic player roster broadcast. Server sends this at
+// a configurable interval (player_list_poll_s, default 60, 0 = disabled).
+// Includes character data from Hello plus live position/cell/HP.
+table PlayerListEntry {
+    player_id: uint32;
+    display_name: string;       // from Hello.name (config)
+    character_name: string;     // from Hello.character_name (save)
+    character_level: uint16;
+    top_skills: [SkillEntry];   // same SkillEntry from lifecycle.fbs
+    // Live state (from latest PlayerInput + server ECS)
+    pos: Vec3;
+    cell_form_id: uint32;
+    hp: float;
+    hp_max: float;
+}
+
+table PlayerList {
+    server_time_ms: uint64;
+    players: [PlayerListEntry];
 }
 
 // Phase 2.5 — what kind of attack we're reporting. Server uses this to

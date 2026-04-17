@@ -25,6 +25,10 @@ pub struct Config {
     pub pvp_enabled: bool,
     /// Flat damage used for spell hits (true magnitude lookup is deferred).
     pub spell_damage_default: f32,
+    /// Seconds between `PlayerList` broadcasts. 0 = disabled.
+    pub player_list_poll_s: u64,
+    /// Admin password for Zeus mode. Empty string = admin disabled.
+    pub admin_password: String,
 }
 
 impl Default for Config {
@@ -37,6 +41,8 @@ impl Default for Config {
             gc_interval_ms: 500,
             pvp_enabled: false,
             spell_damage_default: 25.0,
+            player_list_poll_s: 60,
+            admin_password: String::new(),
         }
     }
 }
@@ -57,10 +63,15 @@ impl Config {
         Ok(toml::from_str(&text)?)
     }
 
-    /// Load or fall back. Logs via `tracing` so startup never fails on a
-    /// missing config.
+    /// Load or fall back. If the file doesn't exist, writes a documented
+    /// default so the host can see and edit all fields.
     #[must_use]
     pub fn load_or_default(path: &Path) -> Self {
+        if !path.exists() {
+            tracing::info!(path = %path.display(), "no config found; writing defaults");
+            let _ = Self::write_default(path);
+            return Self::default();
+        }
         match Self::load(path) {
             Ok(c) => {
                 tracing::info!(path = %path.display(), "config loaded");
@@ -75,6 +86,42 @@ impl Config {
                 Self::default()
             }
         }
+    }
+
+    fn write_default(path: &Path) -> std::io::Result<()> {
+        let content = r#"# SkyrimReLive server configuration
+# Edit and restart the server to apply changes.
+
+# UDP bind address. "0.0.0.0:27015" = all interfaces.
+bind = "0.0.0.0:27015"
+
+# Server simulation tick rate (Hz).
+tick_rate_hz = 60
+
+# WorldSnapshot broadcast rate to clients (Hz).
+snapshot_rate_hz = 20
+
+# Disconnect players with no packets for this many seconds.
+connection_timeout_s = 5
+
+# How often the timeout sweep runs (ms).
+gc_interval_ms = 500
+
+# Allow player-vs-player damage. false = hits are silently dropped.
+pvp_enabled = false
+
+# Flat damage for spell hits (true spell magnitude is deferred).
+spell_damage_default = 25.0
+
+# Seconds between PlayerList broadcasts. 0 = disabled.
+player_list_poll_s = 60
+
+# Admin password for Zeus mode. Empty = no password required (anyone
+# can `rl admin` to get admin access). Set a password if you want to
+# restrict admin commands to the host.
+admin_password = ""
+"#;
+        std::fs::write(path, content)
     }
 }
 

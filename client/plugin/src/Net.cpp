@@ -11,10 +11,12 @@
 #include "world_generated.h"
 
 #include <RE/Skyrim.h>
+#include <SKSE/SKSE.h>
 #include <SKSE/Logger.h>
 
 #include "Combat.h"
 #include "Ghost.h"
+#include "Plugin.h"
 #include "Socket.h"
 
 namespace re_v1 = skyrim_relive::v1;
@@ -52,7 +54,8 @@ namespace relive::net {
     }
 
     bool Client::start(std::string_view host, std::uint16_t port,
-                       std::string_view player_name) {
+                       std::string_view player_name,
+                       const CharacterData& char_data) {
         const auto h = sock::udp_connect_ipv4(host, port);
         if (h == sock::kInvalid) {
             SKSE::log::error("UDP connect failed");
@@ -60,7 +63,7 @@ namespace relive::net {
         }
         socket_ = h;
 
-        if (!send_hello(player_name) || !wait_for_welcome()) {
+        if (!send_hello(player_name, char_data) || !wait_for_welcome()) {
             sock::close(socket_);
             socket_ = sock::kInvalid;
             return false;
@@ -82,13 +85,28 @@ namespace relive::net {
         socket_ = sock::kInvalid;
     }
 
-    bool Client::send_hello(std::string_view name) {
-        flatbuffers::FlatBufferBuilder fbb(64);
+    bool Client::send_hello(std::string_view name, const CharacterData& cd) {
+        flatbuffers::FlatBufferBuilder fbb(256);
         const std::string name_s{name};
         const auto name_off = fbb.CreateString(name_s);
+        const auto char_name_off = fbb.CreateString(cd.character_name);
+
+        std::vector<flatbuffers::Offset<re_v1::SkillEntry>> skill_offsets;
+        for (const auto& sk : cd.top_skills) {
+            const auto sn = fbb.CreateString(sk.name);
+            re_v1::SkillEntryBuilder sb(fbb);
+            sb.add_name(sn);
+            sb.add_level(sk.value);
+            skill_offsets.push_back(sb.Finish());
+        }
+        const auto skills_vec = fbb.CreateVector(skill_offsets);
+
         re_v1::HelloBuilder hb(fbb);
         hb.add_name(name_off);
         hb.add_client_protocol_version(kProtoVersion);
+        hb.add_character_name(char_name_off);
+        hb.add_character_level(cd.level);
+        hb.add_top_skills(skills_vec);
         const auto hello_off = hb.Finish();
         fbb.Finish(hello_off);
 
@@ -100,6 +118,8 @@ namespace relive::net {
             SKSE::log::error("Hello send failed");
             return false;
         }
+        SKSE::log::info("Hello sent: char='{}' level={} skills={}",
+                        cd.character_name, cd.level, cd.top_skills.size());
         return true;
     }
 
@@ -285,6 +305,109 @@ namespace relive::net {
                 }
                 ghost::instance().ingest(snap->server_tick(),
                                          snap->server_time_ms(), updates);
+            } else if (type == re_v1::MessageType_PlayerList) {
+                const auto* pl = flatbuffers::GetRoot<re_v1::PlayerList>(body.data());
+                std::vector<relive::plugin::PlayerEntry> entries;
+                if (const auto* players = pl->players()) {
+                    entries.reserve(players->size());
+                    for (const auto* e : *players) {
+                        relive::plugin::PlayerEntry pe;
+                        pe.player_id = e->player_id();
+                        pe.display_name = e->display_name() ? e->display_name()->str() : "";
+                        pe.character_name = e->character_name() ? e->character_name()->str() : "";
+                        pe.level = e->character_level();
+                        if (const auto* skills = e->top_skills()) {
+                            for (const auto* s : *skills) {
+                                pe.top_skills.emplace_back(
+                                    s->name() ? s->name()->str() : "?", s->level());
+                            }
+                        }
+                        if (const auto* p = e->pos()) {
+                            pe.x = p->x();
+                            pe.y = p->y();
+                            pe.z = p->z();
+                        }
+                        pe.cell_form_id = e->cell_form_id();
+                        pe.hp = e->hp();
+                        pe.hp_max = e->hp_max();
+                        entries.push_back(std::move(pe));
+                    }
+                }
+                plugin::update_player_list(
+                    static_cast<decltype(entries)&&>(entries));
+            } else if (type == re_v1::MessageType_ChatMessage) {
+                const auto* cm = flatbuffers::GetRoot<re_v1::ChatMessage>(body.data());
+                const auto sender = cm->sender_name() ? cm->sender_name()->str() : "???";
+                const auto text = cm->text() ? cm->text()->str() : "";
+                if (!text.empty()) {
+                    if (auto* task = SKSE::GetTaskInterface()) {
+                        const auto pid = cm->player_id();
+                        task->AddTask([sender, text, pid]() {
+                            if (auto* console = RE::ConsoleLog::GetSingleton()) {
+                                console->Print("[Chat] %s: %s", sender.c_str(), text.c_str());
+                            }
+                        });
+                    }
+                    SKSE::log::info("[chat] {}: {}", sender, text);
+                }
+            } else if (type == re_v1::MessageType_AdminAuthResult) {
+                const auto* r = flatbuffers::GetRoot<re_v1::AdminAuthResult>(body.data());
+                const bool ok = r->success();
+                const auto reason = r->reason() ? r->reason()->str() : "";
+                if (auto* task = SKSE::GetTaskInterface()) {
+                    task->AddTask([ok, reason]() {
+                        if (auto* console = RE::ConsoleLog::GetSingleton()) {
+                            console->Print("[SkyrimReLive] admin: %s",
+                                           reason.c_str());
+                        }
+                    });
+                }
+                SKSE::log::info("AdminAuthResult: success={} reason={}", ok, reason);
+            } else if (type == re_v1::MessageType_AdminCommandResult) {
+                const auto* r = flatbuffers::GetRoot<re_v1::AdminCommandResult>(body.data());
+                const bool ok = r->success();
+                const auto msg = r->message() ? r->message()->str() : "";
+                if (auto* task = SKSE::GetTaskInterface()) {
+                    task->AddTask([ok, msg]() {
+                        if (auto* console = RE::ConsoleLog::GetSingleton()) {
+                            console->Print("[Admin] %s%s",
+                                           ok ? "" : "ERROR: ", msg.c_str());
+                        }
+                    });
+                }
+            } else if (type == re_v1::MessageType_ServerCommand) {
+                const auto* sc = flatbuffers::GetRoot<re_v1::ServerCommand>(body.data());
+                const auto cmd = sc->command() ? sc->command()->str() : "";
+                const auto args = sc->args() ? sc->args()->str() : "";
+                if (auto* task = SKSE::GetTaskInterface()) {
+                    task->AddTask([cmd, args]() {
+                        if (cmd == "time") {
+                            float hour = 12.0F;
+                            try { hour = std::stof(args); } catch (...) {}
+                            auto* cal = RE::Calendar::GetSingleton();
+                            if (cal && cal->gameHour) {
+                                cal->gameHour->value = hour;
+                            }
+                            if (auto* c = RE::ConsoleLog::GetSingleton()) {
+                                c->Print("[Server] Time set to %.0f:00", hour);
+                            }
+                        } else if (cmd == "weather") {
+                            RE::FormID formId = 0;
+                            try { formId = std::stoul(args, nullptr, 0); } catch (...) {}
+                            if (formId != 0) {
+                                auto* weather = RE::TESForm::LookupByID<RE::TESWeather>(formId);
+                                auto* sky = RE::Sky::GetSingleton();
+                                if (weather && sky) {
+                                    sky->ForceWeather(weather, true);
+                                }
+                            }
+                            if (auto* c = RE::ConsoleLog::GetSingleton()) {
+                                c->Print("[Server] Weather changed");
+                            }
+                        }
+                        SKSE::log::info("ServerCommand: cmd={} args={}", cmd, args);
+                    });
+                }
             } else if (type == re_v1::MessageType_DamageApply) {
                 const auto* d = flatbuffers::GetRoot<re_v1::DamageApply>(body.data());
                 combat::on_damage_apply(d->attacker_player_id(), d->damage(),
@@ -325,6 +448,49 @@ namespace relive::net {
 
         std::vector<std::uint8_t> packet;
         encode_packet(re_v1::MessageType_CombatEvent,
+                      std::span(fbb.GetBufferPointer(), fbb.GetSize()), packet);
+        sock::send_all(socket_, packet);
+    }
+
+    void Client::send_admin_auth(std::string_view password) {
+        if (!running_.load(std::memory_order_acquire)) return;
+        flatbuffers::FlatBufferBuilder fbb(64);
+        const std::string pw{password};
+        const auto pw_off = fbb.CreateString(pw);
+        re_v1::AdminAuthBuilder ab(fbb);
+        ab.add_password(pw_off);
+        fbb.Finish(ab.Finish());
+        std::vector<std::uint8_t> packet;
+        encode_packet(re_v1::MessageType_AdminAuth,
+                      std::span(fbb.GetBufferPointer(), fbb.GetSize()), packet);
+        sock::send_all(socket_, packet);
+    }
+
+    void Client::send_admin_command(std::string_view command) {
+        if (!running_.load(std::memory_order_acquire)) return;
+        flatbuffers::FlatBufferBuilder fbb(128);
+        const std::string cmd{command};
+        const auto cmd_off = fbb.CreateString(cmd);
+        re_v1::AdminCommandBuilder cb(fbb);
+        cb.add_command(cmd_off);
+        fbb.Finish(cb.Finish());
+        std::vector<std::uint8_t> packet;
+        encode_packet(re_v1::MessageType_AdminCommand,
+                      std::span(fbb.GetBufferPointer(), fbb.GetSize()), packet);
+        sock::send_all(socket_, packet);
+    }
+
+    void Client::send_chat(std::string_view text) {
+        if (!running_.load(std::memory_order_acquire)) return;
+        flatbuffers::FlatBufferBuilder fbb(128);
+        const std::string text_s{text};
+        const auto text_off = fbb.CreateString(text_s);
+        re_v1::ChatMessageBuilder cb(fbb);
+        cb.add_text(text_off);
+        const auto off = cb.Finish();
+        fbb.Finish(off);
+        std::vector<std::uint8_t> packet;
+        encode_packet(re_v1::MessageType_ChatMessage,
                       std::span(fbb.GetBufferPointer(), fbb.GetSize()), packet);
         sock::send_all(socket_, packet);
     }

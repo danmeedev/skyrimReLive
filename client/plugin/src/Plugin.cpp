@@ -29,6 +29,10 @@ namespace {
     std::string g_target_host;
     std::uint16_t g_target_port = 0;
 
+    // Zeus: latest player roster from server.
+    std::mutex g_pl_mu;
+    std::vector<relive::plugin::PlayerEntry> g_player_list;
+
     void Toast(const std::string& msg) {
         SKSE::log::info("{}", msg);
         // ConsoleLog is always available; press ~ to see. Proper HUD
@@ -139,7 +143,8 @@ namespace relive::plugin {
     }
 
     std::string start_connection(std::string host, std::uint16_t port,
-                                 std::string name) {
+                                 std::string name,
+                                 const net::CharacterData& char_data) {
         auto expected = ConnState::Idle;
         if (!g_state.compare_exchange_strong(expected, ConnState::Connected)) {
             if (expected == ConnState::Connected) {
@@ -161,7 +166,7 @@ namespace relive::plugin {
         }
 
         SKSE::log::info("SkyrimReLive: connecting to {}:{} as {}", host, port, name);
-        if (!g_client.start(host, port, name)) {
+        if (!g_client.start(host, port, name, char_data)) {
             g_state.store(ConnState::Failed, std::memory_order_release);
             Toast("[SkyrimReLive] connect failed");
             return "connect failed (see SkyrimReLive.log)";
@@ -183,6 +188,31 @@ namespace relive::plugin {
         return "disconnected";
     }
 
+    std::vector<PlayerEntry> get_player_list() noexcept {
+        const std::lock_guard lock(g_pl_mu);
+        return g_player_list;
+    }
+
+    void update_player_list(std::vector<PlayerEntry> list) {
+        const std::lock_guard lock(g_pl_mu);
+        g_player_list = std::move(list);
+    }
+
+    void send_chat(std::string_view text) {
+        if (g_state.load(std::memory_order_acquire) != ConnState::Connected) return;
+        g_client.send_chat(text);
+    }
+
+    void send_admin_auth(std::string_view password) {
+        if (g_state.load(std::memory_order_acquire) != ConnState::Connected) return;
+        g_client.send_admin_auth(password);
+    }
+
+    void send_admin_command(std::string_view command) {
+        if (g_state.load(std::memory_order_acquire) != ConnState::Connected) return;
+        g_client.send_admin_command(command);
+    }
+
     void send_combat_event(std::uint32_t target_player_id,
                            std::uint8_t attack_type, float weapon_reach,
                            float weapon_base_damage,
@@ -194,14 +224,67 @@ namespace relive::plugin {
                                    weapon_base_damage, attack_class);
     }
 
+    net::CharacterData gather_character_data() {
+        net::CharacterData cd;
+        auto* player = RE::PlayerCharacter::GetSingleton();
+        if (!player) {
+            SKSE::log::warn("gather_character_data: player singleton null");
+            return cd;
+        }
+        if (!player->Is3DLoaded()) {
+            SKSE::log::warn("gather_character_data: player 3D not loaded, using defaults");
+            return cd;
+        }
+        if (auto* base = player->GetActorBase()) {
+            if (const char* n = base->GetName(); n && n[0]) {
+                cd.character_name = n;
+            }
+        }
+        cd.level = static_cast<std::uint16_t>(player->GetLevel());
+        // Skill reads can crash on very early saves where the actor value
+        // owner isn't fully initialized. Gate on parentCell as a proxy for
+        // "the world is actually loaded and the player is placed."
+        if (!player->parentCell) {
+            SKSE::log::warn("gather_character_data: no parentCell, skipping skills");
+            return cd;
+        }
+        struct SkillPair { const char* name; RE::ActorValue av; };
+        static constexpr SkillPair kSkills[] = {
+            {"OneHanded",    RE::ActorValue::kOneHanded},
+            {"TwoHanded",    RE::ActorValue::kTwoHanded},
+            {"Archery",      RE::ActorValue::kArchery},
+            {"Block",        RE::ActorValue::kBlock},
+            {"Smithing",     RE::ActorValue::kSmithing},
+            {"HeavyArmor",   RE::ActorValue::kHeavyArmor},
+            {"LightArmor",   RE::ActorValue::kLightArmor},
+            {"Pickpocket",   RE::ActorValue::kPickpocket},
+            {"Lockpicking",  RE::ActorValue::kLockpicking},
+            {"Sneak",        RE::ActorValue::kSneak},
+            {"Alchemy",      RE::ActorValue::kAlchemy},
+            {"Speech",       RE::ActorValue::kSpeech},
+            {"Alteration",   RE::ActorValue::kAlteration},
+            {"Conjuration",  RE::ActorValue::kConjuration},
+            {"Destruction",  RE::ActorValue::kDestruction},
+            {"Illusion",     RE::ActorValue::kIllusion},
+            {"Restoration",  RE::ActorValue::kRestoration},
+            {"Enchanting",   RE::ActorValue::kEnchanting},
+        };
+        std::vector<net::CharacterData::Skill> all;
+        for (const auto& [sname, av] : kSkills) {
+            all.push_back({sname, player->GetActorValue(av)});
+        }
+        std::sort(all.begin(), all.end(),
+                  [](const auto& a, const auto& b) { return a.value > b.value; });
+        if (all.size() > 3) all.resize(3);
+        cd.top_skills = static_cast<decltype(all)&&>(all);
+        SKSE::log::info("gather_character_data: char='{}' level={} skills={}",
+                        cd.character_name, cd.level, cd.top_skills.size());
+        return cd;
+    }
+
     void on_world_loaded() {
         const auto cfg = config::load();
-        // Apply cell target from config. 0 means "any cell" so solo testing
-        // works everywhere by default.
         cell::instance().set_target(cfg.target_cell_form_id);
-
-        // Hit-event sink survives across connect/disconnect cycles; sends
-        // are no-ops while we're idle.
         combat::register_sink();
 
         if (!cfg.auto_connect) {
@@ -209,8 +292,13 @@ namespace relive::plugin {
             Toast("[SkyrimReLive] ready — type `rl connect` to join");
             return;
         }
+        // Send defaults in Hello — character data is populated lazily once
+        // the player is fully stable. Reading GetLevel/GetActorValue at
+        // kPostLoadGame (even deferred by one frame) crashes on early saves
+        // where the player's ActorValue arrays aren't allocated yet.
         std::thread([cfg]() {
-            start_connection(cfg.server_host, cfg.server_port, cfg.player_name);
+            start_connection(cfg.server_host, cfg.server_port,
+                             cfg.player_name);
         }).detach();
     }
 
