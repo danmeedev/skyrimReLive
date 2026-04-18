@@ -47,6 +47,15 @@ namespace {
         body = packet.subspan(kHeaderLen);
         return true;
     }
+    void sync_zeus_to_overlay() {
+        auto npcs = relive::zeus::list_npcs();
+        std::vector<relive::zeus_overlay::OverlayNpc> on;
+        for (const auto& n : npcs) {
+            on.push_back({n.zeus_id, n.base_form_id});
+        }
+        relive::zeus_overlay::push_npc_list(on.data(),
+            static_cast<unsigned>(on.size()));
+    }
 }
 
 namespace relive::net {
@@ -448,10 +457,28 @@ namespace relive::net {
                                         auto zid = npcs.empty() ? 0 : npcs.back().zeus_id;
                                         c->Print("[Server] NPC spawned (zeus_id=%u)", zid);
                                     } else {
-                                        c->Print("[Server] Object placed (0x%x)", formId);
+                                        auto objs = zeus::list_objects();
+                                        auto zid = objs.empty() ? 0 : objs.back().zeus_id;
+                                        c->Print("[Server] Object placed (zeus_id=%u)", zid);
                                     }
                                 }
+                                sync_zeus_to_overlay();
                             }
+                        } else if (cmd == "obj") {
+                            std::uint32_t zid = 0;
+                            std::string order;
+                            std::string order_args;
+                            std::istringstream iss(args);
+                            iss >> zid >> order;
+                            std::getline(iss, order_args);
+                            while (!order_args.empty() &&
+                                   std::isspace(static_cast<unsigned char>(order_args.front())))
+                                order_args.erase(order_args.begin());
+                            auto result = zeus::execute_obj_order(zid, order, order_args);
+                            if (auto* c = RE::ConsoleLog::GetSingleton()) {
+                                c->Print("[Zeus Obj %u] %s", zid, result.c_str());
+                            }
+                            sync_zeus_to_overlay();
                         } else if (cmd == "npcs") {
                             auto npcs = zeus::list_npcs();
                             if (auto* c = RE::ConsoleLog::GetSingleton()) {
@@ -479,20 +506,7 @@ namespace relive::net {
                             if (auto* c = RE::ConsoleLog::GetSingleton()) {
                                 c->Print("[Zeus NPC %u] %s", zid, result.c_str());
                             }
-                        } else if (cmd == "obj") {
-                            std::uint32_t zid = 0;
-                            std::string order;
-                            std::string order_args;
-                            std::istringstream iss(args);
-                            iss >> zid >> order;
-                            std::getline(iss, order_args);
-                            while (!order_args.empty() &&
-                                   std::isspace(static_cast<unsigned char>(order_args.front())))
-                                order_args.erase(order_args.begin());
-                            auto result = zeus::execute_obj_order(zid, order, order_args);
-                            if (auto* c = RE::ConsoleLog::GetSingleton()) {
-                                c->Print("[Zeus Obj %u] %s", zid, result.c_str());
-                            }
+                            sync_zeus_to_overlay();
                         } else if (cmd == "weather") {
                             RE::FormID formId = 0;
                             try { formId = std::stoul(args, nullptr, 0); } catch (...) {}
