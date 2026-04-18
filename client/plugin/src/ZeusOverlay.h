@@ -58,4 +58,8 @@ namespace relive::zeus_overlay {
     // Query whether the overlay is currently visible (consuming input).
     [[nodiscard]] bool is_active();
 
+    // Free camera state — the plugin reads this to manage the game camera.
+    [[nodiscard]] bool is_free_cam();
+    void set_free_cam(bool enabled);
+
 }

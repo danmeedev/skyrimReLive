@@ -37,6 +37,7 @@ namespace relive::zeus_overlay {
 
         std::atomic<bool> g_installed{false};
         std::atomic<bool> g_active{false};
+        std::atomic<bool> g_free_cam{false};
         bool g_imgui_initialized = false;
         InputToggleFn g_input_toggle = nullptr;
         CommandFn g_command_fn = nullptr;
@@ -114,6 +115,20 @@ namespace relive::zeus_overlay {
                              ImGuiWindowFlags_NoCollapse)) {
                 ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.0f, 1.0f),
                                    "SkyrimReLive Zeus Mode");
+                ImGui::Separator();
+
+                // ---- Free Camera ----
+                {
+                    bool fc = g_free_cam.load(std::memory_order_relaxed);
+                    if (ImGui::Checkbox("Free Camera (Fly Mode)", &fc)) {
+                        g_free_cam.store(fc, std::memory_order_relaxed);
+                        if (g_input_toggle) g_input_toggle(g_active.load(std::memory_order_relaxed));
+                    }
+                    if (fc) {
+                        ImGui::SameLine();
+                        ImGui::TextDisabled("WASD to fly, mouse to look (click off panel)");
+                    }
+                }
                 ImGui::Separator();
 
                 // ---- Time & Weather ----
@@ -364,17 +379,22 @@ namespace relive::zeus_overlay {
 
         LRESULT CALLBACK hooked_wndproc(HWND hwnd, UINT msg, WPARAM wp,
                                          LPARAM lp) {
-            // When overlay is active, feed input to ImGui.
             if (g_active.load(std::memory_order_relaxed)) {
                 if (ImGui_ImplWin32_WndProcHandler(hwnd, msg, wp, lp)) {
                     return 0;
                 }
-                // Block game input while overlay is up (mouse + keyboard).
-                if (msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST) return 0;
-                if (msg == WM_KEYDOWN || msg == WM_KEYUP ||
-                    msg == WM_CHAR || msg == WM_SYSKEYDOWN ||
-                    msg == WM_SYSKEYUP) {
-                    return 0;
+                // When ImGui wants the input (hovering a panel), block it
+                // from the game. Otherwise let it through for free-cam.
+                auto& io = ImGui::GetIO();
+                if (io.WantCaptureMouse) {
+                    if (msg >= WM_MOUSEFIRST && msg <= WM_MOUSELAST)
+                        return 0;
+                }
+                if (io.WantCaptureKeyboard || io.WantTextInput) {
+                    if (msg == WM_KEYDOWN || msg == WM_KEYUP ||
+                        msg == WM_CHAR || msg == WM_SYSKEYDOWN ||
+                        msg == WM_SYSKEYUP)
+                        return 0;
                 }
             }
 
@@ -446,6 +466,14 @@ namespace relive::zeus_overlay {
 
     bool is_active() {
         return g_active.load(std::memory_order_relaxed);
+    }
+
+    bool is_free_cam() {
+        return g_free_cam.load(std::memory_order_relaxed);
+    }
+
+    void set_free_cam(bool enabled) {
+        g_free_cam.store(enabled, std::memory_order_relaxed);
     }
 
 }

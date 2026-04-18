@@ -325,13 +325,37 @@ namespace {
                 relive::zeus_overlay::set_input_toggle([](bool active) {
                     auto* controls = RE::ControlMap::GetSingleton();
                     if (!controls) return;
-                    controls->ToggleControls(
-                        RE::ControlMap::UEFlag::kAll, !active, true);
-                    // AllowTextInput lets WM_CHAR through to WndProc so
-                    // ImGui text fields can receive typed characters.
+
+                    bool free_cam = relive::zeus_overlay::is_free_cam();
+
+                    if (active) {
+                        if (free_cam) {
+                            // Free cam: disable gameplay but keep movement + looking
+                            controls->ToggleControls(RE::ControlMap::UEFlag::kFighting, false, true);
+                            controls->ToggleControls(RE::ControlMap::UEFlag::kActivate, false, true);
+                            controls->ToggleControls(RE::ControlMap::UEFlag::kSneaking, false, true);
+                            // Enable free camera
+                            auto* cam = RE::PlayerCamera::GetSingleton();
+                            if (cam) cam->ToggleFreeCameraMode(false);
+                            auto* player = RE::PlayerCharacter::GetSingleton();
+                            if (player) player->SetGodMode(true);
+                        } else {
+                            controls->ToggleControls(RE::ControlMap::UEFlag::kAll, false, true);
+                        }
+                    } else {
+                        controls->ToggleControls(RE::ControlMap::UEFlag::kAll, true, true);
+                        // Disable free camera if it was on
+                        auto* cam = RE::PlayerCamera::GetSingleton();
+                        if (cam && cam->IsInFreeCameraMode()) {
+                            cam->ToggleFreeCameraMode(false);
+                        }
+                        auto* player = RE::PlayerCharacter::GetSingleton();
+                        if (player) player->SetGodMode(false);
+                        relive::zeus_overlay::set_free_cam(false);
+                    }
                     controls->AllowTextInput(active);
-                    SKSE::log::info("zeus overlay: game controls {}",
-                                    active ? "disabled" : "re-enabled");
+                    SKSE::log::info("zeus overlay: controls {} free_cam={}",
+                                    active ? "disabled" : "re-enabled", free_cam);
                 });
                 relive::zeus_overlay::install_hooks();
                 break;
