@@ -99,3 +99,7 @@ sending synthetic PlayerInput at 20 Hz and receiving WorldSnapshot packets.
 
 Apache-2.0. See `LICENSE`. No LGPL/GPL/AGPL/MPL dependencies -- full policy
 and rationale in `docs/DEV_RULES.md`.
+
+
+
+Joing us on Discord at https://discord.gg/TyR9mtEYyb
