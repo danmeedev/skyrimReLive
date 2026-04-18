@@ -29,7 +29,8 @@ port 27015.
 
 ## Configuration
 
-Edit `server/server.toml`:
+`server.toml` is **auto-generated** with all fields documented on first
+run if it doesn't exist. Edit `server/server.toml`:
 
 ```toml
 bind                  = "[::]:27015"   # dual-stack; use "0.0.0.0:27015" for v4-only
@@ -37,10 +38,40 @@ tick_rate_hz          = 60             # server simulation rate
 snapshot_rate_hz      = 20             # world-state broadcast rate
 connection_timeout_s  = 5              # despawn silent clients after this many seconds
 gc_interval_ms        = 500            # how often the timeout sweep runs
+
+# Zeus admin settings
+admin_password        = ""             # empty = open (no password required)
+player_list_poll_s    = 5.0            # how often to refresh player data for `rl players`
+pvp_enabled           = false          # false = melee/ranged/spell hits between players dropped
+spell_damage_default  = 25.0           # flat spell damage sentinel (real magnitude reading deferred)
 ```
 
 Override the path via `RELIVE_CONFIG=<path> cargo run`. Unknown fields are
 rejected (typo-safe).
+
+### Zeus admin mode
+
+Zeus gives the host admin/DM controls. No extra setup required — it's
+built into the server and plugin.
+
+**Console commands (press `~` in-game):**
+- `rl admin` — authenticate as admin (open by default)
+- `rl cmd help` — list all admin commands
+- `rl cmd pvp on|off` — toggle PvP live
+- `rl cmd kick <id>` — disconnect a player
+- `rl cmd time <hour>` — set time for all (0-24)
+- `rl cmd weather clear|rain|snow|storm|fog|<formid>` — set weather
+- `rl cmd give <pid> <formid> [count]` — give items
+- `rl cmd spawn <base_formid>` — spawn NPC/object at your position
+- `rl cmd npcs` — list spawned NPCs
+- `rl cmd npc <zid> follow|wait|moveto|aggro|combat|passive|delete`
+- `rl cmd obj <zid> delete|moveto`
+- `rl cmd tp <pid> <x y z>` or `tp <pid> tome`
+
+**ImGui overlay (F8):** visual admin panel with time slider, weather
+dropdown, searchable form browser (18 categories), player table with
+kick, spawned NPC management, and PvP toggle. Game controls are disabled
+while the overlay is active.
 
 ---
 
@@ -160,7 +191,7 @@ If the server log stays silent, see the troubleshooting section below.
 ## Security notes
 
 - The server still trusts the client's position (known H1 caveat from Phase 1 — see the architecture doc). Anti-teleport / speedhack validation (Phase 2 step 2.4) is deferred since this is a friend-trust mod; the planned home is an opt-in "strict mode" config. Don't run a public server with random players until then.
-- No authentication yet — anyone who can reach the port can connect. For friend-group use on Tailscale this is fine because the tailnet itself is the perimeter.
+- Admin auth is open by default (no password). Set `admin_password` in `server.toml` if hosting for untrusted players. Admin commands (`rl cmd ...`) require auth.
 - Never put a private config (future: passwords, secrets) in the repo. `.gitignore` covers `.env` / `*.local.toml`.
 
 ---

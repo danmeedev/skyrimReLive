@@ -253,6 +253,121 @@ feature. Run through this end-to-end after each major update. Takes
 
 ---
 
+## Phase K — Zeus Admin Commands (5 min)
+
+> **Host only** — requires admin auth.
+
+### K1. Admin auth
+- **Host:** `rl admin`
+- [ ] Console shows admin authenticated
+- **Result:** PASS / FAIL / ___________
+
+### K2. Player list
+- **Both connected**
+- **Host:** `rl players`
+- [ ] Shows both players with name, level, HP, cell
+- **Result:** PASS / FAIL / ___________
+
+### K3. Text chat
+- **Host:** `rl chat hello from host`
+- [ ] Friend sees chat message in console
+- **Friend:** `rl chat hello back`
+- [ ] Host sees chat message in console
+- **Result:** PASS / FAIL / ___________
+
+### K4. PvP toggle
+- **Host:** `rl cmd pvp on`
+- [ ] Server log confirms PvP enabled
+- **Host:** swing at Friend's ghost
+- [ ] Friend sees hit message
+- **Host:** `rl cmd pvp off`
+- **Host:** swing at Friend's ghost
+- [ ] No hit registered
+- **Result:** PASS / FAIL / ___________
+
+### K5. Time set
+- **Host:** `rl cmd time 22`
+- [ ] Both players see nighttime
+- **Host:** `rl cmd time 10`
+- [ ] Both players see daytime
+- **Result:** PASS / FAIL / ___________
+
+### K6. Weather set
+- **Host:** `rl cmd weather rain`
+- [ ] Both players see rain
+- **Host:** `rl cmd weather clear`
+- [ ] Both players see clear sky
+- **Result:** PASS / FAIL / ___________
+
+### K7. Kick
+- **Host:** `rl cmd kick <friend_pid>`
+- [ ] Friend gets disconnected
+- [ ] Host sees Friend's ghost despawn
+- **Result:** PASS / FAIL / ___________
+
+---
+
+## Phase L — Zeus Phase 1: Spawn & Teleport (5 min)
+
+> **Host only** — reconnect Friend after K7 kick test.
+
+### L1. Give item
+- **Host:** `rl cmd give <friend_pid> 0x0000000F 100` (gold)
+- [ ] Friend receives gold
+- **Result:** PASS / FAIL / ___________
+
+### L2. Spawn NPC
+- **Host:** `rl cmd spawn 0x000A2C94` (Lydia)
+- [ ] NPC spawns at Host's position
+- **Host:** `rl cmd npcs`
+- [ ] NPC listed with zeus_id
+- **Result:** PASS / FAIL / crash / ___________
+
+### L3. NPC orders
+- **Host:** `rl cmd npc <zid> follow`
+- [ ] NPC follows Host
+- **Host:** `rl cmd npc <zid> wait`
+- [ ] NPC stops and waits
+- **Host:** `rl cmd npc <zid> delete`
+- [ ] NPC removed
+- **Result:** PASS / FAIL / ___________
+
+### L4. Teleport
+- **Host:** `rl cmd tp <friend_pid> tome`
+- [ ] Friend teleported to Host's position
+- **Result:** PASS / FAIL / ___________
+
+---
+
+## Phase M — Zeus UI (3 min)
+
+### M1. Overlay toggle
+- **Host:** press F8
+- [ ] ImGui overlay appears
+- [ ] Game controls disabled (mouse doesn't rotate camera)
+- **Host:** press F8 again
+- [ ] Overlay closes, game controls restored
+- **Result:** PASS / FAIL / ___________
+
+### M2. Form browser
+- **Host:** open overlay, click Spawn/Browse
+- [ ] Form categories visible (NPC, Weapon, Armor, etc.)
+- **Host:** type a search term (e.g. "iron")
+- [ ] Matching forms filter in real time
+- **Host:** click a result to spawn
+- [ ] Object/NPC spawns in world
+- **Result:** PASS / FAIL / crash / ___________
+
+### M3. UI panels
+- [ ] Time slider changes time of day
+- [ ] Weather dropdown changes weather
+- [ ] Players table shows connected players with Kick button
+- [ ] PvP checkbox toggles PvP
+- [ ] Spawned NPCs panel shows NPCs with Follow/Wait/Delete buttons
+- **Result:** PASS / FAIL / ___________
+
+---
+
 ## Results Summary
 
 **Date:** ___________
@@ -272,7 +387,10 @@ feature. Run through this end-to-end after each major update. Takes
 | H — Cell transitions | /4 | | |
 | I — Disconnect       | /3 | | |
 | J — Edge cases       | /3 | | |
-| **Total**            | **/35** | | |
+| K — Zeus Admin       | /7 | | |
+| L — Zeus Spawn/TP    | /4 | | |
+| M — Zeus UI          | /3 | | |
+| **Total**            | **/49** | | |
 
 **Blocking issues (must fix before next session):**
 

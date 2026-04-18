@@ -1,6 +1,6 @@
 # Roadmap
 
-## Phase 0 — Foundations  ← **we are here**
+## Phase 0 — Foundations
 
 - [x] Repo scaffold, license, gitignore
 - [x] Rust server: hello-world UDP echo
@@ -77,7 +77,11 @@ Per accepted proposal `docs/proposals/0002-phase-2-animation-combat.md`.
   staggerStart on the player's animation graph (when the server flagged
   damage ≥ 30) and prints a console hit summary. Sink is idempotent so
   reconnect cycles don't stack subscriptions.
-- [ ] Step 2.5: pitch replication + ranged combat prep
+- [x] **Step 2.5: pitch replication + ranged combat.** PlayerInput/PlayerState
+  gain pitch field. Ghost actors apply pitch via spine node rotation.
+  Ranged combat (bow, crossbow, spell) validated end-to-end: CombatEvent
+  class 1 (ranged) and class 2 (spell) with server-side range check.
+  Spell damage uses a flat sentinel (25) — reading real magnitude deferred.
 - [ ] (deferred) Step 2.4: server-side transform validation (anti-teleport
   / speedhack). Friend-trust co-op doesn't need hardening — `coc` and
   similar shortcuts are explicitly fine. The validator design is still
@@ -86,9 +90,12 @@ Per accepted proposal `docs/proposals/0002-phase-2-animation-combat.md`.
 
 ## Phase 3 — World state
 
-- Cell transitions
-- Containers, doors, activators
-- Inventory replication (server-owned inventory)
+- [x] **Step 3.1: cell-aware AoI.** Server tracks each player's current
+  cell. WorldSnapshot only includes players in the same cell. Walk into
+  Dragonsreach together — ghosts appear/despawn on cell boundary. Exterior
+  cells send `cell_form_id=0`; only interiors use real FormID.
+- [ ] Containers, doors, activators
+- [ ] Inventory replication (server-owned inventory)
 
 ## Phase 4 — NPC strategy
 
@@ -113,3 +120,44 @@ Per accepted proposal `docs/proposals/0002-phase-2-animation-combat.md`.
 - PvP zones
 - Economy, guilds
 - Keizaal-style MMO content layer
+
+---
+
+## Zeus — Admin / DM tooling  ← **shipped on `zeus` branch**
+
+### Zeus Phase 0 (done)
+
+- [x] **Player list.** `rl players` shows character name, level, top 3
+  skills, HP, and cell for every connected player.
+- [x] **Text chat.** `rl chat <msg>` relays to all connected clients.
+- [x] **Admin auth.** `rl admin [password]` — open by default (no password
+  required). Server `admin_password` field in `server.toml`.
+- [x] **Admin commands** via `rl cmd <command>`:
+  - `pvp on|off` — toggle PvP live
+  - `kick <id>` — disconnect a player
+  - `time <hour>` — set time for all (0-24)
+  - `weather clear|rain|snow|storm|fog|<formid>` — set weather for all
+  - `help` — list commands
+- [x] **Auto-generated `server.toml`** with all fields documented on first run.
+
+### Zeus Phase 1 (done)
+
+- [x] **`give <pid> <item_formid> [count]`** — give items to a player remotely.
+- [x] **`spawn <base_formid>`** — spawn NPC or object at admin's position.
+- [x] **`npcs`** — list spawned NPCs with zeus_ids.
+- [x] **`npc <zeus_id> follow|wait|moveto|aggro|confidence|combat|passive|delete`** — NPC orders using follower system.
+- [x] **`obj <zeus_id> delete|moveto`** — manage spawned objects.
+- [x] **`tp <pid> <x y z>` or `tp <pid> tome`** — teleport players.
+
+### Zeus UI (done)
+
+- [x] **ImGui overlay** toggled with **F8**.
+- [x] **D3D11 Present hook** via swapchain vtable.
+- [x] **Game controls disabled + text input enabled** when overlay active.
+- [x] **Panels:** Time slider, Weather dropdown, Spawn/Browse with
+  searchable form library, Players table, Spawned NPCs with
+  Follow/Wait/Combat/Delete buttons, Admin PvP checkbox + Kick.
+- [x] **Form browser** scans ALL loaded forms: NPC, Weapon, Armor, Potion,
+  Misc, Ammo, Book, Ingredient, Key, Scroll, Static, Tree, Door,
+  Activator, Light, Furniture, Flora, MovableStatic. Search by name
+  with category filter, click to spawn.

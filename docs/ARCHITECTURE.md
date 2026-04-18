@@ -1,16 +1,22 @@
 # Architecture
 
-**Current state: Phase 2 in progress (steps 2.1 + 2.2 + 2.3 done).**
-Players connect, replicate transforms, and see each other as ghost
-actors that play the correct locomotion animation (walk/run/sneak),
-weapon-draw/sheath transitions, and take/deliver melee damage —
-server-validated swings produce DamageApply packets that the target's
-client renders as a stagger. Step 2.5 (pitch replication / ranged
-combat prep) is not started; step 2.4 (transform validation /
+**Current state: Phase 2 complete, Phase 3.1 shipped, Zeus admin
+tooling shipped.** Players connect, replicate transforms, and see each
+other as ghost actors with locomotion animation (walk/run/sneak),
+weapon-draw/sheath transitions, pitch replication for aiming, and
+full combat — melee, ranged (bow/crossbow), and spell hits are
+server-validated. Cell-aware area-of-interest (Phase 3.1) gates
+ghost rendering per cell. Step 2.4 (transform validation /
 anti-teleport) is deferred — friend-trust co-op is explicitly fine
-with `coc`-style shortcuts, and a future opt-in "strict mode" config
-is the right home for hardening. The server runs an authoritative
-ECS sim; the client is a thin SKSE plugin.
+with `coc`-style shortcuts.
+
+**Zeus mode** adds admin/DM tooling: player list, text chat, admin
+auth, live PvP toggle, kick, time/weather control, item giving, NPC
+spawning with follower-system orders, object management, and player
+teleportation. An **ImGui overlay** (toggled with F8) provides a GUI
+for all Zeus features, including a searchable form browser that scans
+all loaded game forms across 18 categories. The overlay hooks D3D11's
+Present via swapchain vtable and disables game controls when active.
 
 ## Guiding principles
 
@@ -23,11 +29,11 @@ ECS sim; the client is a thin SKSE plugin.
    are pluggable, not baked in.
 4. **Apache-2.0.** Avoid LGPL contamination -- do not link TiltedPhoques libs.
 
-## Topology (Phase 2 in progress)
+## Topology (Phase 2 complete + Zeus)
 
 ```
 +-- Skyrim.exe + SKSE plugin (client) ----------------+
-|  Sends PlayerInput @ 60 Hz: pos + yaw plus          |
+|  Sends PlayerInput @ 60 Hz: pos + yaw + pitch plus  |
 |    locomotion graph vars (Speed, Direction,         |
 |    IsRunning, IsSprinting, IsSneaking) and weapon   |
 |    state (IsEquipping, IsUnequipping, iState,       |
@@ -36,22 +42,28 @@ ECS sim; the client is a thin SKSE plugin.
 |  Spawns ghost actors, 100 ms interpolation; applies |
 |    received graph vars to ghosts via                |
 |    SetGraphVariableFloat/Bool/Int so they animate.  |
-|  Cell gating: replication active per cell.          |
+|  Cell-aware AoI: replication gated per cell.       |
+|  Zeus UI: ImGui overlay (F8) hooks D3D11 Present;  |
+|    admin panels for time/weather/spawn/NPC/players. |
+|  Form browser: scans 18 form categories on load.   |
 +-------------+---------------------------------------+
               | UDP (raw, unreliable)
               v
 +-----------------------------------------------------+
 |  Server (single binary, Rust)                       |
 |  - bevy_ecs world: Player, Connection,              |
-|    Transform, Velocity, AnimState components        |
+|    Transform, Velocity, AnimState, Health           |
 |  - 60 Hz sim tick (integrate Transform; AnimState   |
 |    holds the latest replicated graph-var values)    |
 |  - 20 Hz WorldSnapshot broadcast (PlayerState as    |
 |    a Flatbuffers table, carries anim + weapon)      |
+|  - Cell-aware AoI: snapshot only includes same-cell |
 |  - Connection lifecycle: Hello/Welcome,             |
 |    Heartbeat, LeaveNotify, Disconnect,              |
 |    timeout GC                                       |
-|  - TOML config (server.toml)                        |
+|  - Zeus admin: chat relay, admin auth, pvp toggle,  |
+|    kick, time/weather, give/spawn/npc/obj/tp        |
+|  - TOML config (server.toml, auto-generated)        |
 |  - Dual-stack IPv6 via socket2                      |
 +-----------------------------------------------------+
 ```

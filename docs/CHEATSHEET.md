@@ -21,7 +21,24 @@ Press `~` to open the Skyrim console, then type:
 | `rl cell clear`              | Clear target (any cell is active)                     |
 | `rl demo start`              | Spawn a Lydia clone that orbits you (solo ghost test) |
 | `rl demo stop`               | Stop the demo ghost (despawns after ~3 s)             |
+| `rl players`                 | Player list: name, level, top skills, HP, cell        |
+| `rl chat <msg>`              | Send text chat to all connected players                |
+| `rl admin`                   | Authenticate as admin (open by default, no password)   |
+| `rl admin <password>`        | Authenticate with admin password                       |
+| `rl cmd pvp on\|off`         | Toggle PvP for all players (admin)                     |
+| `rl cmd kick <id>`           | Disconnect a player by ID (admin)                      |
+| `rl cmd time <hour>`         | Set time of day for all (0-24) (admin)                 |
+| `rl cmd weather <preset>`    | Set weather: clear/rain/snow/storm/fog/<formid> (admin)|
+| `rl cmd give <pid> <formid> [count]` | Give item(s) to a player (admin)              |
+| `rl cmd spawn <base_formid>` | Spawn NPC or object at your position (admin)           |
+| `rl cmd npcs`                | List spawned NPCs with zeus_ids (admin)                |
+| `rl cmd npc <zid> <order>`   | NPC order: follow/wait/moveto/aggro/combat/passive/delete (admin) |
+| `rl cmd obj <zid> <action>`  | Object action: delete/moveto (admin)                   |
+| `rl cmd tp <pid> <x y z>`   | Teleport player to coordinates (admin)                 |
+| `rl cmd tp <pid> tome`       | Teleport player to your position (admin)               |
+| `rl cmd help`                | List all admin commands (admin)                        |
 | `rl help`                    | List all subcommands                                  |
+| **F8**                       | Toggle ImGui admin overlay (Zeus UI)                   |
 
 ---
 
@@ -74,7 +91,22 @@ connection_timeout_s = 5
 
 # How often the timeout sweep runs (ms).
 gc_interval_ms = 500
+
+# Admin password. Empty string = open (no password required).
+admin_password = ""
+
+# How often to poll player data for `rl players` (seconds).
+player_list_poll_s = 5.0
+
+# PvP toggle. false = melee/ranged/spell hits between players are dropped.
+pvp_enabled = false
+
+# Default spell damage (flat sentinel until real magnitude reading).
+spell_damage_default = 25.0
 ```
+
+> **Note:** `server.toml` is auto-generated with all fields documented on
+> first run if it doesn't exist.
 
 ---
 

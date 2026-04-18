@@ -43,6 +43,16 @@ Updated as items are created or resolved.
 **Context:** Walking SpellItem → effect → magnitude chain adds complexity. Sentinel value works for Phase 2.5.
 **Next step:** Read `MagicItem::GetCostliestEffectItem()->GetMagnitude()` when wiring Phase 3+ magic sync.
 
+### Form scan deferred + SEH guarded
+**Severity:** Low — workaround in place
+**Context:** Scanning all loaded forms for the Zeus form browser can crash if called too early. Currently deferred 3 seconds post-load with SEH guard wrapping each form read.
+**Next step:** Find a reliable "all forms loaded" signal instead of a timer. Or move scanning to a background thread with per-form try/catch.
+
+### Zeus ImGui overlay is host-only
+**Severity:** Low — by design for now
+**Context:** The F8 overlay only works for the admin/host. Non-admin players have no GUI for chat or player list.
+**Next step:** A lightweight player-facing overlay (chat window, player list) that doesn't require admin auth.
+
 ### No reconnect logic
 **Severity:** Low — player must restart Skyrim after disconnect
 **Context:** Phase 1 design. `rl connect` from console does reconnect, but auto-reconnect on network drop isn't implemented.
@@ -65,3 +75,6 @@ Updated as items are created or resolved.
 | ActorState bitmask tearing | `94bd3fd` | Single 32-bit word write instead of per-bit |
 | Demo ghost flicker | earlier commit | Aligned synthetic tick with real tick counter |
 | Self-rescheduling AddTask infinite loop | earlier commit | Background thread pump at 50ms cadence |
+| NPC spawn crash with 4+ NPCs | zeus branch | Don't force follower package on spawn; let AI run naturally |
+| Form scan crash on early load | zeus branch | 3-second defer + SEH guard around each form read |
+| Character data crash on early saves | zeus branch | Deferred character reads; Hello sends defaults |
