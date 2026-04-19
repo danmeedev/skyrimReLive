@@ -18,6 +18,7 @@
 #include "Ghost.h"
 #include "Net.h"
 #include "Plugin.h"
+#include "Zeus.h"
 #include "ZeusOverlay.h"
 
 namespace {
@@ -49,7 +50,38 @@ namespace {
         while (g_state.load(std::memory_order_acquire) ==
                relive::plugin::ConnState::Connected) {
             if (auto* task = SKSE::GetTaskInterface()) {
-                task->AddTask([]() { relive::ghost::instance().tick_main_thread(); });
+                task->AddTask([]() {
+                    relive::ghost::instance().tick_main_thread();
+                    // Poll for Zeus point-and-click place requests.
+                    relive::zeus_overlay::PlaceRequest pr;
+                    if (relive::zeus_overlay::pop_place_request(pr)) {
+                        auto* pick = RE::CrosshairPickData::GetSingleton();
+                        if (pick) {
+                            // collisionPoint may be a single NiPoint3 (flat)
+                            // or an array of 3 (VR). Use address-of to get
+                            // a pointer to the first element either way.
+                            const auto* cp = reinterpret_cast<const RE::NiPoint3*>(
+                                &pick->collisionPoint);
+                            pr.x = cp->x;
+                            pr.y = cp->y;
+                            pr.z = cp->z;
+                        }
+                        if (pr.x != 0 || pr.y != 0 || pr.z != 0) {
+                            char buf[64];
+                            std::snprintf(buf, sizeof(buf), "spawn 0x%x",
+                                          pr.form_id);
+                            // Use the admin command path which broadcasts
+                            // to all clients. Override the spawn position
+                            // by sending a targeted ServerCommand.
+                            auto actor = relive::zeus::execute_spawn(
+                                pr.form_id, pr.x, pr.y, pr.z);
+                            if (auto* c = RE::ConsoleLog::GetSingleton()) {
+                                c->Print("[Zeus] Placed at (%.0f, %.0f, %.0f)",
+                                         pr.x, pr.y, pr.z);
+                            }
+                        }
+                    }
+                });
             }
             std::this_thread::sleep_for(50ms);
         }

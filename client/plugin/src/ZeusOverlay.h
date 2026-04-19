@@ -44,6 +44,18 @@ namespace relive::zeus_overlay {
     };
     void push_form_library(const FormEntry* entries, unsigned int count);
 
+    // The currently selected form for world placement (0 = none).
+    [[nodiscard]] unsigned int get_selected_form_id();
+
+    // Called from Plugin.cpp when the user clicks in the world (not on
+    // ImGui) while a form is selected. Passes the crosshair collision
+    // point. Returns the selected form_id (0 if none).
+    struct PlaceRequest {
+        unsigned int form_id;
+        float x, y, z;
+    };
+    [[nodiscard]] bool pop_place_request(PlaceRequest& out);
+
     // Install WndProc hook for input. Call at kDataLoaded. Idempotent.
     void install_hooks();
 

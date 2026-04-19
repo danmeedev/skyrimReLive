@@ -47,6 +47,12 @@ namespace relive::zeus_overlay {
         std::vector<OverlayNpc> g_npcs;
         std::vector<FormEntry> g_forms;
 
+        std::atomic<unsigned int> g_selected_form{0};
+        char g_selected_name[128] = "";
+        std::mutex g_place_mu;
+        bool g_has_place_request = false;
+        relive::zeus_overlay::PlaceRequest g_place_request{};
+
         // Case-insensitive substring match.
         bool icontains(const char* haystack, const char* needle) {
             if (!needle[0]) return true;
@@ -171,6 +177,21 @@ namespace relive::zeus_overlay {
                     ImGui::SetNextItemWidth(120);
                     ImGui::Combo("##cat", &s_cat_filter, categories, 19);
 
+                    // Show currently selected form for placement.
+                    {
+                        auto sel = g_selected_form.load(std::memory_order_relaxed);
+                        if (sel != 0) {
+                            ImGui::TextColored(ImVec4(0.2f, 1.0f, 0.2f, 1.0f),
+                                "Selected: %s (0x%x)", g_selected_name, sel);
+                            ImGui::SameLine();
+                            if (ImGui::SmallButton("Clear")) {
+                                g_selected_form.store(0, std::memory_order_relaxed);
+                                g_selected_name[0] = '\0';
+                            }
+                            ImGui::TextDisabled("Right-click in the world to place");
+                        }
+                    }
+
                     {
                         std::lock_guard lock(g_data_mu);
                         const char* cat_str = s_cat_filter > 0 ? categories[s_cat_filter] : nullptr;
@@ -185,17 +206,17 @@ namespace relive::zeus_overlay {
                                 break;
                             }
                             ImGui::PushID(static_cast<int>(f.form_id));
+                            bool is_selected = (g_selected_form.load(std::memory_order_relaxed) == f.form_id);
                             char label[192];
                             snprintf(label, sizeof(label), "[%s] %s (0x%x)",
                                      f.category, f.name, f.form_id);
-                            if (ImGui::Selectable(label, false)) {
-                                char buf[64];
-                                snprintf(buf, sizeof(buf), "spawn 0x%x", f.form_id);
-                                send_cmd(buf);
+                            if (ImGui::Selectable(label, is_selected)) {
+                                g_selected_form.store(f.form_id, std::memory_order_relaxed);
+                                strncpy(g_selected_name, f.name, sizeof(g_selected_name) - 1);
                             }
                             if (ImGui::IsItemHovered()) {
                                 ImGui::BeginTooltip();
-                                ImGui::Text("Left-click: Spawn at your position");
+                                ImGui::Text("Click to select for placement");
                                 ImGui::Text("FormID: 0x%x", f.form_id);
                                 ImGui::EndTooltip();
                             }
@@ -367,6 +388,22 @@ namespace relive::zeus_overlay {
 
                 render_zeus_panel();
 
+                // Right-click in the world (not on ImGui) queues a place
+                // request. Plugin.cpp polls this and spawns at the
+                // crosshair collision point.
+                static bool s_rmb_was_down = false;
+                bool rmb_down = (GetAsyncKeyState(VK_RBUTTON) & 0x8000) != 0;
+                if (rmb_down && !s_rmb_was_down && !io.WantCaptureMouse) {
+                    auto sel = g_selected_form.load(std::memory_order_relaxed);
+                    if (sel != 0) {
+                        std::lock_guard lock(g_place_mu);
+                        g_has_place_request = true;
+                        g_place_request.form_id = sel;
+                        // x/y/z filled by Plugin.cpp from CrosshairPickData
+                    }
+                }
+                s_rmb_was_down = rmb_down;
+
                 ImGui::Render();
                 if (g_rtv) {
                     g_context->OMSetRenderTargets(1, &g_rtv, nullptr);
@@ -474,6 +511,18 @@ namespace relive::zeus_overlay {
 
     void set_free_cam(bool enabled) {
         g_free_cam.store(enabled, std::memory_order_relaxed);
+    }
+
+    unsigned int get_selected_form_id() {
+        return g_selected_form.load(std::memory_order_relaxed);
+    }
+
+    bool pop_place_request(PlaceRequest& out) {
+        std::lock_guard lock(g_place_mu);
+        if (!g_has_place_request) return false;
+        out = g_place_request;
+        g_has_place_request = false;
+        return true;
     }
 
 }
